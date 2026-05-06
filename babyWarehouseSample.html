@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <title>Babylon Warehowse  a</title>
+
+        <style>
+            html, body {
+                overflow: hidden;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            #renderCanvas {
+                width: 100%;
+                height: 100%;
+                touch-action: none;
+            }
+        </style>
+
+        <script src="https://cdn.babylonjs.com/babylon.js"></script>
+        <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.js"></script>
+        <script src="https://cdn.babylonjs.com/materialsLibrary/babylon.gridMaterial.js"></script>
+        <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
+
+    </head>
+
+   <body style="background-color: antiquewhite;">
+    <!--shinobi1--><script type="text/javascript" src="//xa.shinobi.jp/ufo/190862403"></script><noscript><a href="//xa.shinobi.jp/bin/gg?190862403" target="_blank"><img src="//xa.shinobi.jp/bin/ll?190862403" border="0"></a><br><span style="font-size:9px"><img style="margin:0;vertical-align:text-bottom;" src="//img.shinobi.jp/tadaima/fj.gif" width="19" height="11"> </span></noscript><!--shinobi2-->
+    <div class="divMgnLeft">　【操作】 左ドラッグ：視点回転　右ドラッグ：視点平行移動　ホイール：拡大縮小 　マウスカーソルを重ねると情報表示　クリックは何もしません
+        <a href="./index.html">戻る</a></div>
+
+     <canvas id="renderCanvas" style="height:1000px;border-style: dotted;" ></canvas>
+
+   </body>
+
+</html>
+
+
+<script>
+    const canvas = document.getElementById("renderCanvas"); // Get the canvas element
+    const engine = new BABYLON.Engine(canvas, true); // Generate the BABYLON 3D engine
+    const createScene = function () {
+        const scene = new BABYLON.Scene(engine);
+
+        const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 3, new BABYLON.Vector3(0, 20, -20), scene);
+        camera.setTarget(new BABYLON.Vector3(10, 5, 0),);
+        camera.attachControl(canvas, true);
+        camera.wheelDeltaPercentage = 0.005;
+
+        const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+        light.intensity = 0.8;
+
+        //Ground
+        var ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 60, height: 40}, scene);
+        ground.position.x = 15;
+        ground.position.z = -5;
+        const groundMat = new BABYLON.StandardMaterial("groundMat");
+        groundMat.diffuseTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/Ground.png", scene);
+        ground.material = groundMat; 
+
+        createGUIButton();
+        let guiCanvas = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        infoButton = BABYLON.GUI.Button.CreateSimpleButton("infoButton", "");
+        infoButton.width = "300px"
+        infoButton.height = "80px";
+        infoButton.top = "50px";
+        infoButton.color = "white";
+        infoButton.cornerRadius = 5;
+        infoButton.background = "green";
+        infoButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+        infoButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        guiCanvas.addControl(infoButton);
+
+
+        //倉庫モデル読込
+        BABYLON.SceneLoader.ImportMeshAsync("", "https://raw.githubusercontent.com/ykoba079/sample1/master/", "souko.glb").then((result) => {
+            result.meshes[0].scaling.x = -0.4;
+            result.meshes[0].scaling.y = 0.4;
+            result.meshes[0].scaling.z = 0.4;
+            result.meshes[0].position.x = 10;
+            result.meshes[0].position.y = 1.1;
+            for(i=0;i<result.meshes.length;i++){
+                result.meshes[i].isPickable = false;
+            }
+            result.physicsImpostor = new BABYLON.PhysicsImpostor(box, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 1 }, scene);
+
+        });
+
+         //荷データ読込
+        niData = getNiData();
+
+        for (let i=0; i<niData.length;i++){
+            var myMaterial = new BABYLON.StandardMaterial("myMaterial", scene);
+
+            myMaterial.diffuseColor = createNiColor(niData[i].出荷数,200);
+            myMaterial.emissiveColor = createNiColor(niData[i].出荷数,200);
+            myMaterial.alpha = 0.7;
+
+            const box = BABYLON.MeshBuilder.CreateBox(niData[i].name, {width: 0.5, height: 0.5, depth: 0.5})   
+            box.id = niData[i].id;
+            box.name = niData[i].name;
+            box.position.x = niData[i].x;
+            box.position.y = niData[i].y+ (niData[i].出荷数*0.05)/4;
+            box.position.z = niData[i].z;
+            box.material = myMaterial;
+            box.x = niData[i].x;
+            box.y = niData[i].y;
+            box.z = niData[i].z;
+            box.出荷数 = niData[i].出荷数;
+            niData[i].box = box;
+                
+            const dragBehavior = new BABYLON.PointerDragBehavior();
+            box.addBehavior(dragBehavior);
+
+            dragBehavior.onDragStartObservable.add((event)=>{
+                //ドラッグの開始
+                dragBehavior.moveAttached = true;
+            })
+            dragBehavior.onDragObservable.add((event)=>{
+                //ドラッグ中
+                var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, BABYLON.Matrix.Identity(), camera);    
+                var hit = scene.pickWithRay(ray);
+                var hits = scene.multiPickWithRay(ray);
+
+                for(var i=0; i< hits.length; i++){
+                    if (hits[i].pickedMesh && (hits[i].pickedMesh.name=="マーカー")){
+
+                        var ni = niData.find(el => (el.box.x == hits[i].pickedMesh.x && 
+                                                    el.box.y == hits[i].pickedMesh.y && 
+                                                    el.box.z == hits[i].pickedMesh.z));
+                        if(ni==null){
+                            dragBehavior.moveAttached = false;
+                            //マーカーの座標をドラッグ中のBOXに設定
+                            event.pointerInfo.pickInfo.pickedMesh.x = hits[i].pickedMesh.x;
+                            event.pointerInfo.pickInfo.pickedMesh.y = hits[i].pickedMesh.y;
+                            event.pointerInfo.pickInfo.pickedMesh.z = hits[i].pickedMesh.z;
+
+                            niBoxScaleSet(hits[i].pickedMesh.x,hits[i].pickedMesh.z) ;
+                        }else{
+                            //空いてないマーカーなのでフィットさせない
+                        }
+                    }
+                }
+            })
+            dragBehavior.onDragEndObservable.add((event)=>{
+                //ドラッグの終了
+            })
+        }
+
+        niBoxScaleReSet();
+
+        mkData = getMkData();
+        var mkMaterial = new BABYLON.StandardMaterial("mkMaterial", scene);
+        mkMaterial.diffuseColor = new BABYLON.Color3(0.82, 0.89, 0.82);
+        for (let i=0;i<mkData.length;i++){
+            const box = BABYLON.MeshBuilder.CreateBox(mkData[i].id, {width: 0.6, height: 0.05, depth: 0.6})   
+            box.material = mkMaterial;
+            box.position.x = mkData[i].x;
+            box.position.y = mkData[i].y+0.02;
+            box.position.z = mkData[i].z;
+            box.id = mkData[i].id;
+            box.x = mkData[i].x; //商品を置いたときに使用する座標
+            box.y = mkData[i].y;
+            box.z = mkData[i].z;
+            box.name = "マーカー";
+        }
+        var tanaData = getTanaData();
+        for (let i=0; i<tanaData.length;i++){
+            BABYLON.SceneLoader.ImportMeshAsync("", "https://raw.githubusercontent.com/ykoba079/sample1/master/", "tana.glb").then((result) => {
+                result.meshes[0].scaling.x = 0.5;
+                result.meshes[0].scaling.y = 0.67;
+                result.meshes[0].scaling.z = 0.5;
+                result.meshes[0].position.x = tanaData[i].x;
+                result.meshes[0].position.y = tanaData[i].y;
+                result.meshes[0].position.z = tanaData[i].z;
+                result.meshes[0].rotate (BABYLON.Axis.Y,  tanaData[i].rx, BABYLON.Space.WORLD);
+                for(j=0;j<result.meshes.length;j++){
+                    result.meshes[j].isPickable = false;
+                }
+            });
+        }
+
+        scene.onPointerMove = function castRay(){
+
+        var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, BABYLON.Matrix.Identity(), camera);    
+        var hit = scene.pickWithRay(ray);
+
+        if (hit.pickedMesh && (hit.pickedMesh.name!="ground" && hit.pickedMesh.name!="マーカー")){
+            //荷データをボタンで表示する
+            createInfoButton(hit.pickedMesh);
+        }
+        }
+
+        return scene;
+    };
+    const scene = createScene(); 
+    engine.runRenderLoop(function () {
+            scene.render();
+    });
+
+    window.addEventListener("resize", function () {
+            engine.resize();
+    });
+
+    function createInfoButton(pickedMesh){
+        infoButton.textBlock.text= "ID："+ pickedMesh.id + "\n" + "品名："+pickedMesh.name + "\n" + "出荷数："+pickedMesh.出荷数;
+}
+
+function createGUIButton(){
+    //Creates a gui label to display the cannon
+    let guiCanvas = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    let guiButton = BABYLON.GUI.Button.CreateSimpleButton("guiButton", "表示変更（高さ）");
+    guiButton.width = "160px"
+    guiButton.height = "30px";
+    guiButton.top = "10px";
+    guiButton.color = "white";
+    guiButton.cornerRadius = 5;
+    guiButton.background = "green";
+    guiButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+    guiButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+
+    guiButton.onPointerClickObservable.add(() => {
+        //ボタンをクリックしたら荷のBOXの高さを、固定と可変で切り替える
+        niBoxScaleReSet();
+    });
+    //ボタンを表示
+    guiCanvas.addControl(guiButton);
+}
+
+
+function getNiData(){
+    var niData = [
+
+{"id":11 ,"name":"USBマウス（黒）","x":4,"y":1,"z":8,"出荷数":24},          {"id":14,"name":"USBマウス（黒小）","x":5,"y":1,"z":8,"出荷数":89},          {"id":17,"name":"USBキーボード","x":6,"y":1,"z":8,"出荷数":129},
+{"id":12 ,"name":"USBマウス（白）","x":4,"y":2,"z":8,"出荷数":97},          {"id":15,"name":"USBマウス（白小）","x":5,"y":2,"z":8,"出荷数":8},           {"id":18,"name":"USBキーボートテンキー","x":6,"y":2,"z":8,"出荷数":6},
+                                                                          {"id":16,"name":"USBマウス（赤）","x":5,"y":3,"z":8,"出荷数":37},            {"id":19,"name":"USB高級キーボード","x":6,"y":3,"z":8,"出荷数":82},
+{"id":41 ,"name":"フロッピーディスク5","x":8,"y":1,"z":8,"出荷数":3},                                                                                 {"id":47,"name":"CDドライブ","x":10,"y":1,"z":8,"出荷数":35},
+{"id":42 ,"name":"フロッピーディスク3.5","x":8,"y":2,"z":8,"出荷数":13},                                                                              {"id":48,"name":"DVDドライブ","x":10,"y":2,"z":8,"出荷数":47},
+{"id":43 ,"name":"MOディスク","x":8,"y":3,"z":8,"出荷数":16},               {"id":46,"name":"MOドライブ","x":9,"y":3,"z":8,"出荷数":13},                 {"id":49,"name":"JAZZドライブ","x":10,"y":3,"z":8,"出荷数":1},
+{"id":71 ,"name":"USB-Aケーブル　1m","x":11,"y":1,"z":8,"出荷数":62},       {"id":74,"name":"USB-Cケーブル　1m","x":12,"y":1,"z":8,"出荷数":85},         {"id":77,"name":"Lケーブル　1m","x":13,"y":1,"z":8,"出荷数":19},
+{"id":72 ,"name":"USB-Aケーブル　2m","x":11,"y":2,"z":8,"出荷数":56},                                                                                 
+{"id":73 ,"name":"USB-Aケーブル　5m","x":11,"y":3,"z":8,"出荷数":3},        {"id":76,"name":"USB-Cケーブル　3m","x":12,"y":3,"z":8,"出荷数":53},         
+{"id":101,"name":"マザーボードG","x":14,"y":1,"z":8,"出荷数":72},           {"id":104,"name":"GT3060","x":15,"y":1,"z":8,"出荷数":18},                   {"id":107,"name":"M2SSD 512MB","x":16,"y":1,"z":8,"出荷数":77},
+{"id":102,"name":"マザーボードAS","x":14,"y":2,"z":8,"出荷数":55},          {"id":105,"name":"GY3070","x":15,"y":2,"z":8,"出荷数":73},                   
+{"id":103,"name":"マザーボードGM","x":14,"y":3,"z":8,"出荷数":53},          {"id":106,"name":"GT3080","x":15,"y":3,"z":8,"出荷数":67},                   
+{"id":131,"name":"HDD USB-A 2T","x":17,"y":1,"z":8,"出荷数":80},            {"id":134,"name":"HDD USB-C 2T","x":18,"y":1,"z":8,"出荷数":82},             {"id":137,"name":"ドライバー 16cm","x":19,"y":1,"z":8,"出荷数":80},
+{"id":132,"name":"HDD SATA 2TBL","x":17,"y":2,"z":8,"出荷数":58},           {"id":135,"name":"HDD SATA 6TBK","x":18,"y":2,"z":8,"出荷数":15},            {"id":138,"name":"ドライバー 13cm","x":19,"y":2,"z":8,"出荷数":16},
+{"id":133,"name":"HDD SATA 4TBK","x":17,"y":3,"z":8,"出荷数":46},                                                                                        
+{"id":161,"name":"PCモニター 21.5BF","x":20,"y":1,"z":8,"出荷数":17},       {"id":164,"name":"PCモニター 21.5PH","x":21,"y":1,"z":8,"出荷数":18},        {"id":167,"name":"PCモニター 21.5AS","x":22,"y":1,"z":8,"出荷数":11},
+{"id":162,"name":"PCモニター 23.5BF","x":20,"y":2,"z":8,"出荷数":20},       {"id":165,"name":"PCモニター 23.5PH","x":21,"y":2,"z":8,"出荷数":20},        
+{"id":163,"name":"PCモニター 27BF","x":20,"y":3,"z":8,"出荷数":6},          {"id":166,"name":"PCモニター 27PH","x":21,"y":3,"z":8,"出荷数":33},          {"id":169,"name":"PCモニター 29AS","x":22,"y":3,"z":8,"出荷数":39},
+{"id":191,"name":"CPUクーラー　10ｃｍ","x":23,"y":1,"z":8,"出荷数":48},     {"id":194,"name":"PC電源400W","x":24,"y":1,"z":8,"出荷数":41},               {"id":197,"name":"PC電源400W GOLD","x":25,"y":1,"z":8,"出荷数":26},
+{"id":192,"name":"CPUクーラー　12ｃｍ","x":23,"y":2,"z":8,"出荷数":31},     {"id":195,"name":"PC電源600W","x":24,"y":2,"z":8,"出荷数":21},               
+{"id":193,"name":"CPUクーラー　14ｃｍ","x":23,"y":3,"z":8,"出荷数":43},     {"id":196,"name":"PC電源900W","x":24,"y":3,"z":8,"出荷数":38},               {"id":199,"name":"PC電源1000W GOLD","x":25,"y":3,"z":8,"出荷数":44},
+{"id":221,"name":"PC電源500W Silver","x":26,"y":1,"z":8,"出荷数":25},                                                                                        {"id":227,"name":"静電ペン（白）","x":28,"y":1,"z":8,"出荷数":22},
+{"id":222,"name":"PC電源700W Silver","x":26,"y":2,"z":8,"出荷数":1},        {"id":225,"name":"マルチカバー","x":27,"y":2,"z":8,"出荷数":48},             
+{"id":223,"name":"PC電源900W Silver","x":26,"y":3,"z":8,"出荷数":10},       {"id":226,"name":"Webカメラ30","x":27,"y":3,"z":8,"出荷数":21},              {"id":229,"name":"静電ペン（黒）","x":28,"y":3,"z":8,"出荷数":3},
+{"id":251,"name":"圧力御前３合","x":29,"y":1,"z":8,"出荷数":17},            {"id":254,"name":"炭火御前３合","x":30,"y":1,"z":8,"出荷数":15},             
+{"id":252,"name":"圧力御前５合","x":29,"y":2,"z":8,"出荷数":50},            {"id":255,"name":"炭火御前５合","x":30,"y":2,"z":8,"出荷数":10},             
+{"id":253,"name":"ふっくら御前３合","x":29,"y":3,"z":8,"出荷数":2},                                                                                      {"id":259,"name":"ミスト御前GOLD","x":31,"y":3,"z":8,"出荷数":23},
+{"id":281,"name":"まな板　24ｃｍ","x":32,"y":1,"z":8,"出荷数":0},           {"id":284,"name":"まな板　28ｃｍ","x":33,"y":1,"z":8,"出荷数":1},            {"id":287,"name":"まな板　（薄）","x":34,"y":1,"z":8,"出荷数":44},
+{"id":283,"name":"綿棒（小）","x":32,"y":3,"z":8,"出荷数":35},                                                                                          
+
+
+
+                                                                            
+                                                                            {"id":404,"name":"洗剤　除菌","x":10,"y":1,"z":3,"出荷数":94},               {"id":407,"name":"洗剤　部屋干し","x":10,"y":1,"z":4,"出荷数":194},
+{"id":402,"name":"コーヒー　キリマン","x":10,"y":2,"z":2,"出荷数":167},     {"id":405,"name":"コーヒー　ルワンダ","x":10,"y":2,"z":3,"出荷数":69},       {"id":408,"name":"コーヒー　コロンビア","x":10,"y":2,"z":4,"出荷数":15},
+{"id":403,"name":"コーヒー　クリスタル","x":10,"y":3,"z":2,"出荷数":114},   {"id":406,"name":"コーヒー　ジャマイカ","x":10,"y":3,"z":3,"出荷数":169},  
+{"id":431,"name":"扇風機","x":11,"y":1,"z":2,"出荷数":1},              {"id":434,"name":"お茶　静岡","x":11,"y":1,"z":3,"出荷数":133},              {"id":437,"name":"お茶　宇治","x":11,"y":1,"z":4,"出荷数":119},
+{"id":432,"name":"ほうじ茶　","x":11,"y":2,"z":2,"出荷数":181},             {"id":435,"name":"麦茶","x":11,"y":2,"z":3,"出荷数":181},                   
+{"id":433,"name":"抹茶","x":11,"y":3,"z":2,"出荷数":69},                    {"id":436,"name":"湯たんぽ","x":11,"y":3,"z":3,"出荷数":105},                  
+{"id":461,"name":"カップ麺　醤油","x":15,"y":1,"z":2,"出荷数":28},          {"id":464,"name":"カップ麺　とんこつ","x":15,"y":1,"z":3,"出荷数":27},       {"id":467,"name":"カップ麺　味噌","x":15,"y":1,"z":4,"出荷数":98},
+{"id":462,"name":"インスタント麺　醤油","x":15,"y":2,"z":2,"出荷数":144},   {"id":465,"name":"インスタント麺　塩","x":15,"y":2,"z":3,"出荷数":60},     
+{"id":463,"name":"レトルトカレー和風","x":15,"y":3,"z":2,"出荷数":20},      {"id":466,"name":"レトルトカレー洋風","x":15,"y":3,"z":3,"出荷数":87},       {"id":469,"name":"レトルトカレーホテル風","x":15,"y":3,"z":4,"出荷数":80},
+{"id":491,"name":"マサラスパイス","x":16,"y":1,"z":2,"出荷数":10},          {"id":494,"name":"地中海スパイス","x":16,"y":1,"z":3,"出荷数":71},           {"id":497,"name":"クレイジースパイス","x":16,"y":1,"z":4,"出荷数":24},
+{"id":492,"name":"塩　ドイツ","x":16,"y":2,"z":2,"出荷数":90},              {"id":495,"name":"塩　ピンク","x":16,"y":2,"z":3,"出荷数":121},            
+{"id":493,"name":"レトルト　ビーフシチュー","x":16,"y":3,"z":2,"出荷数":69},{"id":496,"name":"非常食A","x":16,"y":3,"z":3,"出荷数":15},                
+{"id":521,"name":"鯖缶","x":20,"y":1,"z":2,"出荷数":16},                    {"id":524,"name":"いわし缶","x":20,"y":1,"z":3,"出荷数":27},                 {"id":527,"name":"飯缶","x":20,"y":1,"z":4,"出荷数":84},
+{"id":522,"name":"ペン黒","x":20,"y":2,"z":2,"出荷数":46},                  {"id":525,"name":"ペン赤","x":20,"y":2,"z":3,"出荷数":119},                
+{"id":523,"name":"ボールペン黒","x":20,"y":3,"z":2,"出荷数":31},            {"id":526,"name":"ボールペン赤","x":20,"y":3,"z":3,"出荷数":93},             {"id":529,"name":"ボールペン青","x":20,"y":3,"z":4,"出荷数":56},
+                                                                            {"id":554,"name":"ノギス","x":21,"y":1,"z":3,"出荷数":54},                   {"id":557,"name":"レーザーポインタ","x":21,"y":1,"z":4,"出荷数":1},
+{"id":552,"name":"スキャナ","x":21,"y":2,"z":2,"出荷数":0},                 {"id":555,"name":"レーザースキャナ","x":21,"y":2,"z":3,"出荷数":40},         {"id":558,"name":"レンチ","x":21,"y":2,"z":4,"出荷数":78},
+{"id":553,"name":"ドライバープラス","x":21,"y":3,"z":2,"出荷数":77},        {"id":556,"name":"ドライバーマイナス","x":21,"y":3,"z":3,"出荷数":1},        {"id":559,"name":"六角ドライバー","x":21,"y":3,"z":4,"出荷数":76},
+{"id":581,"name":"はんだごて","x":25,"y":1,"z":2,"出荷数":58},              {"id":584,"name":"ガスはんだごて","x":25,"y":1,"z":3,"出荷数":66},           {"id":587,"name":"はんだ","x":25,"y":1,"z":4,"出荷数":30},
+{"id":582,"name":"ねじ6mm","x":25,"y":2,"z":2,"出荷数":16},                 {"id":585,"name":"ねじ3mm","x":25,"y":2,"z":3,"出荷数":80},                  {"id":588,"name":"ねじ詰め合わせ","x":25,"y":2,"z":4,"出荷数":95},
+{"id":583,"name":"ビーカー","x":25,"y":3,"z":2,"出荷数":78},                {"id":586,"name":"シャーレ","x":25,"y":3,"z":3,"出荷数":20},                 {"id":589,"name":"試験管","x":25,"y":3,"z":4,"出荷数":17},
+                                                                            {"id":614,"name":"真空管","x":26,"y":1,"z":3,"出荷数":100},                
+{"id":612,"name":"パワートランジスタ","x":26,"y":2,"z":2,"出荷数":84},      {"id":615,"name":"プリント基板","x":26,"y":2,"z":3,"出荷数":65},           
+{"id":613,"name":"電解コンデンサ","x":26,"y":3,"z":2,"出荷数":67},          {"id":616,"name":"コンデンサ","x":26,"y":3,"z":3,"出荷数":18},             
+{"id":641,"name":"チップ抵抗","x":30,"y":1,"z":2,"出荷数":74},              {"id":644,"name":"セラミックコンデンサ","x":30,"y":1,"z":3,"出荷数":83},   
+{"id":642,"name":"トルグスイッチ","x":30,"y":2,"z":2,"出荷数":22},          {"id":645,"name":"非常スイッチ","x":30,"y":2,"z":3,"出荷数":49},          
+{"id":643,"name":"LED明","x":30,"y":3,"z":2,"出荷数":3},                    {"id":646,"name":"懐中電灯","x":30,"y":3,"z":3,"出荷数":49},                 {"id":649,"name":"蛍光灯棒型","x":30,"y":3,"z":4,"出荷数":31},
+{"id":671,"name":"ガスバーナー","x":31,"y":1,"z":2,"出荷数":31},            {"id":674,"name":"バーベキューセット","x":31,"y":1,"z":3,"出荷数":35},       {"id":677,"name":"ガスコンロ","x":31,"y":1,"z":4,"出荷数":13},
+{"id":672,"name":"ステンレスカップ","x":31,"y":2,"z":2,"出荷数":66},        {"id":675,"name":"ケトル","x":31,"y":2,"z":3,"出荷数":16},                   {"id":678,"name":"ガス缶","x":31,"y":2,"z":4,"出荷数":78},
+                                                                            {"id":734,"name":"土鍋","x":35,"y":1,"z":3,"出荷数":280},    {"id":737,"name":"電気ストーブ","x":35,"y":1,"z":4,"出荷数":260},
+{"id":703,"name":"カレンダーA","x":35,"y":3,"z":2,"出荷数":30},             {"id":706,"name":"カレンダーB","x":35,"y":3,"z":3,"出荷数":21},              {"id":709,"name":"カレンダーC","x":35,"y":3,"z":4,"出荷数":3},
+                                                                            {"id":735,"name":"クリスマス包装紙","x":36,"y":2,"z":3,"出荷数":58},         {"id":738,"name":"クリスマスリボン","x":36,"y":2,"z":4,"出荷数":35},
+{"id":733,"name":"クリスマスツリー","x":36,"y":3,"z":2,"出荷数":59},        {"id":736,"name":"ツリー飾りA","x":36,"y":3,"z":3,"出荷数":59},              {"id":739,"name":"ツリー飾りB","x":36,"y":3,"z":4,"出荷数":30},
+
+                                                                            {"id":946,"name":"キーボード　白","x":21,"y":3,"z":-5,"出荷数":57},          {"id":949,"name":"キーボード２","x":21,"y":3,"z":-4,"出荷数":7},
+{"id":971,"name":"キーボードテンキー","x":25,"y":1,"z":-6,"出荷数":54},     {"id":974,"name":"キーボードテンキー　白","x":25,"y":1,"z":-5,"出荷数":98},  {"id":977,"name":"キーボードテンキー２","x":25,"y":1,"z":-4,"出荷数":49},
+{"id":972,"name":"クリーナー","x":25,"y":2,"z":-6,"出荷数":6},              {"id":975,"name":"USBケーブル　10cm","x":25,"y":2,"z":-5,"出荷数":20},       {"id":978,"name":"USBケーブル　30cm","x":25,"y":2,"z":-4,"出荷数":16},
+{"id":973,"name":"USBケーブル　80cm","x":25,"y":3,"z":-6,"出荷数":95},      {"id":976,"name":"USBケーブル　150cm","x":25,"y":3,"z":-5,"出荷数":100},     {"id":979,"name":"USBケーブルC　10cm","x":25,"y":3,"z":-4,"出荷数":4},
+{"id":1003,"name":"CDドライブ","x":26,"y":3,"z":-6,"出荷数":2},             {"id":1006,"name":"DVDドライブ","x":26,"y":3,"z":-5,"出荷数":66},            {"id":1009,"name":"BRドライブ","x":26,"y":3,"z":-4,"出荷数":48},
+{"id":1031,"name":"CD10枚","x":30,"y":1,"z":-6,"出荷数":17},                {"id":1034,"name":"CD50枚","x":30,"y":1,"z":-5,"出荷数":90},                 {"id":1037,"name":"CD100枚","x":30,"y":1,"z":-4,"出荷数":27},
+{"id":1032,"name":"DVD10枚","x":30,"y":2,"z":-6,"出荷数":38},               {"id":1035,"name":"DVD50枚","x":30,"y":2,"z":-5,"出荷数":56},                {"id":1038,"name":"DVD100枚","x":30,"y":2,"z":-4,"出荷数":38},
+{"id":1033,"name":"BR10枚","x":30,"y":3,"z":-6,"出荷数":45},                {"id":1036,"name":"BR50枚","x":30,"y":3,"z":-5,"出荷数":43},                 {"id":1039,"name":"BR100枚","x":30,"y":3,"z":-4,"出荷数":10},
+{"id":1061,"name":"デジタルカメラ1","x":31,"y":1,"z":-6,"出荷数":6},        {"id":1064,"name":"デジタルカメラ2","x":31,"y":1,"z":-5,"出荷数":1},         {"id":1067,"name":"デジタルカメラ3","x":31,"y":1,"z":-4,"出荷数":14},
+{"id":1062,"name":"一眼レフ1","x":31,"y":2,"z":-6,"出荷数":69},             {"id":1065,"name":"一眼レフ2","x":31,"y":2,"z":-5,"出荷数":54},              {"id":1068,"name":"一眼レフ3","x":31,"y":2,"z":-4,"出荷数":76},
+{"id":1063,"name":"カメラレンズ1","x":31,"y":3,"z":-6,"出荷数":26},         {"id":1066,"name":"カメラレンズ2","x":31,"y":3,"z":-5,"出荷数":4},           {"id":1069,"name":"カメラレンズ3","x":31,"y":3,"z":-4,"出荷数":35},
+{"id":1091,"name":"ドットサイト1","x":35,"y":1,"z":-6,"出荷数":2},          {"id":1094,"name":"ドットサイト2","x":35,"y":1,"z":-5,"出荷数":12},          {"id":1097,"name":"ドットサイト3","x":35,"y":1,"z":-4,"出荷数":15},
+{"id":1092,"name":"カメラキャップ1","x":35,"y":2,"z":-6,"出荷数":34},       {"id":1095,"name":"カメラキャップ2","x":35,"y":2,"z":-5,"出荷数":20},        {"id":1098,"name":"カメラキャップ3","x":35,"y":2,"z":-4,"出荷数":63},
+{"id":1093,"name":"バッテリー1","x":35,"y":3,"z":-6,"出荷数":6},            {"id":1096,"name":"バッテリー2","x":35,"y":3,"z":-5,"出荷数":19},            {"id":1099,"name":"バッテリー3","x":35,"y":3,"z":-4,"出荷数":29},
+{"id":1122,"name":"カメラカバー1","x":36,"y":2,"z":-6,"出荷数":6},          {"id":1125,"name":"カメラカバー2","x":36,"y":2,"z":-5,"出荷数":11},          {"id":1128,"name":"カメラカバー3","x":36,"y":2,"z":-4,"出荷数":7},
+{"id":1123,"name":"ドローン1","x":36,"y":3,"z":-6,"出荷数":9},              {"id":1126,"name":"ドローン2","x":36,"y":3,"z":-5,"出荷数":9},               {"id":1129,"name":"ドローン3","x":36,"y":3,"z":-4,"出荷数":6},
+
+
+ ];
+    var json1 = JSON.stringify(niData);
+    niDtList = JSON.parse(json1);
+
+    return niDtList;
+}
+
+//BOXを表示する高さを切り替える（固定サイズor高さを可変にする）
+var boxScale = -1;
+function niBoxScaleReSet(){
+    boxScale = boxScale*-1;
+    if(boxScale==1){
+        //規定の位置に固定サイズで表示
+        for (let i=0; i<niData.length;i++){
+            niData[i].box.scaling.y = 1;
+            niData[i].box.position.y = niData[i].box.y + 0.5/2;
+        }
+    }else{
+        //出荷量で高さを変更
+        for (let i=0; i<niData.length;i++){
+            niData[i].box.scaling.y = niData[i].出荷数*0.05;
+            niData[i].box.position.y = niData[i].box.y + niData[i].box.scaling.y/4;
+        }
+        for (let i=0; i<niData.length;i++){
+            for (let j=0; j<niData.length;j++){
+                if(niData[i].box.x == niData[j].box.x && 
+                niData[i].box.z == niData[j].box.z && 
+                niData[i].box.y > niData[j].box.y ){
+                    niData[i].box.position.y = niData[j].box.position.y + (niData[j].出荷数*0.05)/4;
+                    niData[i].box.position.y = niData[i].box.position.y + (niData[i].出荷数*0.05)/4;
+                }
+            }
+        }
+    }
+}
+
+function niBoxScaleSet(x,z){
+    if(boxScale==1){
+        //規定の位置に固定サイズで表示
+        var ni = niData.find(el => (el.box.x == x &&  el.box.z == z));
+
+        for (let i=0; i<niData.length;i++){
+            if(niData[i].box.x == x && niData[i].box.z==z){
+                niData[i].box.scaling.y = 1;
+                niData[i].box.position.y = niData[i].box.y + 0.5/2;
+                niData[i].box.position.z = niData[i].box.z;
+                niData[i].box.position.x = niData[i].box.x;
+            }
+        }
+    }else{
+        //出荷量で高さを変更
+        for (let i=0; i<niData.length;i++){
+            if(niData[i].box.x == x && niData[i].box.z==z && niData[i].box.y > niData[j].box.y ){
+                niData[i].box.position.y = niData[j].box.position.y + (niData[j].出荷数*0.05)/4;
+                niData[i].box.position.y = niData[i].box.position.y + (niData[i].出荷数*0.05)/4;
+            }
+        }
+    }
+}
+
+//BOXの色を数量から作成する。少：赤　→　多：緑
+function createNiColor(i数量,i最大値){
+    let iColR=0;
+    let iColG=0;
+    let i中央値=i最大値/2;
+    if(i数量<=i中央値){
+        iColR = 1.0;
+        iColG = i数量/i中央値*0.8;
+    }else{
+        if(i数量>i最大値){
+            iColR=0;
+        }else{
+            iColR=Math.abs(i数量-i最大値)/i最大値*0.8;
+        }
+        iColG=1.0;
+    }
+    
+    return new BABYLON.Color3(iColR, iColG, 0);
+}
+
+function getTanaData(){
+    var tanaData = [
+            {"x":5,"y":1,"z":8,"rx":Math.PI/2},
+            {"x":8,"y":1,"z":8,"rx":Math.PI/2},
+            {"x":11,"y":1,"z":8,"rx":Math.PI/2},
+            {"x":14,"y":1,"z":8,"rx":Math.PI/2},
+            {"x":17,"y":1,"z":8,"rx":Math.PI/2},
+            {"x":20,"y":1,"z":8,"rx":Math.PI/2},
+            {"x":23,"y":1,"z":8,"rx":Math.PI/2},
+            {"x":26,"y":1,"z":8,"rx":Math.PI/2},
+            {"x":29,"y":1,"z":8,"rx":Math.PI/2},
+            {"x":32,"y":1,"z":8,"rx":Math.PI/2},
+            {"x":35,"y":1,"z":8,"rx":Math.PI/2},
+            {"x":38,"y":1,"z":8,"rx":Math.PI/2},
+
+            {"x":10,"y":1,"z":3,"rx":0},
+            {"x":11,"y":1,"z":3,"rx":0},
+            {"x":15,"y":1,"z":3,"rx":0},
+            {"x":16,"y":1,"z":3,"rx":0},
+            {"x":20,"y":1,"z":3,"rx":0},
+            {"x":21,"y":1,"z":3,"rx":0},
+            {"x":25,"y":1,"z":3,"rx":0},
+            {"x":26,"y":1,"z":3,"rx":0},
+            {"x":30,"y":1,"z":3,"rx":0},
+            {"x":31,"y":1,"z":3,"rx":0},
+            {"x":35,"y":1,"z":3,"rx":0},
+            {"x":36,"y":1,"z":3,"rx":0},
+
+            {"x":20,"y":1,"z":-5,"rx":0},
+            {"x":21,"y":1,"z":-5,"rx":0},
+            {"x":25,"y":1,"z":-5,"rx":0},
+            {"x":26,"y":1,"z":-5,"rx":0},
+            {"x":30,"y":1,"z":-5,"rx":0},
+            {"x":31,"y":1,"z":-5,"rx":0},
+            {"x":35,"y":1,"z":-5,"rx":0},
+            {"x":36,"y":1,"z":-5,"rx":0},
+
+
+
+    ];
+    var json1 = JSON.stringify(tanaData);
+    return JSON.parse(json1);
+}
+
+function getMkData(){
+    var mkData = [
+        {"id":"A010101","x":4,"y":1,"z":8},  {"id":"A010201","x":5,"y":1,"z":8},  {"id":"A010301","x":6,"y":1,"z":8},
+        {"id":"A010102","x":4,"y":2,"z":8},  {"id":"A010202","x":5,"y":2,"z":8},  {"id":"A010302","x":6,"y":2,"z":8},
+        {"id":"A010103","x":4,"y":3,"z":8},  {"id":"A010203","x":5,"y":3,"z":8},  {"id":"A010303","x":6,"y":3,"z":8},
+        {"id":"A020101","x":7,"y":1,"z":8},  {"id":"A020201","x":8,"y":1,"z":8},  {"id":"A020301","x":9,"y":1,"z":8},
+        {"id":"A020102","x":7,"y":2,"z":8},  {"id":"A020202","x":8,"y":2,"z":8},  {"id":"A020302","x":9,"y":2,"z":8},
+        {"id":"A020103","x":7,"y":3,"z":8},  {"id":"A020203","x":8,"y":3,"z":8},  {"id":"A020303","x":9,"y":3,"z":8},
+        {"id":"A030101","x":10,"y":1,"z":8},  {"id":"A030201","x":11,"y":1,"z":8},  {"id":"A030301","x":12,"y":1,"z":8},
+        {"id":"A030102","x":10,"y":2,"z":8},  {"id":"A030202","x":11,"y":2,"z":8},  {"id":"A030302","x":12,"y":2,"z":8},
+        {"id":"A030103","x":10,"y":3,"z":8},  {"id":"A030203","x":11,"y":3,"z":8},  {"id":"A030303","x":12,"y":3,"z":8},
+        {"id":"A030101","x":13,"y":1,"z":8},  {"id":"A030201","x":14,"y":1,"z":8},  {"id":"A030301","x":15,"y":1,"z":8},
+        {"id":"A030102","x":13,"y":2,"z":8},  {"id":"A030202","x":14,"y":2,"z":8},  {"id":"A030302","x":15,"y":2,"z":8},
+        {"id":"A030103","x":13,"y":3,"z":8},  {"id":"A030203","x":14,"y":3,"z":8},  {"id":"A030303","x":15,"y":3,"z":8},
+        {"id":"A030101","x":16,"y":1,"z":8},  {"id":"A030201","x":17,"y":1,"z":8},  {"id":"A030301","x":18,"y":1,"z":8},
+        {"id":"A030102","x":16,"y":2,"z":8},  {"id":"A030202","x":17,"y":2,"z":8},  {"id":"A030302","x":18,"y":2,"z":8},
+        {"id":"A030103","x":16,"y":3,"z":8},  {"id":"A030203","x":17,"y":3,"z":8},  {"id":"A030303","x":18,"y":3,"z":8},
+        {"id":"A030101","x":19,"y":1,"z":8},  {"id":"A030201","x":20,"y":1,"z":8},  {"id":"A030301","x":21,"y":1,"z":8},
+        {"id":"A030102","x":19,"y":2,"z":8},  {"id":"A030202","x":20,"y":2,"z":8},  {"id":"A030302","x":21,"y":2,"z":8},
+        {"id":"A030103","x":19,"y":3,"z":8},  {"id":"A030203","x":20,"y":3,"z":8},  {"id":"A030303","x":21,"y":3,"z":8},
+        {"id":"A030101","x":22,"y":1,"z":8},  {"id":"A030201","x":23,"y":1,"z":8},  {"id":"A030301","x":24,"y":1,"z":8},
+        {"id":"A030102","x":22,"y":2,"z":8},  {"id":"A030202","x":23,"y":2,"z":8},  {"id":"A030302","x":24,"y":2,"z":8},
+        {"id":"A030103","x":22,"y":3,"z":8},  {"id":"A030203","x":23,"y":3,"z":8},  {"id":"A030303","x":24,"y":3,"z":8},
+        {"id":"A030101","x":25,"y":1,"z":8},  {"id":"A030201","x":26,"y":1,"z":8},  {"id":"A030301","x":27,"y":1,"z":8},
+        {"id":"A030102","x":25,"y":2,"z":8},  {"id":"A030202","x":26,"y":2,"z":8},  {"id":"A030302","x":27,"y":2,"z":8},
+        {"id":"A030103","x":25,"y":3,"z":8},  {"id":"A030203","x":26,"y":3,"z":8},  {"id":"A030303","x":27,"y":3,"z":8},
+        {"id":"A030101","x":28,"y":1,"z":8},  {"id":"A030201","x":29,"y":1,"z":8},  {"id":"A030301","x":30,"y":1,"z":8},
+        {"id":"A030102","x":28,"y":2,"z":8},  {"id":"A030202","x":29,"y":2,"z":8},  {"id":"A030302","x":30,"y":2,"z":8},
+        {"id":"A030103","x":28,"y":3,"z":8},  {"id":"A030203","x":29,"y":3,"z":8},  {"id":"A030303","x":30,"y":3,"z":8},
+        {"id":"A030101","x":31,"y":1,"z":8},  {"id":"A030201","x":32,"y":1,"z":8},  {"id":"A030301","x":33,"y":1,"z":8},
+        {"id":"A030102","x":31,"y":2,"z":8},  {"id":"A030202","x":32,"y":2,"z":8},  {"id":"A030302","x":33,"y":2,"z":8},
+        {"id":"A030103","x":31,"y":3,"z":8},  {"id":"A030203","x":32,"y":3,"z":8},  {"id":"A030303","x":33,"y":3,"z":8},
+        {"id":"A030101","x":34,"y":1,"z":8},  {"id":"A030201","x":35,"y":1,"z":8},  {"id":"A030301","x":36,"y":1,"z":8},
+        {"id":"A030102","x":34,"y":2,"z":8},  {"id":"A030202","x":35,"y":2,"z":8},  {"id":"A030302","x":36,"y":2,"z":8},
+        {"id":"A030103","x":34,"y":3,"z":8},  {"id":"A030203","x":35,"y":3,"z":8},  {"id":"A030303","x":36,"y":3,"z":8},
+        {"id":"A030101","x":37,"y":1,"z":8},  {"id":"A030201","x":38,"y":1,"z":8},  {"id":"A030301","x":39,"y":1,"z":8},
+        {"id":"A030102","x":37,"y":2,"z":8},  {"id":"A030202","x":38,"y":2,"z":8},  {"id":"A030302","x":39,"y":2,"z":8},
+        {"id":"A030103","x":37,"y":3,"z":8},  {"id":"A030203","x":38,"y":3,"z":8},  {"id":"A030303","x":39,"y":3,"z":8},
+
+        {"id":"A030101","x":10,"y":1,"z":2},  {"id":"A030201","x":10,"y":1,"z":3},  {"id":"A030301","x":10,"y":1,"z":4},
+        {"id":"A030102","x":10,"y":2,"z":2},  {"id":"A030202","x":10,"y":2,"z":3},  {"id":"A030302","x":10,"y":2,"z":4},
+        {"id":"A030103","x":10,"y":3,"z":2},  {"id":"A030203","x":10,"y":3,"z":3},  {"id":"A030303","x":10,"y":3,"z":4},
+        {"id":"A030101","x":11,"y":1,"z":2},  {"id":"A030201","x":11,"y":1,"z":3},  {"id":"A030301","x":11,"y":1,"z":4},
+        {"id":"A030102","x":11,"y":2,"z":2},  {"id":"A030202","x":11,"y":2,"z":3},  {"id":"A030302","x":11,"y":2,"z":4},
+        {"id":"A030103","x":11,"y":3,"z":2},  {"id":"A030203","x":11,"y":3,"z":3},  {"id":"A030303","x":11,"y":3,"z":4},
+
+        {"id":"A030101","x":15,"y":1,"z":2},  {"id":"A030201","x":15,"y":1,"z":3},  {"id":"A030301","x":15,"y":1,"z":4},
+        {"id":"A030102","x":15,"y":2,"z":2},  {"id":"A030202","x":15,"y":2,"z":3},  {"id":"A030302","x":15,"y":2,"z":4},
+        {"id":"A030103","x":15,"y":3,"z":2},  {"id":"A030203","x":15,"y":3,"z":3},  {"id":"A030303","x":15,"y":3,"z":4},
+        {"id":"A030101","x":16,"y":1,"z":2},  {"id":"A030201","x":16,"y":1,"z":3},  {"id":"A030301","x":16,"y":1,"z":4},
+        {"id":"A030102","x":16,"y":2,"z":2},  {"id":"A030202","x":16,"y":2,"z":3},  {"id":"A030302","x":16,"y":2,"z":4},
+        {"id":"A030103","x":16,"y":3,"z":2},  {"id":"A030203","x":16,"y":3,"z":3},  {"id":"A030303","x":16,"y":3,"z":4},
+
+        {"id":"A030101","x":20,"y":1,"z":2},  {"id":"A030201","x":20,"y":1,"z":3},  {"id":"A030301","x":20,"y":1,"z":4},
+        {"id":"A030102","x":20,"y":2,"z":2},  {"id":"A030202","x":20,"y":2,"z":3},  {"id":"A030302","x":20,"y":2,"z":4},
+        {"id":"A030103","x":20,"y":3,"z":2},  {"id":"A030203","x":20,"y":3,"z":3},  {"id":"A030303","x":20,"y":3,"z":4},
+        {"id":"A030101","x":21,"y":1,"z":2},  {"id":"A030201","x":21,"y":1,"z":3},  {"id":"A030301","x":21,"y":1,"z":4},
+        {"id":"A030102","x":21,"y":2,"z":2},  {"id":"A030202","x":21,"y":2,"z":3},  {"id":"A030302","x":21,"y":2,"z":4},
+        {"id":"A030103","x":21,"y":3,"z":2},  {"id":"A030203","x":21,"y":3,"z":3},  {"id":"A030303","x":21,"y":3,"z":4},
+        
+        {"id":"A030101","x":25,"y":1,"z":2},  {"id":"A030201","x":25,"y":1,"z":3},  {"id":"A030301","x":25,"y":1,"z":4},
+        {"id":"A030102","x":25,"y":2,"z":2},  {"id":"A030202","x":25,"y":2,"z":3},  {"id":"A030302","x":25,"y":2,"z":4},
+        {"id":"A030103","x":25,"y":3,"z":2},  {"id":"A030203","x":25,"y":3,"z":3},  {"id":"A030303","x":25,"y":3,"z":4},
+        {"id":"A030101","x":26,"y":1,"z":2},  {"id":"A030201","x":26,"y":1,"z":3},  {"id":"A030301","x":26,"y":1,"z":4},
+        {"id":"A030102","x":26,"y":2,"z":2},  {"id":"A030202","x":26,"y":2,"z":3},  {"id":"A030302","x":26,"y":2,"z":4},
+        {"id":"A030103","x":26,"y":3,"z":2},  {"id":"A030203","x":26,"y":3,"z":3},  {"id":"A030303","x":26,"y":3,"z":4}, 
+        
+        {"id":"A030101","x":30,"y":1,"z":2},  {"id":"A030201","x":30,"y":1,"z":3},  {"id":"A030301","x":30,"y":1,"z":4},
+        {"id":"A030102","x":30,"y":2,"z":2},  {"id":"A030202","x":30,"y":2,"z":3},  {"id":"A030302","x":30,"y":2,"z":4},
+        {"id":"A030103","x":30,"y":3,"z":2},  {"id":"A030203","x":30,"y":3,"z":3},  {"id":"A030303","x":30,"y":3,"z":4},
+        {"id":"A030101","x":31,"y":1,"z":2},  {"id":"A030201","x":31,"y":1,"z":3},  {"id":"A030301","x":31,"y":1,"z":4},
+        {"id":"A030102","x":31,"y":2,"z":2},  {"id":"A030202","x":31,"y":2,"z":3},  {"id":"A030302","x":31,"y":2,"z":4},
+        {"id":"A030103","x":31,"y":3,"z":2},  {"id":"A030203","x":31,"y":3,"z":3},  {"id":"A030303","x":31,"y":3,"z":4},
+
+        {"id":"A030101","x":35,"y":1,"z":2},  {"id":"A030201","x":35,"y":1,"z":3},  {"id":"A030301","x":35,"y":1,"z":4},
+        {"id":"A030102","x":35,"y":2,"z":2},  {"id":"A030202","x":35,"y":2,"z":3},  {"id":"A030302","x":35,"y":2,"z":4},
+        {"id":"A030103","x":35,"y":3,"z":2},  {"id":"A030203","x":35,"y":3,"z":3},  {"id":"A030303","x":35,"y":3,"z":4},
+        {"id":"A030101","x":36,"y":1,"z":2},  {"id":"A030201","x":36,"y":1,"z":3},  {"id":"A030301","x":36,"y":1,"z":4},
+        {"id":"A030102","x":36,"y":2,"z":2},  {"id":"A030202","x":36,"y":2,"z":3},  {"id":"A030302","x":36,"y":2,"z":4},
+        {"id":"A030103","x":36,"y":3,"z":2},  {"id":"A030203","x":36,"y":3,"z":3},  {"id":"A030303","x":36,"y":3,"z":4},
+
+
+        {"id":"A030101","x":20,"y":1,"z":-4},  {"id":"A030201","x":20,"y":1,"z":-5},  {"id":"A030301","x":20,"y":1,"z":-6},
+        {"id":"A030102","x":20,"y":2,"z":-4},  {"id":"A030202","x":20,"y":2,"z":-5},  {"id":"A030302","x":20,"y":2,"z":-6},
+        {"id":"A030103","x":20,"y":3,"z":-4},  {"id":"A030203","x":20,"y":3,"z":-5},  {"id":"A030303","x":20,"y":3,"z":-6},
+        {"id":"A030101","x":21,"y":1,"z":-4},  {"id":"A030201","x":21,"y":1,"z":-5},  {"id":"A030301","x":21,"y":1,"z":-6},
+        {"id":"A030102","x":21,"y":2,"z":-4},  {"id":"A030202","x":21,"y":2,"z":-5},  {"id":"A030302","x":21,"y":2,"z":-6},
+        {"id":"A030103","x":21,"y":3,"z":-4},  {"id":"A030203","x":21,"y":3,"z":-5},  {"id":"A030303","x":21,"y":3,"z":-6},
+        
+        {"id":"A030101","x":25,"y":1,"z":-4},  {"id":"A030201","x":25,"y":1,"z":-5},  {"id":"A030301","x":25,"y":1,"z":-6},
+        {"id":"A030102","x":25,"y":2,"z":-4},  {"id":"A030202","x":25,"y":2,"z":-5},  {"id":"A030302","x":25,"y":2,"z":-6},
+        {"id":"A030103","x":25,"y":3,"z":-4},  {"id":"A030203","x":25,"y":3,"z":-5},  {"id":"A030303","x":25,"y":3,"z":-6},
+        {"id":"A030101","x":26,"y":1,"z":-4},  {"id":"A030201","x":26,"y":1,"z":-5},  {"id":"A030301","x":26,"y":1,"z":-6},
+        {"id":"A030102","x":26,"y":2,"z":-4},  {"id":"A030202","x":26,"y":2,"z":-5},  {"id":"A030302","x":26,"y":2,"z":-6},
+        {"id":"A030103","x":26,"y":3,"z":-4},  {"id":"A030203","x":26,"y":3,"z":-5},  {"id":"A030303","x":26,"y":3,"z":-6},        
+        
+        {"id":"A030101","x":30,"y":1,"z":-4},  {"id":"A030201","x":30,"y":1,"z":-5},  {"id":"A030301","x":30,"y":1,"z":-6},
+        {"id":"A030102","x":30,"y":2,"z":-4},  {"id":"A030202","x":30,"y":2,"z":-5},  {"id":"A030302","x":30,"y":2,"z":-6},
+        {"id":"A030103","x":30,"y":3,"z":-4},  {"id":"A030203","x":30,"y":3,"z":-5},  {"id":"A030303","x":30,"y":3,"z":-6},
+        {"id":"A030101","x":31,"y":1,"z":-4},  {"id":"A030201","x":31,"y":1,"z":-5},  {"id":"A030301","x":31,"y":1,"z":-6},
+        {"id":"A030102","x":31,"y":2,"z":-4},  {"id":"A030202","x":31,"y":2,"z":-5},  {"id":"A030302","x":31,"y":2,"z":-6},
+        {"id":"A030103","x":31,"y":3,"z":-4},  {"id":"A030203","x":31,"y":3,"z":-5},  {"id":"A030303","x":31,"y":3,"z":-6},
+
+        {"id":"A030101","x":35,"y":1,"z":-4},  {"id":"A030201","x":35,"y":1,"z":-5},  {"id":"A030301","x":35,"y":1,"z":-6},
+        {"id":"A030102","x":35,"y":2,"z":-4},  {"id":"A030202","x":35,"y":2,"z":-5},  {"id":"A030302","x":35,"y":2,"z":-6},
+        {"id":"A030103","x":35,"y":3,"z":-4},  {"id":"A030203","x":35,"y":3,"z":-5},  {"id":"A030303","x":35,"y":3,"z":-6},
+        {"id":"A030101","x":36,"y":1,"z":-4},  {"id":"A030201","x":36,"y":1,"z":-5},  {"id":"A030301","x":36,"y":1,"z":-6},
+        {"id":"A030102","x":36,"y":2,"z":-4},  {"id":"A030202","x":36,"y":2,"z":-5},  {"id":"A030302","x":36,"y":2,"z":-6},
+        {"id":"A030103","x":36,"y":3,"z":-4},  {"id":"A030203","x":36,"y":3,"z":-5},  {"id":"A030303","x":36,"y":3,"z":-6},
+
+
+
+
+
+
+            ];
+    var json1 = JSON.stringify(mkData);
+    return JSON.parse(json1);
+}
+
+
+</script>

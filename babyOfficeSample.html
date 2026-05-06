@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <title>Babylon Template</title>
+
+        <style>
+            html, body {
+                overflow: hidden;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            #renderCanvas {
+                width: 100%;
+                height: 100%;
+                touch-action: none;
+            }
+        </style>
+
+        <script src="https://cdn.babylonjs.com/babylon.js"></script>
+        <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.js"></script>
+        <script src="https://cdn.babylonjs.com/materialsLibrary/babylon.gridMaterial.js"></script>
+        <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
+
+    </head>
+
+   <body>
+    <!--shinobi1--><script type="text/javascript" src="//xa.shinobi.jp/ufo/190862403"></script><noscript><a href="//xa.shinobi.jp/bin/gg?190862403" target="_blank"><img src="//xa.shinobi.jp/bin/ll?190862403" border="0"></a><br><span style="font-size:9px"><img style="margin:0;vertical-align:text-bottom;" src="//img.shinobi.jp/tadaima/fj.gif" width="19" height="11"> </span></noscript><!--shinobi2-->
+    <div class="divMgnLeft">　【操作】 左ドラッグ：視点回転　右ドラッグ：視点平行移動　ホイール：拡大縮小 　マウスカーソルを重ねると情報表示　クリックは何もしません
+        <a href="./index.html">戻る</a></div>
+	<canvas id="renderCanvas" style="height:1000px"></canvas>
+	<script>
+        const canvas = document.getElementById("renderCanvas"); // Get the canvas element
+        const engine = new BABYLON.Engine(canvas, true); // Generate the BABYLON 3D engine
+        const createScene = function () {
+            const scene = new BABYLON.Scene(engine);
+
+const camera = new BABYLON.ArcRotateCamera("Camera", 0, 0, 0, BABYLON.Vector3.Zero(), scene);
+camera.position = new BABYLON.Vector3(130, 6, 30);
+camera.setTarget(new BABYLON.Vector3(160 / 2, -10, 16 / 2));
+camera.attachControl(canvas, true);
+camera.wheelDeltaPercentage = 0.005;
+
+const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+light.intensity = 0.8;
+
+
+
+const extensions = [
+    "./x/s/Y/k/xsYk8.jpg", // "/../../skybox/dark-s_px.jpg", 
+    "./1/g/O/W/1gOWa.jpg", // "/../../skybox/dark-s_py.jpg", 
+    "./m/7/s/7/m7s7q.jpg", // "/../../skybox/dark-s_pz.jpg", 
+    "./4/x/e/H/4xeHN.jpg", // "/../../skybox/dark-s_nx.jpg", 
+    "./g/V/E/9/gVE9m.jpg", // "/../../skybox/dark-s_ny.jpg", 
+    "./f/D/1/C/fD1Cf.jpg"  // "/../../skybox/dark-s_nz.jpg"
+];
+
+
+// Our built-in 'ground' shape.
+const ground = BABYLON.MeshBuilder.CreateBox("ground", { width: 160, height: 0.1, depth: 46 }, scene);
+ground.position = new BABYLON.Vector3(80, 0, 23);
+
+const groundMaterial = new BABYLON.GridMaterial("groundMaterial", scene);
+groundMaterial.majorUnitFrequency = 5;
+groundMaterial.minorUnitVisibility = 0.45;
+groundMaterial.gridRatio = 0.5;
+groundMaterial.mainColor = new BABYLON.Color3(0, 0.05, 0.2);
+groundMaterial.lineColor = new BABYLON.Color3(0, 1.0, 1.0);
+groundMaterial.opacity = 0.98;
+
+ground.material = groundMaterial;
+ground.material.wireframe = false;
+
+const wallMaterial = new BABYLON.StandardMaterial("wallMaterial", scene);
+wallMaterial.diffuseColor = new BABYLON.Color3(1, 0, 1);
+wallMaterial.specularColor = new BABYLON.Color3(0.5, 0.6, 0.87);
+wallMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
+wallMaterial.ambientColor = new BABYLON.Color3(0.23, 0.98, 0.53);
+wallMaterial.alpha = 0.5;
+
+const doorMaterial = new BABYLON.StandardMaterial("doorMaterial", scene);
+doorMaterial.diffuseColor = new BABYLON.Color3(0.68, 0.51, 0.01);
+doorMaterial.specularColor = new BABYLON.Color3(0.5, 0.6, 0.87);
+doorMaterial.emissiveColor = new BABYLON.Color3(0.75, 0.24, 0.24);
+doorMaterial.ambientColor = new BABYLON.Color3(0.23, 0.98, 0.53);
+doorMaterial.alpha = 0.9;
+
+
+
+let bDt = getWallData();
+for (let i = 0; bDt.length > i; i++) {
+    createBox(bDt[i].id, bDt[i].x1, bDt[i].y1, bDt[i].z1, bDt[i].x2, bDt[i].y2, bDt[i].z2, wallMaterial);
+}
+
+let pDt = getPillarData();
+for (let i = 0; pDt.length > i; i++) {
+    createPillar(pDt[i].id, pDt[i].x, pDt[i].y, pDt[i].z, pDt[i].r, pDt[i].h, pDt[i].shape, groundMaterial);
+}
+
+
+let brDt = getDoorData();
+for (let i = 0; brDt.length > i; i++) {
+    createBox(brDt[i].id, brDt[i].x1, brDt[i].y1, brDt[i].z1, brDt[i].x2, brDt[i].y2, brDt[i].z2, wallMaterial);
+}
+
+
+BABYLON.SceneLoader.ImportMeshAsync("", "https://raw.githubusercontent.com/ykoba079/sample1/master/", "officeDesk3.glb").then((result) => {
+    let mesh = result.meshes[0]; 
+    let dsDt = getDeskData();
+    for (let i = 0; dsDt.length > i; i++) {
+        var clonedMesh = mesh.clone('clonedMesh'); 
+            clonedMesh.scaling.x = 1.2;
+            clonedMesh.scaling.y = 1.2;
+            clonedMesh.scaling.z = 0.94;
+            clonedMesh.position.x = dsDt[i].x;
+            clonedMesh.position.y = dsDt[i].y;
+            clonedMesh.position.z = dsDt[i].z;
+            clonedMesh.rotate (BABYLON.Axis.Y,  dsDt[i].rt, BABYLON.Space.WORLD);;
+    }
+});
+let pcDt = getPcData();
+BABYLON.SceneLoader.ImportMeshAsync("", "https://raw.githubusercontent.com/ykoba079/sample1/master/", "nootbookpcL.glb").then((result) => {
+    let mesh = result.meshes[0]; 
+    let iyy = -0.01;
+    for (let i = 0; pcDt.length > i; i++) {
+        if(pcDt[i].type =="1" && pcDt[i].err !="1"){
+            let clonedMesh = mesh.clone('clonedMesh'); 
+            
+            clonedMesh.position.x = pcDt[i].x;
+            clonedMesh.position.y = pcDt[i].y + iyy;
+            clonedMesh.position.z = pcDt[i].z;
+            clonedMesh.rotate (BABYLON.Axis.Y,  pcDt[i].rt, BABYLON.Space.WORLD);;
+            clonedMesh.sid = pcDt[i].SID;
+            clonedMesh.user = pcDt[i].user;
+            clonedMesh.info = pcDt[i].info;
+            clonedMesh.metadata = { id: "value"};
+        }
+    }
+});
+
+BABYLON.SceneLoader.ImportMeshAsync("", "https://raw.githubusercontent.com/ykoba079/sample1/master/", "nootbookpcL.glb").then((result) => {
+    let mesh = result.meshes[0]; 
+    for (var k = 0; k < result.meshes.length; k++) {
+        result.meshes[k].material = doorMaterial;
+    }
+    let iyy = -0.01;
+    for (let i = 0; pcDt.length > i; i++) {
+        if(pcDt[i].type =="1" && pcDt[i].err =="1"){
+            let clonedMesh = mesh.clone('clonedMesh'); 
+            
+            clonedMesh.position.x = pcDt[i].x;
+            clonedMesh.position.y = pcDt[i].y + iyy;
+            clonedMesh.position.z = pcDt[i].z;
+            clonedMesh.rotate (BABYLON.Axis.Y,  pcDt[i].rt, BABYLON.Space.WORLD);;
+            clonedMesh.sid = pcDt[i].SID;
+            clonedMesh.user = pcDt[i].user;
+            clonedMesh.info = pcDt[i].info;
+            clonedMesh.metadata = { id: "value"};
+        }
+    }
+});
+
+BABYLON.SceneLoader.ImportMeshAsync("", "https://raw.githubusercontent.com/ykoba079/sample1/master/", "desktoppcL.glb").then((result) => {
+    let mesh = result.meshes[0]; 
+    let    iyy=-0.28;
+    for (let i = 0; pcDt.length > i; i++) {
+        if(pcDt[i].type !="1" && pcDt[i].err !="1"){
+            let clonedMesh = mesh.clone('clonedMesh'); 
+            clonedMesh.position.x = pcDt[i].x;
+            clonedMesh.position.y = pcDt[i].y + iyy;
+            clonedMesh.position.z = pcDt[i].z;
+            clonedMesh.rotate (BABYLON.Axis.Y,  pcDt[i].rt, BABYLON.Space.WORLD);;
+            clonedMesh.sid = pcDt[i].SID;
+            clonedMesh.user = pcDt[i].user;
+            clonedMesh.info = pcDt[i].info;
+            clonedMesh.metadata = { id: "value"};
+        }
+    }
+});
+BABYLON.SceneLoader.ImportMeshAsync("", "https://raw.githubusercontent.com/ykoba079/sample1/master/", "desktoppcL.glb").then((result) => {
+    let mesh = result.meshes[0]; 
+    for (var k = 0; k < result.meshes.length; k++) {
+        result.meshes[k].material = doorMaterial;
+    }
+    
+    let    iyy=-0.28;
+    for (let i = 0; pcDt.length > i; i++) {
+        if(pcDt[i].type !="1" && pcDt[i].err =="1"){
+            let clonedMesh = mesh.clone('clonedMesh'); 
+            clonedMesh.position.x = pcDt[i].x;
+            clonedMesh.position.y = pcDt[i].y + iyy;
+            clonedMesh.position.z = pcDt[i].z;
+            clonedMesh.rotate (BABYLON.Axis.Y,  pcDt[i].rt, BABYLON.Space.WORLD);;
+            clonedMesh.sid = pcDt[i].SID;
+            clonedMesh.user = pcDt[i].user;
+            clonedMesh.info = pcDt[i].info;
+            clonedMesh.metadata = { id: "value"};
+        }
+    }
+});
+
+
+let guiCanvas = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    infoButton = BABYLON.GUI.Button.CreateSimpleButton("infoButton", "");
+    infoButton.width = "400px"
+    infoButton.height = "80px";
+    infoButton.top = "10px";
+    infoButton.color = "white";
+    infoButton.cornerRadius = 5;
+    infoButton.background = "green";
+    infoButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+    infoButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    guiCanvas.addControl(infoButton);
+
+scene.onPointerMove = function castRay(){
+
+    var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, BABYLON.Matrix.Identity(), camera);    
+    var hit = scene.pickWithRay(ray);
+
+    if (hit.pickedMesh && (hit.pickedMesh.name.indexOf("Pc") != -1 || hit.pickedMesh.name.indexOf("pc") != -1)){
+        
+        createInfoButton(hit.pickedMesh.parent);
+    }
+}
+
+// ターゲットブース
+
+const radius = 2;
+//const angle = Math.PI / 3;
+const angle = Math.PI / 10;
+const particleSystem = new BABYLON.ParticleSystem("particles", 2000, scene);
+particleSystem.particleTexture = new BABYLON.Texture("textures/flare.png", scene);
+
+particleSystem.emitter = BABYLON.Vector3.Zero(); // the starting location
+particleSystem.emitter.x = 109;
+particleSystem.emitter.z = 12.5;
+
+particleSystem.color1 = new BABYLON.Color4(0.77, 0.81, 0.45);
+particleSystem.color2 = new BABYLON.Color4(0.89, 0.36, 0.73);
+particleSystem.colorDead = new BABYLON.Color4(0, 0, 0.2, 0.0);
+particleSystem.minSize = 0.1;
+particleSystem.maxSize = 0.5;
+particleSystem.minLifeTime = 0.3;
+particleSystem.maxLifeTime = 1.5;
+particleSystem.emitRate = 1000;
+particleSystem.createConeEmitter(radius, angle);
+particleSystem.minEmitPower = 2;
+particleSystem.maxEmitPower = 4;
+particleSystem.updateSpeed = 0.005;
+particleSystem.start();
+
+            return scene;
+        };
+        const scene = createScene(); 
+        engine.runRenderLoop(function () {
+                scene.render();
+        });
+
+        window.addEventListener("resize", function () {
+                engine.resize();
+        });
+
+
+
+
+
+
+
+        function createInfoButton(pickedMesh){
+    
+    infoButton.textBlock.text= "SID："+ pickedMesh.sid + "\n" + "使用者："+pickedMesh.user + "\n" + ""+pickedMesh.info;
+}
+function createBox(id, x1, y1, z1, x2, y2, z2, mate) {
+if (x1 == x2) { x2 = x2 + 0.2 }
+if (z1 == z2) { z2 = z2 + 0.2 }
+if (x1 > x2) { [x1, x2] = [x2, x1]; }
+if (z1 > z2) { [z1, z2] = [z2, z1]; }
+
+if (id == null || id == undefined) {
+    id = "";
+}
+
+const box = BABYLON.MeshBuilder.CreateBox(`box_${id}`, { width: Math.abs(x1 - x2), height: Math.abs(y1 - y2), depth: Math.abs(z1 - z2) })
+box.position.x = x1 + Math.abs(x1 - x2) / 2;
+box.position.y = y1 + Math.abs(y1 - y2) / 2;
+box.position.z = z1 + Math.abs(z1 - z2) / 2;
+box.material = mate;
+}
+
+function createBooth(id, x1, y1, z1, x2, y2, z2, mate) {
+if (x1 == x2) { x2 = x2 + 0.2 }
+if (z1 == z2) { z2 = z2 + 0.2 }
+if (x1 > x2) { [x1, x2] = [x2, x1]; }
+if (z1 > z2) { [z1, z2] = [z2, z1]; }
+
+if (id == null || id == undefined) {
+    id = "";
+}
+
+const box = BABYLON.MeshBuilder.CreateBox(`booth_${id}`, { width: Math.abs(x1 - x2), height: Math.abs(y1 - y2), depth: Math.abs(z1 - z2) })
+box.position.x = x1 + Math.abs(x1 - x2) / 2;
+box.position.y = y1 + Math.abs(y1 - y2) / 2;
+box.position.z = z1 + Math.abs(z1 - z2) / 2;
+box.material = mate;
+}
+
+function createPillar(id, x, y, z, r, h, shape, mate) {
+if (shape == "box") {
+    let pillar = BABYLON.MeshBuilder.CreateBox(`pillar_x${x}_z${z}`, { height: h, width: r, depth: r });
+    pillar.position = new BABYLON.Vector3(x, y + h / 2, z);
+
+} else {
+    //let pillar = BABYLON.MeshBuilder.CreateCylinder(`pillar_x${x}_z${z}`, { height: h, width: r, depth: r });
+    let pillar = BABYLON.MeshBuilder.CreateCylinder(`pillar_x${x}_z${z}`, { height: h, diameter: r });
+    pillar.position = new BABYLON.Vector3(x, y + h / 2, z);
+}
+}
+
+function getPcData(){
+let boxData = [
+{"type":"1","SID":"5D8G9J1R3T2F","x":122.4,"y":0.6,"z":10.5,"rt":1.570795,"user":"鈴木 裕子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7S6B4A9N0Q1","x":122.4,"y":0.6,"z":12.5,"rt":1.570795,"user":"田中 太郎(GTP出身)","info":"","err":""},
+{"type":"2","SID":"2W1E9X7I3K5","x":122.4,"y":0.9,"z":14.5,"rt":1.570795,"user":"山田 美佳(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4V8H2M6C1P9","x":122.4,"y":0.6,"z":16.5,"rt":1.570795,"user":"佐藤 隆司(GTP出身)","info":"","err":""},
+{"type":"1","SID":"3L9O5Y7U4T2","x":122.4,"y":0.6,"z":18.5,"rt":1.570795,"user":"伊藤 恵美子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6A2B8Z0X3C1","x":122.4,"y":0.6,"z":20.5,"rt":1.570795,"user":"渡辺 光男(GTP出身)","info":"保守期限　2023/05/30","err":"1"},
+{"type":"2","SID":"9K5J7Q4W6E8","x":122.4,"y":0.9,"z":24.5,"rt":1.570795,"user":"中村 亜美(GTP出身)","info":"保守期限　2023/05/30","err":"1"},
+{"type":"2","SID":"1P3O5I7U9Y2","x":122.4,"y":0.9,"z":26.5,"rt":1.570795,"user":"小林 健太(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":122.4,"y":0.6,"z":28.5,"rt":1.570795,"user":"木村 美穂(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"7Q5W3E9R1T2","x":120.9,"y":0.6,"z":10.5,"rt":4.712385,"user":"佐々木 美咲(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2A6S8D4F0G1","x":120.9,"y":0.6,"z":12.5,"rt":4.712385,"user":"斎藤 健太郎(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9H7J5K1L3M2","x":120.9,"y":0.6,"z":14.5,"rt":4.712385,"user":"高橋 美沙子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"3N1B6V2C4X8","x":120.9,"y":0.6,"z":16.5,"rt":4.712385,"user":"吉田 正人(GTP出身)","info":"","err":""},
+{"type":"2","SID":"1Q3W5E7R9T2","x":120.9,"y":0.9,"z":18.5,"rt":4.712385,"user":"山口 美香(GTP出身)","info":"","err":""},
+{"type":"1","SID":"5Y7U9I3O2P0","x":120.9,"y":0.6,"z":20.5,"rt":4.712385,"user":"田村 裕二(GTP出身)","info":"","err":""},
+{"type":"2","SID":"8M6N4B2V0C1","x":120.9,"y":0.9,"z":24.5,"rt":4.712385,"user":"山本 愛子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2X4Z6L8K9J1","x":120.9,"y":0.6,"z":26.5,"rt":4.712385,"user":"中島 健一(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":120.9,"y":0.6,"z":28.5,"rt":4.712385,"user":"加藤 美奈子(GTP出身)","info":"","err":""},
+
+{"type":"2","SID":"6H8J4K2L0M1","x":115.9,"y":0.9,"z":10.5,"rt":1.570795,"user":"森田 美穂子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":115.9,"y":0.6,"z":12.5,"rt":1.570795,"user":"山崎 裕介(GTP出身)","info":"","err":""},
+{"type":"2","SID":"7Q5W3E9R1T2","x":115.9,"y":0.9,"z":14.5,"rt":1.570795,"user":"原田 亜美(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":115.9,"y":0.6,"z":16.5,"rt":1.570795,"user":"藤田 健一郎(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":115.9,"y":0.6,"z":18.5,"rt":1.570795,"user":"井上 美香子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2Z4L6K8J0H1","x":115.9,"y":0.6,"z":20.5,"rt":1.570795,"user":"大野 健介(GTP出身)","info":"","err":""},
+{"type":"2","SID":"9Q7W5E3R1T2","x":115.9,"y":0.9,"z":22.5,"rt":1.570795,"user":"小川 美樹(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1A3S5D7F9G0","x":115.9,"y":0.6,"z":24.5,"rt":1.570795,"user":"菊地 光男(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6H8J4K2L0M1","x":115.9,"y":0.6,"z":26.5,"rt":1.570795,"user":"高木 美咲(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":115.9,"y":0.6,"z":28.5,"rt":1.570795,"user":"松本 裕太(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"1Y3U5I7O9P2","x":114.4,"y":0.6,"z":10.5,"rt":4.712385,"user":"岡田 健司(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":114.4,"y":0.6,"z":12.5,"rt":4.712385,"user":"森本 亜美(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2Z4L6K8J0H1","x":114.4,"y":0.6,"z":14.5,"rt":4.712385,"user":"永田 裕介(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":114.4,"y":0.6,"z":16.5,"rt":4.712385,"user":"吉川 美智子(GTP出身)","info":"","err":""},
+{"type":"2","SID":"1A3S5D7F9G0","x":114.4,"y":0.9,"z":18.5,"rt":4.712385,"user":"石田 光男(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6H8J4K2L0M1","x":114.4,"y":0.6,"z":20.5,"rt":4.712385,"user":"佐野 美咲(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":114.4,"y":0.6,"z":22.5,"rt":4.712385,"user":"杉山 裕樹(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7Q5W3E9R1T2","x":114.4,"y":0.6,"z":24.5,"rt":4.712385,"user":"前田 美里(GTP出身)","info":"Windwosアップデート不備","err":"1"},
+{"type":"1","SID":"1Y3U5I7O9P2","x":114.4,"y":0.6,"z":26.5,"rt":4.712385,"user":"山田 健太(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":114.4,"y":0.6,"z":28.5,"rt":4.712385,"user":"長谷川 亜美(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"9Q7W5E3R1T2","x":109.4,"y":0.6,"z":10.5,"rt":1.570795,"user":"福田 美香子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1A3S5D7F9G0","x":109.4,"y":0.6,"z":12.5,"rt":1.570795,"user":"高田 裕介(GTP出身)","info":"ウイルスを検出しました！！","err":"1"},
+{"type":"2","SID":"6H8J4K2L0M1","x":109.4,"y":0.9,"z":14.5,"rt":1.570795,"user":"長島 美佳(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":109.4,"y":0.6,"z":16.5,"rt":1.570795,"user":"小西 健太郎(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7Q5W3E9R1T2","x":109.4,"y":0.6,"z":18.5,"rt":1.570795,"user":"関根 美奈子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":109.4,"y":0.6,"z":20.5,"rt":1.570795,"user":"柴田 光男(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"2Z4L6K8J0H1","x":109.4,"y":0.6,"z":24.5,"rt":1.570795,"user":"谷口 健一(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":109.4,"y":0.6,"z":26.5,"rt":1.570795,"user":"佐久間 美穂子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1A3S5D7F9G0","x":109.4,"y":0.6,"z":28.5,"rt":1.570795,"user":"松田 光男(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"4N2B6V8C0X3","x":107.9,"y":0.6,"z":10.5,"rt":4.712385,"user":"河野 裕太(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7Q5W3E9R1T2","x":107.9,"y":0.6,"z":12.5,"rt":4.712385,"user":"金子 亜美(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":107.9,"y":0.6,"z":14.5,"rt":4.712385,"user":"田口 健太郎(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":107.9,"y":0.6,"z":16.5,"rt":4.712385,"user":"中嶋 美香子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2Z4L6K8J0H1","x":107.9,"y":0.6,"z":18.5,"rt":4.712385,"user":"門脇 光男(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":107.9,"y":0.6,"z":20.5,"rt":4.712385,"user":"平田 美奈子(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"6H8J4K2L0M1","x":107.9,"y":0.6,"z":24.5,"rt":4.712385,"user":"矢野 美佳(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":107.9,"y":0.6,"z":26.5,"rt":4.712385,"user":"大島 健太(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7Q5W3E9R1T2","x":107.9,"y":0.6,"z":28.5,"rt":4.712385,"user":"山口 美咲(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"8M6N4B2V1C3","x":102.9,"y":0.6,"z":10.5,"rt":1.570795,"user":"伊藤 美香子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2Z4L6K8J0H1","x":102.9,"y":0.6,"z":12.5,"rt":1.570795,"user":"渡部 光男(GTP出身)","info":"Windwosアップデート不備","err":"1"},
+{"type":"1","SID":"9Q7W5E3R1T2","x":102.9,"y":0.6,"z":14.5,"rt":1.570795,"user":"中村 美奈子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1A3S5D7F9G0","x":102.9,"y":0.6,"z":16.5,"rt":1.570795,"user":"小野 健一(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6H8J4K2L0M1","x":102.9,"y":0.6,"z":18.5,"rt":1.570795,"user":"田辺 美穂(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":102.9,"y":0.6,"z":20.5,"rt":1.570795,"user":"坂本 裕介(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7Q5W3E9R1T2","x":102.9,"y":0.6,"z":22.5,"rt":1.570795,"user":"西田 美咲(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":102.9,"y":0.6,"z":24.5,"rt":1.570795,"user":"佐伯 光男(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":102.9,"y":0.6,"z":26.5,"rt":1.570795,"user":"山内 美佳(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2Z4L6K8J0H1","x":102.9,"y":0.6,"z":28.5,"rt":1.570795,"user":"高田 裕太郎(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"1A3S5D7F9G0","x":101.4,"y":0.6,"z":10.5,"rt":4.712385,"user":"山田 光男(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6H8J4K2L0M1","x":101.4,"y":0.6,"z":12.5,"rt":4.712385,"user":"井上 美奈子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":101.4,"y":0.6,"z":14.5,"rt":4.712385,"user":"加藤 裕樹(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7Q5W3E9R1T2","x":101.4,"y":0.6,"z":16.5,"rt":4.712385,"user":"小宮 美里(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":101.4,"y":0.6,"z":18.5,"rt":4.712385,"user":"川口 健太(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":101.4,"y":0.6,"z":20.5,"rt":4.712385,"user":"山崎 美咲(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2Z4L6K8J0H1","x":101.4,"y":0.6,"z":22.5,"rt":4.712385,"user":"原田 光男(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":101.4,"y":0.6,"z":24.5,"rt":4.712385,"user":"藤田 美香子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1A3S5D7F9G0","x":101.4,"y":0.6,"z":26.5,"rt":4.712385,"user":"浜田 健介(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6H8J4K2L0M1","x":101.4,"y":0.6,"z":28.5,"rt":4.712385,"user":"高橋 美穂(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"7Q5W3E9R1T2","x":96.4,"y":0.6,"z":10.5,"rt":1.570795,"user":"木村 美奈子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":96.4,"y":0.6,"z":12.5,"rt":1.570795,"user":"林 裕介(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":96.4,"y":0.6,"z":14.5,"rt":1.570795,"user":"佐々木 美佳(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2Z4L6K8J0H1","x":96.4,"y":0.6,"z":16.5,"rt":1.570795,"user":"斎藤 光太郎(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":96.4,"y":0.6,"z":18.5,"rt":1.570795,"user":"渡辺 美沙子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1A3S5D7F9G0","x":96.4,"y":0.6,"z":20.5,"rt":1.570795,"user":"中村 健一(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6H8J4K2L0M1","x":96.4,"y":0.6,"z":22.5,"rt":1.570795,"user":"小林 美穂子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":96.4,"y":0.6,"z":24.5,"rt":1.570795,"user":"木下 光男(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7Q5W3E9R1T2","x":96.4,"y":0.6,"z":26.5,"rt":1.570795,"user":"田村 美香(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":96.4,"y":0.6,"z":28.5,"rt":1.570795,"user":"山本 裕二(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"2Z4L6K8J0H1","x":94.9,"y":0.6,"z":10.5,"rt":4.712385,"user":"加藤 光太(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":94.9,"y":0.6,"z":12.5,"rt":4.712385,"user":"青木 美奈子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1A3S5D7F9G0","x":94.9,"y":0.6,"z":14.5,"rt":4.712385,"user":"森田 裕樹(GTP出身)","info":"","err":""},
+{"type":"1","SID":"5D8G9J1R3T2F","x":94.9,"y":0.6,"z":16.5,"rt":4.712385,"user":"山崎 亜美(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7S6B4A9N0Q1","x":94.9,"y":0.6,"z":18.5,"rt":4.712385,"user":"原田 健太郎(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2W1E9X7I3K5","x":94.9,"y":0.6,"z":20.5,"rt":4.712385,"user":"藤田 美穂子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4V8H2M6C1P9","x":94.9,"y":0.6,"z":22.5,"rt":4.712385,"user":"井上 光男(GTP出身)","info":"","err":""},
+{"type":"1","SID":"3L9O5Y7U4T2","x":94.9,"y":0.6,"z":24.5,"rt":4.712385,"user":"大野 美咲(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6A2B8Z0X3C1","x":94.9,"y":0.6,"z":26.5,"rt":4.712385,"user":"小川 美香(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9K5J7Q4W6E8","x":94.9,"y":0.6,"z":28.5,"rt":4.712385,"user":"菊地 裕太(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"8M6N4B2V1C3","x":89.9,"y":0.6,"z":10.5,"rt":1.570795,"user":"松本 光男(GTP出身)","info":"","err":""},
+{"type":"1","SID":"0X2Z4L6K8J9","x":89.9,"y":0.6,"z":12.5,"rt":1.570795,"user":"中川 美香子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7Q5W3E9R1T2","x":89.9,"y":0.6,"z":14.5,"rt":1.570795,"user":"岡田 裕介(GTP出身)","info":"","err":""},
+{"type":"","SID":"2A6S8D4F0G1","x":89.9,"y":0.9,"z":16.5,"rt":1.570795,"user":"森本 美咲(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9H7J5K1L3M2","x":89.9,"y":0.6,"z":18.5,"rt":1.570795,"user":"永田 光太郎(GTP出身)","info":"Windwosアップデート不備","err":"1"},
+{"type":"1","SID":"3N1B6V2C4X8","x":89.9,"y":0.6,"z":20.5,"rt":1.570795,"user":"吉川 美奈子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Q3W5E7R9T2","x":89.9,"y":0.6,"z":22.5,"rt":1.570795,"user":"石田 美香(GTP出身)","info":"Windwosアップデート不備","err":"1"},
+{"type":"1","SID":"5Y7U9I3O2P0","x":89.9,"y":0.6,"z":24.5,"rt":1.570795,"user":"佐野 美穂子(GTP出身)","info":"","err":""},
+{"type":"2","SID":"8M6N4B2V0C1","x":89.9,"y":0.9,"z":26.5,"rt":1.570795,"user":"杉山 裕介(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2X4Z6L8K9J1","x":89.9,"y":0.6,"z":28.5,"rt":1.570795,"user":"前田 美佳(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"1A3S5D7F9G0","x":88.4,"y":0.6,"z":10.5,"rt":4.712385,"user":"長谷川 亜美子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6H8J4K2L0M1","x":88.4,"y":0.6,"z":12.5,"rt":4.712385,"user":"西村 光太(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":88.4,"y":0.6,"z":14.5,"rt":4.712385,"user":"福田 美穂(GTP出身)","info":"","err":""},
+{"type":"","SID":"7Q5W3E9R1T2","x":88.4,"y":0.9,"z":16.5,"rt":4.712385,"user":"高田 裕二(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":88.4,"y":0.6,"z":18.5,"rt":4.712385,"user":"長島 美香子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":88.4,"y":0.6,"z":20.5,"rt":4.712385,"user":"鈴木 裕子(GTP出身)","info":"","err":""},
+{"type":"2","SID":"2Z4L6K8J0H1","x":88.4,"y":0.9,"z":22.5,"rt":4.712385,"user":"田中 太郎(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":88.4,"y":0.6,"z":24.5,"rt":4.712385,"user":"山田 美佳(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1A3S5D7F9G0","x":88.4,"y":0.6,"z":26.5,"rt":4.712385,"user":"佐藤 隆司(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6H8J4K2L0M1","x":88.4,"y":0.6,"z":28.5,"rt":4.712385,"user":"伊藤 恵美子(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"7Q5W3E9R1T2","x":83.4,"y":0.6,"z":10.5,"rt":1.570795,"user":"中村 亜美(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":83.4,"y":0.6,"z":12.5,"rt":1.570795,"user":"小林 健太(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":83.4,"y":0.6,"z":14.5,"rt":1.570795,"user":"木村 美穂(GTP出身)","info":"","err":""},
+{"type":"","SID":"2Z4L6K8J0H1","x":83.4,"y":0.9,"z":16.5,"rt":1.570795,"user":"林 賢一(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":83.4,"y":0.6,"z":18.5,"rt":1.570795,"user":"佐々木 美咲(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"6H8J4K2L0M1","x":81.9,"y":0.6,"z":10.5,"rt":4.712385,"user":"高橋 美沙子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":81.9,"y":0.6,"z":12.5,"rt":4.712385,"user":"吉田 正人(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7Q5W3E9R1T2","x":81.9,"y":0.6,"z":14.5,"rt":4.712385,"user":"山口 美香(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":81.9,"y":0.6,"z":16.5,"rt":4.712385,"user":"田村 裕二(GTP出身)","info":"1ヶ月電源が入っていません","err":"1"},
+{"type":"","SID":"8M6N4B2V1C3","x":81.9,"y":0.9,"z":18.5,"rt":4.712385,"user":"山本 愛子(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"9Q7W5E3R1T2","x":76.9,"y":0.6,"z":10.5,"rt":1.570795,"user":"加藤 美奈子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1A3S5D7F9G0","x":76.9,"y":0.6,"z":12.5,"rt":1.570795,"user":"青木 光太郎(GTP出身)","info":"","err":""},
+{"type":"","SID":"6H8J4K2L0M1","x":76.9,"y":0.9,"z":14.5,"rt":1.570795,"user":"森田 美穂子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":76.9,"y":0.6,"z":16.5,"rt":1.570795,"user":"山崎 裕介(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7Q5W3E9R1T2","x":76.9,"y":0.6,"z":18.5,"rt":1.570795,"user":"原田 亜美(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"8M6N4B2V1C3","x":75.4,"y":0.6,"z":10.5,"rt":4.712385,"user":"井上 美香子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2Z4L6K8J0H1","x":75.4,"y":0.6,"z":12.5,"rt":4.712385,"user":"大野 健介(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":75.4,"y":0.6,"z":14.5,"rt":4.712385,"user":"小川 美樹(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1A3S5D7F9G0","x":75.4,"y":0.6,"z":16.5,"rt":4.712385,"user":"菊地 光男(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6H8J4K2L0M1","x":75.4,"y":0.6,"z":18.5,"rt":4.712385,"user":"高木 美咲(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"7Q5W3E9R1T2","x":70.4,"y":0.6,"z":10.5,"rt":1.570795,"user":"中川 美穂子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":70.4,"y":0.6,"z":12.5,"rt":1.570795,"user":"岡田 健司(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":70.4,"y":0.6,"z":14.5,"rt":1.570795,"user":"森本 亜美(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2Z4L6K8J0H1","x":70.4,"y":0.6,"z":16.5,"rt":1.570795,"user":"永田 裕介(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":70.4,"y":0.6,"z":18.5,"rt":1.570795,"user":"吉川 美智子(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"6H8J4K2L0M1","x":68.9,"y":0.6,"z":10.5,"rt":4.712385,"user":"佐野 美咲(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":68.9,"y":0.6,"z":12.5,"rt":4.712385,"user":"杉山 裕樹(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7Q5W3E9R1T2","x":68.9,"y":0.6,"z":14.5,"rt":4.712385,"user":"前田 美里(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":68.9,"y":0.6,"z":16.5,"rt":4.712385,"user":"山田 健太(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":68.9,"y":0.6,"z":18.5,"rt":4.712385,"user":"長谷川 亜美(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"9Q7W5E3R1T2","x":63.9,"y":0.6,"z":10.5,"rt":1.570795,"user":"福田 美香子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1A3S5D7F9G0","x":63.9,"y":0.6,"z":12.5,"rt":1.570795,"user":"高田 裕介(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6H8J4K2L0M1","x":63.9,"y":0.6,"z":14.5,"rt":1.570795,"user":"長島 美佳(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":63.9,"y":0.6,"z":16.5,"rt":1.570795,"user":"小西 健太郎(GTP出身)","info":"","err":""},
+{"type":"1","SID":"7Q5W3E9R1T2","x":63.9,"y":0.6,"z":18.5,"rt":1.570795,"user":"関根 美奈子(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"8M6N4B2V1C3","x":62.4,"y":0.6,"z":10.5,"rt":4.712385,"user":"宮本 美沙子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"2Z4L6K8J0H1","x":62.4,"y":0.6,"z":12.5,"rt":4.712385,"user":"谷口 健一(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":62.4,"y":0.6,"z":14.5,"rt":4.712385,"user":"佐久間 美穂子(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1A3S5D7F9G0","x":62.4,"y":0.6,"z":16.5,"rt":4.712385,"user":"松田 光男(GTP出身)","info":"","err":""},
+{"type":"1","SID":"6H8J4K2L0M1","x":62.4,"y":0.6,"z":18.5,"rt":4.712385,"user":"岡本 美咲(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"7Q5W3E9R1T2","x":57.4,"y":0.6,"z":10.5,"rt":1.570795,"user":"金子 亜美(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":57.4,"y":0.6,"z":12.5,"rt":1.570795,"user":"田口 健太郎(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":57.4,"y":0.6,"z":14.5,"rt":1.570795,"user":"中嶋 美香子(GTP出身)","info":"","err":""},
+{"type":"","SID":"2Z4L6K8J0H1","x":57.4,"y":0.9,"z":16.5,"rt":1.570795,"user":"門脇 光男(GTP出身)","info":"","err":""},
+{"type":"1","SID":"9Q7W5E3R1T2","x":57.4,"y":0.6,"z":18.5,"rt":1.570795,"user":"平田 美奈子(GTP出身)","info":"","err":""},
+
+{"type":"1","SID":"6H8J4K2L0M1","x":55.9,"y":0.6,"z":10.5,"rt":4.712385,"user":"矢野 美佳(GTP出身)","info":"","err":""},
+{"type":"1","SID":"4N2B6V8C0X3","x":55.9,"y":0.6,"z":12.5,"rt":4.712385,"user":"大島 健太(GTP出身)","info":"","err":""},
+{"type":"2","SID":"7Q5W3E9R1T2","x":55.9,"y":0.9,"z":14.5,"rt":4.712385,"user":"山口 美咲(GTP出身)","info":"","err":""},
+{"type":"1","SID":"1Y3U5I7O9P2","x":55.9,"y":0.6,"z":16.5,"rt":4.712385,"user":"小松 裕一(GTP出身)","info":"","err":""},
+{"type":"1","SID":"8M6N4B2V1C3","x":55.9,"y":0.6,"z":18.5,"rt":4.712385,"user":"伊藤 美香子(GTP出身)","info":"","err":""},
+]
+return boxData;
+}
+
+function getDeskData() {
+
+let boxData = [
+{"id":"あ19","x":122.4,"y":0,"z":10.5,"rt":3.14159},
+{"id":"あ18","x":122.4,"y":0,"z":12.5,"rt":3.14159},
+{"id":"あ17","x":122.4,"y":0,"z":14.5,"rt":3.14159},
+{"id":"あ16","x":122.4,"y":0,"z":16.5,"rt":3.14159},
+{"id":"あ15","x":122.4,"y":0,"z":18.5,"rt":3.14159},
+{"id":"あ14","x":122.4,"y":0,"z":20.5,"rt":3.14159},
+{"id":"あ13","x":122.4,"y":0,"z":24.5,"rt":3.14159},
+{"id":"あ12","x":122.4,"y":0,"z":26.5,"rt":3.14159},
+{"id":"あ11","x":122.4,"y":0,"z":28.5,"rt":3.14159},
+
+{"id":"あ28","x":120.9,"y":0,"z":10.5,"rt":0},
+{"id":"あ27","x":120.9,"y":0,"z":12.5,"rt":0},
+{"id":"あ26","x":120.9,"y":0,"z":14.5,"rt":0},
+{"id":"あ25","x":120.9,"y":0,"z":16.5,"rt":0},
+{"id":"あ24","x":120.9,"y":0,"z":18.5,"rt":0},
+{"id":"あ23","x":120.9,"y":0,"z":20.5,"rt":0},
+{"id":"あ22","x":120.9,"y":0,"z":24.5,"rt":0},
+{"id":"あ21","x":120.9,"y":0,"z":26.5,"rt":0},
+{"id":"あ20","x":120.9,"y":0,"z":28.5,"rt":0},
+
+{"id":"い10","x":115.9,"y":0,"z":10.5,"rt":3.14159},
+{"id":"い09","x":115.9,"y":0,"z":12.5,"rt":3.14159},
+{"id":"い08","x":115.9,"y":0,"z":14.5,"rt":3.14159},
+{"id":"い07","x":115.9,"y":0,"z":16.5,"rt":3.14159},
+{"id":"い06","x":115.9,"y":0,"z":18.5,"rt":3.14159},
+{"id":"い05","x":115.9,"y":0,"z":20.5,"rt":3.14159},
+{"id":"い04","x":115.9,"y":0,"z":22.5,"rt":3.14159},
+{"id":"い03","x":115.9,"y":0,"z":24.5,"rt":3.14159},
+{"id":"い02","x":115.9,"y":0,"z":26.5,"rt":3.14159},
+{"id":"い01","x":115.9,"y":0,"z":28.5,"rt":3.14159},
+
+{"id":"い20","x":114.4,"y":0,"z":10.5,"rt":0},
+{"id":"い19","x":114.4,"y":0,"z":12.5,"rt":0},
+{"id":"い18","x":114.4,"y":0,"z":14.5,"rt":0},
+{"id":"い17","x":114.4,"y":0,"z":16.5,"rt":0},
+{"id":"い16","x":114.4,"y":0,"z":18.5,"rt":0},
+{"id":"い15","x":114.4,"y":0,"z":20.5,"rt":0},
+{"id":"い14","x":114.4,"y":0,"z":22.5,"rt":0},
+{"id":"い13","x":114.4,"y":0,"z":24.5,"rt":0},
+{"id":"い12","x":114.4,"y":0,"z":26.5,"rt":0},
+{"id":"い11","x":114.4,"y":0,"z":28.5,"rt":0},
+
+{"id":"う09","x":109.4,"y":0,"z":10.5,"rt":3.14159},
+{"id":"う08","x":109.4,"y":0,"z":12.5,"rt":3.14159},
+{"id":"う07","x":109.4,"y":0,"z":14.5,"rt":3.14159},
+{"id":"う06","x":109.4,"y":0,"z":16.5,"rt":3.14159},
+{"id":"う05","x":109.4,"y":0,"z":18.5,"rt":3.14159},
+{"id":"う04","x":109.4,"y":0,"z":20.5,"rt":3.14159},
+
+{"id":"う03","x":109.4,"y":0,"z":24.5,"rt":3.14159},
+{"id":"う02","x":109.4,"y":0,"z":26.5,"rt":3.14159},
+{"id":"う01","x":109.4,"y":0,"z":28.5,"rt":3.14159},
+
+{"id":"う18","x":107.9,"y":0,"z":10.5,"rt":0},
+{"id":"う17","x":107.9,"y":0,"z":12.5,"rt":0},
+{"id":"う16","x":107.9,"y":0,"z":14.5,"rt":0},
+{"id":"う15","x":107.9,"y":0,"z":16.5,"rt":0},
+{"id":"う14","x":107.9,"y":0,"z":18.5,"rt":0},
+{"id":"う13","x":107.9,"y":0,"z":20.5,"rt":0},
+
+{"id":"う12","x":107.9,"y":0,"z":24.5,"rt":0},
+{"id":"う11","x":107.9,"y":0,"z":26.5,"rt":0},
+{"id":"う10","x":107.9,"y":0,"z":28.5,"rt":0},
+
+{"id":"え10","x":102.9,"y":0,"z":10.5,"rt":3.14159},
+{"id":"え09","x":102.9,"y":0,"z":12.5,"rt":3.14159},
+{"id":"え08","x":102.9,"y":0,"z":14.5,"rt":3.14159},
+{"id":"え07","x":102.9,"y":0,"z":16.5,"rt":3.14159},
+{"id":"え06","x":102.9,"y":0,"z":18.5,"rt":3.14159},
+{"id":"え05","x":102.9,"y":0,"z":20.5,"rt":3.14159},
+{"id":"え04","x":102.9,"y":0,"z":22.5,"rt":3.14159},
+{"id":"え03","x":102.9,"y":0,"z":24.5,"rt":3.14159},
+{"id":"え02","x":102.9,"y":0,"z":26.5,"rt":3.14159},
+{"id":"え01","x":102.9,"y":0,"z":28.5,"rt":3.14159},
+
+{"id":"え20","x":101.4,"y":0,"z":10.5,"rt":0},
+{"id":"え19","x":101.4,"y":0,"z":12.5,"rt":0},
+{"id":"え18","x":101.4,"y":0,"z":14.5,"rt":0},
+{"id":"え17","x":101.4,"y":0,"z":16.5,"rt":0},
+{"id":"え16","x":101.4,"y":0,"z":18.5,"rt":0},
+{"id":"え15","x":101.4,"y":0,"z":20.5,"rt":0},
+{"id":"え14","x":101.4,"y":0,"z":22.5,"rt":0},
+{"id":"え13","x":101.4,"y":0,"z":24.5,"rt":0},
+{"id":"え12","x":101.4,"y":0,"z":26.5,"rt":0},
+{"id":"え11","x":101.4,"y":0,"z":28.5,"rt":0},
+
+{"id":"お09","x":96.4,"y":0,"z":10.5,"rt":3.14159},
+{"id":"お08","x":96.4,"y":0,"z":12.5,"rt":3.14159},
+{"id":"お07","x":96.4,"y":0,"z":14.5,"rt":3.14159},
+{"id":"お06","x":96.4,"y":0,"z":16.5,"rt":3.14159},
+{"id":"お05","x":96.4,"y":0,"z":18.5,"rt":3.14159},
+{"id":"お04","x":96.4,"y":0,"z":20.5,"rt":3.14159},
+
+{"id":"お03","x":96.4,"y":0,"z":24.5,"rt":3.14159},
+{"id":"お02","x":96.4,"y":0,"z":26.5,"rt":3.14159},
+{"id":"お01","x":96.4,"y":0,"z":28.5,"rt":3.14159},
+
+{"id":"お18","x":94.9,"y":0,"z":10.5,"rt":0},
+{"id":"お17","x":94.9,"y":0,"z":12.5,"rt":0},
+{"id":"お16","x":94.9,"y":0,"z":14.5,"rt":0},
+{"id":"お15","x":94.9,"y":0,"z":16.5,"rt":0},
+{"id":"お14","x":94.9,"y":0,"z":18.5,"rt":0},
+{"id":"お13","x":94.9,"y":0,"z":20.5,"rt":0},
+
+{"id":"お12","x":94.9,"y":0,"z":24.5,"rt":0},
+{"id":"お11","x":94.9,"y":0,"z":26.5,"rt":0},
+{"id":"お10","x":94.9,"y":0,"z":28.5,"rt":0},
+
+{"id":"か10","x":89.9,"y":0,"z":10.5,"rt":3.14159},
+{"id":"か09","x":89.9,"y":0,"z":12.5,"rt":3.14159},
+{"id":"か08","x":89.9,"y":0,"z":14.5,"rt":3.14159},
+{"id":"か07","x":89.9,"y":0,"z":16.5,"rt":3.14159},
+{"id":"か06","x":89.9,"y":0,"z":18.5,"rt":3.14159},
+{"id":"か05","x":89.9,"y":0,"z":20.5,"rt":3.14159},
+{"id":"か04","x":89.9,"y":0,"z":22.5,"rt":3.14159},
+{"id":"か03","x":89.9,"y":0,"z":24.5,"rt":3.14159},
+{"id":"か02","x":89.9,"y":0,"z":26.5,"rt":3.14159},
+{"id":"か01","x":89.9,"y":0,"z":28.5,"rt":3.14159},
+
+{"id":"か20","x":88.4,"y":0,"z":10.5,"rt":0},
+{"id":"か19","x":88.4,"y":0,"z":12.5,"rt":0},
+{"id":"か18","x":88.4,"y":0,"z":14.5,"rt":0},
+{"id":"か17","x":88.4,"y":0,"z":16.5,"rt":0},
+{"id":"か16","x":88.4,"y":0,"z":18.5,"rt":0},
+{"id":"か15","x":88.4,"y":0,"z":20.5,"rt":0},
+{"id":"か14","x":88.4,"y":0,"z":22.5,"rt":0},
+{"id":"か13","x":88.4,"y":0,"z":24.5,"rt":0},
+{"id":"か12","x":88.4,"y":0,"z":26.5,"rt":0},
+{"id":"か11","x":88.4,"y":0,"z":28.5,"rt":0},
+
+{"id":"き05","x":83.4,"y":0,"z":10.5,"rt":3.14159},
+{"id":"き04","x":83.4,"y":0,"z":12.5,"rt":3.14159},
+{"id":"き03","x":83.4,"y":0,"z":14.5,"rt":3.14159},
+{"id":"き02","x":83.4,"y":0,"z":16.5,"rt":3.14159},
+{"id":"き01","x":83.4,"y":0,"z":18.5,"rt":3.14159},
+
+{"id":"き10","x":81.9,"y":0,"z":10.5,"rt":0},
+{"id":"き09","x":81.9,"y":0,"z":12.5,"rt":0},
+{"id":"き05","x":81.9,"y":0,"z":14.5,"rt":0},
+{"id":"き07","x":81.9,"y":0,"z":16.5,"rt":0},
+{"id":"き06","x":81.9,"y":0,"z":18.5,"rt":0},
+
+{"id":"き15","x":76.9,"y":0,"z":10.5,"rt":3.14159},
+{"id":"き14","x":76.9,"y":0,"z":12.5,"rt":3.14159},
+{"id":"き13","x":76.9,"y":0,"z":14.5,"rt":3.14159},
+{"id":"き12","x":76.9,"y":0,"z":16.5,"rt":3.14159},
+{"id":"き11","x":76.9,"y":0,"z":18.5,"rt":3.14159},
+
+{"id":"き20","x":75.4,"y":0,"z":10.5,"rt":0},
+{"id":"き19","x":75.4,"y":0,"z":12.5,"rt":0},
+{"id":"き18","x":75.4,"y":0,"z":14.5,"rt":0},
+{"id":"き17","x":75.4,"y":0,"z":16.5,"rt":0},
+{"id":"き16","x":75.4,"y":0,"z":18.5,"rt":0},
+
+{"id":"く05","x":70.4,"y":0,"z":10.5,"rt":3.14159},
+{"id":"く04","x":70.4,"y":0,"z":12.5,"rt":3.14159},
+{"id":"く03","x":70.4,"y":0,"z":14.5,"rt":3.14159},
+{"id":"く02","x":70.4,"y":0,"z":16.5,"rt":3.14159},
+{"id":"く01","x":70.4,"y":0,"z":18.5,"rt":3.14159},
+
+{"id":"く10","x":68.9,"y":0,"z":10.5,"rt":0},
+{"id":"く09","x":68.9,"y":0,"z":12.5,"rt":0},
+{"id":"く08","x":68.9,"y":0,"z":14.5,"rt":0},
+{"id":"く07","x":68.9,"y":0,"z":16.5,"rt":0},
+{"id":"く06","x":68.9,"y":0,"z":18.5,"rt":0},
+
+{"id":"く15","x":63.9,"y":0,"z":10.5,"rt":3.14159},
+{"id":"く14","x":63.9,"y":0,"z":12.5,"rt":3.14159},
+{"id":"く13","x":63.9,"y":0,"z":14.5,"rt":3.14159},
+{"id":"く12","x":63.9,"y":0,"z":16.5,"rt":3.14159},
+{"id":"く11","x":63.9,"y":0,"z":18.5,"rt":3.14159},
+
+{"id":"け05","x":62.4,"y":0,"z":10.5,"rt":0},
+{"id":"け04","x":62.4,"y":0,"z":12.5,"rt":0},
+{"id":"け03","x":62.4,"y":0,"z":14.5,"rt":0},
+{"id":"け02","x":62.4,"y":0,"z":16.5,"rt":0},
+{"id":"け01","x":62.4,"y":0,"z":18.5,"rt":0},
+
+{"id":"こ10","x":57.4,"y":0,"z":10.5,"rt":3.14159},
+{"id":"こ09","x":57.4,"y":0,"z":12.5,"rt":3.14159},
+{"id":"こ08","x":57.4,"y":0,"z":14.5,"rt":3.14159},
+{"id":"こ07","x":57.4,"y":0,"z":16.5,"rt":3.14159},
+{"id":"こ06","x":57.4,"y":0,"z":18.5,"rt":3.14159},
+
+{"id":"こ15","x":55.9,"y":0,"z":10.5,"rt":0},
+{"id":"こ14","x":55.9,"y":0,"z":12.5,"rt":0},
+{"id":"こ13","x":55.9,"y":0,"z":14.5,"rt":0},
+{"id":"こ12","x":55.9,"y":0,"z":16.5,"rt":0},
+{"id":"こ11","x":55.9,"y":0,"z":18.5,"rt":0},
+
+{"id":"こ20","x":50.9,"y":0,"z":10.5,"rt":3.14159},
+{"id":"こ19","x":50.9,"y":0,"z":12.5,"rt":3.14159},
+{"id":"こ18","x":50.9,"y":0,"z":14.5,"rt":3.14159},
+{"id":"こ17","x":50.9,"y":0,"z":16.5,"rt":3.14159},
+{"id":"こ16","x":50.9,"y":0,"z":18.5,"rt":3.14159},
+
+
+];
+return boxData;
+}
+
+function getWallData() {
+let boxData = [
+    { "x1": 6.4, "y1": 0, "z1": 5.9, "x2": 6.4, "y2": 3, "z2": 24 },
+    { "x1": 6.4, "y1": 0, "z1": 24, "x2": 9.6, "y2": 3, "z2": 24 },
+    { "x1": 9.6, "y1": 0, "z1": 24, "x2": 9.6, "y2": 3, "z2": 38 },
+    { "x1": 6.4, "y1": 0, "z1": 38, "x2": 44.8, "y2": 3, "z2": 38 },
+    { "x1": 44.8, "y1": 0, "z1": 38.4, "x2": 44.8, "y2": 3, "z2": 22.4 },
+    { "x1": 44.8, "y1": 0, "z1": 22.4, "x2": 78.4, "y2": 3, "z2": 22.4 },
+    { "x1": 78.4, "y1": 0, "z1": 22.4, "x2": 78.4, "y2": 3, "z2": 33.6 },
+    { "x1": 78.4, "y1": 0, "z1": 33.6, "x2": 137.4, "y2": 3, "z2": 33.6 },
+    { "x1": 137.4, "y1": 0, "z1": 33.6, "x2": 137.4, "y2": 3, "z2": 22.4 },
+    { "x1": 137.4, "y1": 0, "z1": 22.4, "x2": 138.8, "y2": 3, "z2": 22.4 },
+    { "x1": 138.8, "y1": 0, "z1": 22.4, "x2": 138.8, "y2": 3, "z2": 5.9 },
+    { "x1": 138.8, "y1": 0, "z1": 5.9, "x2": 6.4, "y2": 3, "z2": 5.9 },
+
+    { "x1": 6.4, "y1": 0, "z1": 37.9, "x2": 6.4, "y2": 3, "z2": 44.3 },
+    { "x1": 6.4, "y1": 0, "z1": 44.3, "x2": 57.6, "y2": 3, "z2": 44.3 },
+    { "x1": 57.6, "y1": 0, "z1": 44.3, "x2": 57.6, "y2": 3, "z2": 35.9 },
+    { "x1": 57.6, "y1": 0, "z1": 35.9, "x2": 70.4, "y2": 3, "z2": 35.9 },
+    { "x1": 6.4, "y1": 0, "z1": 40.4, "x2": 57.6, "y2": 3, "z2": 40.4 },
+    { "x1": 70.4, "y1": 0, "z1": 35.9, "x2": 70.4, "y2": 3, "z2": 38.4 },
+    { "x1": 70.4, "y1": 0, "z1": 38.4, "x2": 140.8, "y2": 3, "z2": 38.4 },
+    { "x1": 140.8, "y1": 0, "z1": 38.4, "x2": 140.8, "y2": 3, "z2": 44.3 },
+    { "x1": 140.8, "y1": 0, "z1": 44.3, "x2": 70.4, "y2": 3, "z2": 44.3 },
+
+
+];
+return boxData;
+}
+
+function getDoorData() {
+let boxData = [
+    { "x1": 137.2, "y1": 0, "z1": 32, "x2": 138, "y2": 2.8, "z2": 30 },
+    { "x1": 137.2, "y1": 0, "z1": 28, "x2": 138, "y2": 2.8, "z2": 26 },
+    { "x1": 44.6, "y1": 0, "z1": 30, "x2": 46, "y2": 2.8, "z2": 28 },
+    { "x1": 44.6, "y1": 0, "z1": 28, "x2": 46, "y2": 2.8, "z2": 26 },
+];
+return boxData;
+}
+
+function getPillarData() {
+let pData = [
+    { "x": 0, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 12.8, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 19.2, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 32, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 44.8, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 57.6, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 70.4, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 83.2, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 96, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 108.8, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 121.6, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 134.4, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 140.8, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 153.6, "y": 0, "z": 22.4, "r": 1.8, "h": 3, "shape": "circle" },
+
+    { "x": 0, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 12.8, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 19.2, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 32, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 44.8, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 57.6, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 70.4, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 83.2, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 96, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 108.8, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 121.6, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 134.4, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 140.8, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 153.6, "y": 0, "z": 6.3, "r": 1.8, "h": 3, "shape": "box" },
+
+
+    { "x": 0, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 6.4, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 12.8, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 19.2, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 32, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 44.8, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 57.6, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 70.4, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 83.2, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 96, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 108.8, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 121.6, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 134.4, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 140.8, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 146.6, "y": 0, "z": 38.4, "r": 1.8, "h": 3, "shape": "circle" },
+
+    { "x": 0, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 6.4, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 12.8, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 19.2, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 32, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 44.8, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 57.6, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 70.4, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 83.2, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 96, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 108.8, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 121.6, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 134.4, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 140.8, "y": 0, "z": 0, "r": 1.8, "h": 3, "shape": "circle" },
+
+
+    { "x": 0, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 6.4, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "box" },
+    { "x": 12.8, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 19.2, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 32, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 44.8, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 57.6, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 70.4, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 83.2, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 96, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 108.8, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 121.6, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 134.4, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 140.8, "y": 0, "z": 44.8, "r": 1.8, "h": 3, "shape": "circle" },
+    { "x": 153.6, "y": 0, "z": 34.0, "r": 1.5, "h": 3, "shape": "circle" },
+];
+return pData;
+}
+
+function getBoothData() {
+let boothData = [
+    { "id": "協08", "x1": 130.3, "y1": 0, "z1": 9.5, "x2": 130.75, "y2": 0.7, "z2": 11.9 },
+    { "id": "協07", "x1": 130.3, "y1": 0, "z1": 12.05, "x2": 130.75, "y2": 0.7, "z2": 14.45 },
+    { "id": "協06", "x1": 130.3, "y1": 0, "z1": 14.6, "x2": 130.75, "y2": 0.7, "z2": 17 },
+    { "id": "協05", "x1": 130.3, "y1": 0, "z1": 17.15, "x2": 130.75, "y2": 0.7, "z2": 19.55 },
+    { "id": "協04", "x1": 130.3, "y1": 0, "z1": 19.7, "x2": 130.75, "y2": 0.7, "z2": 22.1 },
+    { "id": "協03", "x1": 130.3, "y1": 0, "z1": 22.25, "x2": 130.75, "y2": 0.7, "z2": 24.65 },
+    { "id": "協02", "x1": 130.3, "y1": 0, "z1": 24.8, "x2": 130.75, "y2": 0.7, "z2": 27.2 },
+    { "id": "協01", "x1": 130.3, "y1": 0, "z1": 27.35, "x2": 130.75, "y2": 0.7, "z2": 29.75 },
+
+    { "id": "あ10", "x1": 128.3, "y1": 0, "z1": 9.5, "x2": 128.75, "y2": 0.7, "z2": 11.3 },
+    { "id": "あ09", "x1": 128.3, "y1": 0, "z1": 11.5, "x2": 128.75, "y2": 0.7, "z2": 13.3 },
+    { "id": "あ08", "x1": 128.3, "y1": 0, "z1": 13.5, "x2": 128.75, "y2": 0.7, "z2": 15.3 },
+    { "id": "あ07", "x1": 128.3, "y1": 0, "z1": 15.5, "x2": 128.75, "y2": 0.7, "z2": 17.3 },
+    { "id": "あ06", "x1": 128.3, "y1": 0, "z1": 17.5, "x2": 128.75, "y2": 0.7, "z2": 19.3 },
+    { "id": "あ05", "x1": 128.3, "y1": 0, "z1": 19.5, "x2": 128.75, "y2": 0.7, "z2": 21.3 },
+    { "id": "あ04", "x1": 128.3, "y1": 0, "z1": 21.5, "x2": 128.75, "y2": 0.7, "z2": 23.3 },
+    { "id": "あ03", "x1": 128.3, "y1": 0, "z1": 23.5, "x2": 128.75, "y2": 0.7, "z2": 25.3 },
+    { "id": "あ02", "x1": 128.3, "y1": 0, "z1": 25.5, "x2": 128.75, "y2": 0.7, "z2": 27.3 },
+    { "id": "あ01", "x1": 128.3, "y1": 0, "z1": 27.5, "x2": 128.75, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "あ19", "x1": 122.4, "y1": 0, "z1": 9.5, "x2": 122.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "あ18", "x1": 122.4, "y1": 0, "z1": 11.5, "x2": 122.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "あ17", "x1": 122.4, "y1": 0, "z1": 13.5, "x2": 122.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "あ16", "x1": 122.4, "y1": 0, "z1": 15.5, "x2": 122.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "あ15", "x1": 122.4, "y1": 0, "z1": 17.5, "x2": 122.85, "y2": 0.7, "z2": 19.3 },
+    { "id": "あ14", "x1": 122.4, "y1": 0, "z1": 19.5, "x2": 122.85, "y2": 0.7, "z2": 21.3 },
+    { "id": "あ13", "x1": 122.4, "y1": 0, "z1": 23.5, "x2": 122.85, "y2": 0.7, "z2": 25.3 },
+    { "id": "あ12", "x1": 122.4, "y1": 0, "z1": 25.5, "x2": 122.85, "y2": 0.7, "z2": 27.3 },
+    { "id": "あ11", "x1": 122.4, "y1": 0, "z1": 27.5, "x2": 122.85, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "あ28", "x1": 120.4, "y1": 0, "z1": 9.5, "x2": 120.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "あ27", "x1": 120.4, "y1": 0, "z1": 11.5, "x2": 120.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "あ26", "x1": 120.4, "y1": 0, "z1": 13.5, "x2": 120.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "あ25", "x1": 120.4, "y1": 0, "z1": 15.5, "x2": 120.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "あ24", "x1": 120.4, "y1": 0, "z1": 17.5, "x2": 120.85, "y2": 0.7, "z2": 19.3 },
+    { "id": "あ23", "x1": 120.4, "y1": 0, "z1": 19.5, "x2": 120.85, "y2": 0.7, "z2": 21.3 },
+    { "id": "あ22", "x1": 120.4, "y1": 0, "z1": 23.5, "x2": 120.85, "y2": 0.7, "z2": 25.3 },
+    { "id": "あ21", "x1": 120.4, "y1": 0, "z1": 25.5, "x2": 120.85, "y2": 0.7, "z2": 27.3 },
+    { "id": "あ20", "x1": 120.4, "y1": 0, "z1": 27.5, "x2": 120.85, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "い10", "x1": 115.9, "y1": 0, "z1": 9.5, "x2": 116.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "い09", "x1": 115.9, "y1": 0, "z1": 11.5, "x2": 116.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "い08", "x1": 115.9, "y1": 0, "z1": 13.5, "x2": 116.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "い07", "x1": 115.9, "y1": 0, "z1": 15.5, "x2": 116.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "い06", "x1": 115.9, "y1": 0, "z1": 17.5, "x2": 116.35, "y2": 0.7, "z2": 19.3 },
+    { "id": "い05", "x1": 115.9, "y1": 0, "z1": 19.5, "x2": 116.35, "y2": 0.7, "z2": 21.3 },
+    { "id": "い04", "x1": 115.9, "y1": 0, "z1": 21.5, "x2": 116.35, "y2": 0.7, "z2": 23.3 },
+    { "id": "い03", "x1": 115.9, "y1": 0, "z1": 23.5, "x2": 116.35, "y2": 0.7, "z2": 25.3 },
+    { "id": "い02", "x1": 115.9, "y1": 0, "z1": 25.5, "x2": 116.35, "y2": 0.7, "z2": 27.3 },
+    { "id": "い01", "x1": 115.9, "y1": 0, "z1": 27.5, "x2": 116.35, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "い20", "x1": 113.9, "y1": 0, "z1": 9.5, "x2": 114.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "い19", "x1": 113.9, "y1": 0, "z1": 11.5, "x2": 114.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "い18", "x1": 113.9, "y1": 0, "z1": 13.5, "x2": 114.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "い17", "x1": 113.9, "y1": 0, "z1": 15.5, "x2": 114.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "い16", "x1": 113.9, "y1": 0, "z1": 17.5, "x2": 114.35, "y2": 0.7, "z2": 19.3 },
+    { "id": "い15", "x1": 113.9, "y1": 0, "z1": 19.5, "x2": 114.35, "y2": 0.7, "z2": 21.3 },
+    { "id": "い14", "x1": 113.9, "y1": 0, "z1": 21.5, "x2": 114.35, "y2": 0.7, "z2": 23.3 },
+    { "id": "い13", "x1": 113.9, "y1": 0, "z1": 23.5, "x2": 114.35, "y2": 0.7, "z2": 25.3 },
+    { "id": "い12", "x1": 113.9, "y1": 0, "z1": 25.5, "x2": 114.35, "y2": 0.7, "z2": 27.3 },
+    { "id": "い11", "x1": 113.9, "y1": 0, "z1": 27.5, "x2": 114.35, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "う09", "x1": 109.4, "y1": 0, "z1": 9.5, "x2": 109.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "う08", "x1": 109.4, "y1": 0, "z1": 11.5, "x2": 109.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "う07", "x1": 109.4, "y1": 0, "z1": 13.5, "x2": 109.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "う06", "x1": 109.4, "y1": 0, "z1": 15.5, "x2": 109.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "う05", "x1": 109.4, "y1": 0, "z1": 17.5, "x2": 109.85, "y2": 0.7, "z2": 19.3 },
+    { "id": "う04", "x1": 109.4, "y1": 0, "z1": 19.5, "x2": 109.85, "y2": 0.7, "z2": 21.3 },
+
+    { "id": "う03", "x1": 109.4, "y1": 0, "z1": 23.5, "x2": 109.85, "y2": 0.7, "z2": 25.3 },
+    { "id": "う02", "x1": 109.4, "y1": 0, "z1": 25.5, "x2": 109.85, "y2": 0.7, "z2": 27.3 },
+    { "id": "う01", "x1": 109.4, "y1": 0, "z1": 27.5, "x2": 109.85, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "う18", "x1": 107.4, "y1": 0, "z1": 9.5, "x2": 107.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "う17", "x1": 107.4, "y1": 0, "z1": 11.5, "x2": 107.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "う16", "x1": 107.4, "y1": 0, "z1": 13.5, "x2": 107.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "う15", "x1": 107.4, "y1": 0, "z1": 15.5, "x2": 107.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "う14", "x1": 107.4, "y1": 0, "z1": 17.5, "x2": 107.85, "y2": 0.7, "z2": 19.3 },
+    { "id": "う13", "x1": 107.4, "y1": 0, "z1": 19.5, "x2": 107.85, "y2": 0.7, "z2": 21.3 },
+
+    { "id": "う12", "x1": 107.4, "y1": 0, "z1": 23.5, "x2": 107.85, "y2": 0.7, "z2": 25.3 },
+    { "id": "う11", "x1": 107.4, "y1": 0, "z1": 25.5, "x2": 107.85, "y2": 0.7, "z2": 27.3 },
+    { "id": "う10", "x1": 107.4, "y1": 0, "z1": 27.5, "x2": 107.85, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "え10", "x1": 102.9, "y1": 0, "z1": 9.5, "x2": 103.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "え09", "x1": 102.9, "y1": 0, "z1": 11.5, "x2": 103.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "え08", "x1": 102.9, "y1": 0, "z1": 13.5, "x2": 103.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "え07", "x1": 102.9, "y1": 0, "z1": 15.5, "x2": 103.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "え06", "x1": 102.9, "y1": 0, "z1": 17.5, "x2": 103.35, "y2": 0.7, "z2": 19.3 },
+    { "id": "え05", "x1": 102.9, "y1": 0, "z1": 19.5, "x2": 103.35, "y2": 0.7, "z2": 21.3 },
+    { "id": "え04", "x1": 102.9, "y1": 0, "z1": 21.5, "x2": 103.35, "y2": 0.7, "z2": 23.3 },
+    { "id": "え03", "x1": 102.9, "y1": 0, "z1": 23.5, "x2": 103.35, "y2": 0.7, "z2": 25.3 },
+    { "id": "え02", "x1": 102.9, "y1": 0, "z1": 25.5, "x2": 103.35, "y2": 0.7, "z2": 27.3 },
+    { "id": "え01", "x1": 102.9, "y1": 0, "z1": 27.5, "x2": 103.35, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "え20", "x1": 100.9, "y1": 0, "z1": 9.5, "x2": 101.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "え19", "x1": 100.9, "y1": 0, "z1": 11.5, "x2": 101.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "え18", "x1": 100.9, "y1": 0, "z1": 13.5, "x2": 101.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "え17", "x1": 100.9, "y1": 0, "z1": 15.5, "x2": 101.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "え16", "x1": 100.9, "y1": 0, "z1": 17.5, "x2": 101.35, "y2": 0.7, "z2": 19.3 },
+    { "id": "え15", "x1": 100.9, "y1": 0, "z1": 19.5, "x2": 101.35, "y2": 0.7, "z2": 21.3 },
+    { "id": "え14", "x1": 100.9, "y1": 0, "z1": 21.5, "x2": 101.35, "y2": 0.7, "z2": 23.3 },
+    { "id": "え13", "x1": 100.9, "y1": 0, "z1": 23.5, "x2": 101.35, "y2": 0.7, "z2": 25.3 },
+    { "id": "え12", "x1": 100.9, "y1": 0, "z1": 25.5, "x2": 101.35, "y2": 0.7, "z2": 27.3 },
+    { "id": "え11", "x1": 100.9, "y1": 0, "z1": 27.5, "x2": 101.35, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "お09", "x1": 96.4, "y1": 0, "z1": 9.5, "x2": 96.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "お08", "x1": 96.4, "y1": 0, "z1": 11.5, "x2": 96.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "お07", "x1": 96.4, "y1": 0, "z1": 13.5, "x2": 96.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "お06", "x1": 96.4, "y1": 0, "z1": 15.5, "x2": 96.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "お05", "x1": 96.4, "y1": 0, "z1": 17.5, "x2": 96.85, "y2": 0.7, "z2": 19.3 },
+    { "id": "お04", "x1": 96.4, "y1": 0, "z1": 19.5, "x2": 96.85, "y2": 0.7, "z2": 21.3 },
+
+    { "id": "お03", "x1": 96.4, "y1": 0, "z1": 23.5, "x2": 96.85, "y2": 0.7, "z2": 25.3 },
+    { "id": "お02", "x1": 96.4, "y1": 0, "z1": 25.5, "x2": 96.85, "y2": 0.7, "z2": 27.3 },
+    { "id": "お01", "x1": 96.4, "y1": 0, "z1": 27.5, "x2": 96.85, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "お18", "x1": 94.4, "y1": 0, "z1": 9.5, "x2": 94.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "お17", "x1": 94.4, "y1": 0, "z1": 11.5, "x2": 94.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "お16", "x1": 94.4, "y1": 0, "z1": 13.5, "x2": 94.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "お15", "x1": 94.4, "y1": 0, "z1": 15.5, "x2": 94.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "お14", "x1": 94.4, "y1": 0, "z1": 17.5, "x2": 94.85, "y2": 0.7, "z2": 19.3 },
+    { "id": "お13", "x1": 94.4, "y1": 0, "z1": 19.5, "x2": 94.85, "y2": 0.7, "z2": 21.3 },
+
+    { "id": "お12", "x1": 94.4, "y1": 0, "z1": 23.5, "x2": 94.85, "y2": 0.7, "z2": 25.3 },
+    { "id": "お11", "x1": 94.4, "y1": 0, "z1": 25.5, "x2": 94.85, "y2": 0.7, "z2": 27.3 },
+    { "id": "お10", "x1": 94.4, "y1": 0, "z1": 27.5, "x2": 94.85, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "か10", "x1": 89.9, "y1": 0, "z1": 9.5, "x2": 90.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "か09", "x1": 89.9, "y1": 0, "z1": 11.5, "x2": 90.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "か08", "x1": 89.9, "y1": 0, "z1": 13.5, "x2": 90.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "か07", "x1": 89.9, "y1": 0, "z1": 15.5, "x2": 90.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "か06", "x1": 89.9, "y1": 0, "z1": 17.5, "x2": 90.35, "y2": 0.7, "z2": 19.3 },
+    { "id": "か05", "x1": 89.9, "y1": 0, "z1": 19.5, "x2": 90.35, "y2": 0.7, "z2": 21.3 },
+    { "id": "か04", "x1": 89.9, "y1": 0, "z1": 21.5, "x2": 90.35, "y2": 0.7, "z2": 23.3 },
+    { "id": "か03", "x1": 89.9, "y1": 0, "z1": 23.5, "x2": 90.35, "y2": 0.7, "z2": 25.3 },
+    { "id": "か02", "x1": 89.9, "y1": 0, "z1": 25.5, "x2": 90.35, "y2": 0.7, "z2": 27.3 },
+    { "id": "か01", "x1": 89.9, "y1": 0, "z1": 27.5, "x2": 90.35, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "か20", "x1": 87.9, "y1": 0, "z1": 9.5, "x2": 88.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "か19", "x1": 87.9, "y1": 0, "z1": 11.5, "x2": 88.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "か18", "x1": 87.9, "y1": 0, "z1": 13.5, "x2": 88.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "か17", "x1": 87.9, "y1": 0, "z1": 15.5, "x2": 88.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "か16", "x1": 87.9, "y1": 0, "z1": 17.5, "x2": 88.35, "y2": 0.7, "z2": 19.3 },
+    { "id": "か15", "x1": 87.9, "y1": 0, "z1": 19.5, "x2": 88.35, "y2": 0.7, "z2": 21.3 },
+    { "id": "か14", "x1": 87.9, "y1": 0, "z1": 21.5, "x2": 88.35, "y2": 0.7, "z2": 23.3 },
+    { "id": "か13", "x1": 87.9, "y1": 0, "z1": 23.5, "x2": 88.35, "y2": 0.7, "z2": 25.3 },
+    { "id": "か12", "x1": 87.9, "y1": 0, "z1": 25.5, "x2": 88.35, "y2": 0.7, "z2": 27.3 },
+    { "id": "か11", "x1": 87.9, "y1": 0, "z1": 27.5, "x2": 88.35, "y2": 0.7, "z2": 29.3 },
+
+    { "id": "き05", "x1": 83.4, "y1": 0, "z1": 9.5, "x2": 83.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "き04", "x1": 83.4, "y1": 0, "z1": 11.5, "x2": 83.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "き03", "x1": 83.4, "y1": 0, "z1": 13.5, "x2": 83.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "き02", "x1": 83.4, "y1": 0, "z1": 15.5, "x2": 83.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "き01", "x1": 83.4, "y1": 0, "z1": 17.5, "x2": 83.85, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "き10", "x1": 81.4, "y1": 0, "z1": 9.5, "x2": 81.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "き09", "x1": 81.4, "y1": 0, "z1": 11.5, "x2": 81.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "き05", "x1": 81.4, "y1": 0, "z1": 13.5, "x2": 81.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "き07", "x1": 81.4, "y1": 0, "z1": 15.5, "x2": 81.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "き06", "x1": 81.4, "y1": 0, "z1": 17.5, "x2": 81.85, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "き15", "x1": 76.9, "y1": 0, "z1": 9.5, "x2": 77.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "き14", "x1": 76.9, "y1": 0, "z1": 11.5, "x2": 77.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "き13", "x1": 76.9, "y1": 0, "z1": 13.5, "x2": 77.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "き12", "x1": 76.9, "y1": 0, "z1": 15.5, "x2": 77.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "き11", "x1": 76.9, "y1": 0, "z1": 17.5, "x2": 77.35, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "き20", "x1": 74.9, "y1": 0, "z1": 9.5, "x2": 75.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "き19", "x1": 74.9, "y1": 0, "z1": 11.5, "x2": 75.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "き18", "x1": 74.9, "y1": 0, "z1": 13.5, "x2": 75.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "き17", "x1": 74.9, "y1": 0, "z1": 15.5, "x2": 75.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "き16", "x1": 74.9, "y1": 0, "z1": 17.5, "x2": 75.35, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "く05", "x1": 70.4, "y1": 0, "z1": 9.5, "x2": 70.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "く04", "x1": 70.4, "y1": 0, "z1": 11.5, "x2": 70.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "く03", "x1": 70.4, "y1": 0, "z1": 13.5, "x2": 70.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "く02", "x1": 70.4, "y1": 0, "z1": 15.5, "x2": 70.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "く01", "x1": 70.4, "y1": 0, "z1": 17.5, "x2": 70.85, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "く10", "x1": 68.4, "y1": 0, "z1": 9.5, "x2": 68.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "く09", "x1": 68.4, "y1": 0, "z1": 11.5, "x2": 68.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "く08", "x1": 68.4, "y1": 0, "z1": 13.5, "x2": 68.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "く07", "x1": 68.4, "y1": 0, "z1": 15.5, "x2": 68.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "く06", "x1": 68.4, "y1": 0, "z1": 17.5, "x2": 68.85, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "く15", "x1": 63.9, "y1": 0, "z1": 9.5, "x2": 64.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "く14", "x1": 63.9, "y1": 0, "z1": 11.5, "x2": 64.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "く13", "x1": 63.9, "y1": 0, "z1": 13.5, "x2": 64.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "く12", "x1": 63.9, "y1": 0, "z1": 15.5, "x2": 64.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "く11", "x1": 63.9, "y1": 0, "z1": 17.5, "x2": 64.35, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "け05", "x1": 61.9, "y1": 0, "z1": 9.5, "x2": 62.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "け04", "x1": 61.9, "y1": 0, "z1": 11.5, "x2": 62.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "け03", "x1": 61.9, "y1": 0, "z1": 13.5, "x2": 62.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "け02", "x1": 61.9, "y1": 0, "z1": 15.5, "x2": 62.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "け01", "x1": 61.9, "y1": 0, "z1": 17.5, "x2": 62.35, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "け10", "x1": 57.4, "y1": 0, "z1": 9.5, "x2": 57.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "け09", "x1": 57.4, "y1": 0, "z1": 11.5, "x2": 57.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "け08", "x1": 57.4, "y1": 0, "z1": 13.5, "x2": 57.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "け07", "x1": 57.4, "y1": 0, "z1": 15.5, "x2": 57.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "け06", "x1": 57.4, "y1": 0, "z1": 17.5, "x2": 57.85, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "け15", "x1": 55.4, "y1": 0, "z1": 9.5, "x2": 55.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "け14", "x1": 55.4, "y1": 0, "z1": 11.5, "x2": 55.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "け13", "x1": 55.4, "y1": 0, "z1": 13.5, "x2": 55.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "け12", "x1": 55.4, "y1": 0, "z1": 15.5, "x2": 55.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "け11", "x1": 55.4, "y1": 0, "z1": 17.5, "x2": 55.85, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "け20", "x1": 50.9, "y1": 0, "z1": 9.5, "x2": 51.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "け19", "x1": 50.9, "y1": 0, "z1": 11.5, "x2": 51.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "け18", "x1": 50.9, "y1": 0, "z1": 13.5, "x2": 51.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "け17", "x1": 50.9, "y1": 0, "z1": 15.5, "x2": 51.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "け16", "x1": 50.9, "y1": 0, "z1": 17.5, "x2": 51.35, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "け25", "x1": 48.9, "y1": 0, "z1": 9.5, "x2": 49.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "け24", "x1": 48.9, "y1": 0, "z1": 11.5, "x2": 49.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "け23", "x1": 48.9, "y1": 0, "z1": 13.5, "x2": 49.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "け22", "x1": 48.9, "y1": 0, "z1": 15.5, "x2": 49.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "け21", "x1": 48.9, "y1": 0, "z1": 17.5, "x2": 49.35, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "こ05", "x1": 44.4, "y1": 0, "z1": 9.5, "x2": 44.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "こ04", "x1": 44.4, "y1": 0, "z1": 11.5, "x2": 44.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "こ03", "x1": 44.4, "y1": 0, "z1": 13.5, "x2": 44.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "こ02", "x1": 44.4, "y1": 0, "z1": 15.5, "x2": 44.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "こ01", "x1": 44.4, "y1": 0, "z1": 17.5, "x2": 44.85, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "こ10", "x1": 42.4, "y1": 0, "z1": 9.5, "x2": 42.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "こ09", "x1": 42.4, "y1": 0, "z1": 11.5, "x2": 42.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "こ08", "x1": 42.4, "y1": 0, "z1": 13.5, "x2": 42.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "こ07", "x1": 42.4, "y1": 0, "z1": 15.5, "x2": 42.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "こ06", "x1": 42.4, "y1": 0, "z1": 17.5, "x2": 42.85, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "こ15", "x1": 37.9, "y1": 0, "z1": 9.5, "x2": 38.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "こ14", "x1": 37.9, "y1": 0, "z1": 11.5, "x2": 38.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "こ13", "x1": 37.9, "y1": 0, "z1": 13.5, "x2": 38.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "こ12", "x1": 37.9, "y1": 0, "z1": 15.5, "x2": 38.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "こ11", "x1": 37.9, "y1": 0, "z1": 17.5, "x2": 38.35, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "こ20", "x1": 35.9, "y1": 0, "z1": 9.5, "x2": 36.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "こ19", "x1": 35.9, "y1": 0, "z1": 11.5, "x2": 36.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "こ18", "x1": 35.9, "y1": 0, "z1": 13.5, "x2": 36.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "こ17", "x1": 35.9, "y1": 0, "z1": 15.5, "x2": 36.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "こ16", "x1": 35.9, "y1": 0, "z1": 17.5, "x2": 36.35, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "さ05", "x1": 31.4, "y1": 0, "z1": 9.5, "x2": 31.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "さ04", "x1": 31.4, "y1": 0, "z1": 11.5, "x2": 31.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "さ03", "x1": 31.4, "y1": 0, "z1": 13.5, "x2": 31.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "さ02", "x1": 31.4, "y1": 0, "z1": 15.5, "x2": 31.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "さ01", "x1": 31.4, "y1": 0, "z1": 17.5, "x2": 31.85, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "さ10", "x1": 29.4, "y1": 0, "z1": 9.5, "x2": 29.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "さ09", "x1": 29.4, "y1": 0, "z1": 11.5, "x2": 29.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "さ08", "x1": 29.4, "y1": 0, "z1": 13.5, "x2": 29.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "さ07", "x1": 29.4, "y1": 0, "z1": 15.5, "x2": 29.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "さ06", "x1": 29.4, "y1": 0, "z1": 17.5, "x2": 29.85, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "さ15", "x1": 24.9, "y1": 0, "z1": 9.5, "x2": 25.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "さ14", "x1": 24.9, "y1": 0, "z1": 11.5, "x2": 25.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "さ13", "x1": 24.9, "y1": 0, "z1": 13.5, "x2": 25.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "さ12", "x1": 24.9, "y1": 0, "z1": 15.5, "x2": 25.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "さ11", "x1": 24.9, "y1": 0, "z1": 17.5, "x2": 25.35, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "さ20", "x1": 22.9, "y1": 0, "z1": 9.5, "x2": 23.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "さ19", "x1": 22.9, "y1": 0, "z1": 11.5, "x2": 23.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "さ18", "x1": 22.9, "y1": 0, "z1": 13.5, "x2": 23.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "さ17", "x1": 22.9, "y1": 0, "z1": 15.5, "x2": 23.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "さ16", "x1": 22.9, "y1": 0, "z1": 17.5, "x2": 23.35, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "し05", "x1": 18.4, "y1": 0, "z1": 9.5, "x2": 18.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "し04", "x1": 18.4, "y1": 0, "z1": 11.5, "x2": 18.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "し03", "x1": 18.4, "y1": 0, "z1": 13.5, "x2": 18.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "し02", "x1": 18.4, "y1": 0, "z1": 15.5, "x2": 18.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "し01", "x1": 18.4, "y1": 0, "z1": 17.5, "x2": 18.85, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "し10", "x1": 16.4, "y1": 0, "z1": 9.5, "x2": 16.85, "y2": 0.7, "z2": 11.3 },
+    { "id": "し09", "x1": 16.4, "y1": 0, "z1": 11.5, "x2": 16.85, "y2": 0.7, "z2": 13.3 },
+    { "id": "し08", "x1": 16.4, "y1": 0, "z1": 13.5, "x2": 16.85, "y2": 0.7, "z2": 15.3 },
+    { "id": "し07", "x1": 16.4, "y1": 0, "z1": 15.5, "x2": 16.85, "y2": 0.7, "z2": 17.3 },
+    { "id": "し06", "x1": 16.4, "y1": 0, "z1": 17.5, "x2": 16.85, "y2": 0.7, "z2": 19.3 },
+
+    { "id": "し15", "x1": 11.9, "y1": 0, "z1": 9.5, "x2": 12.35, "y2": 0.7, "z2": 11.3 },
+    { "id": "し14", "x1": 11.9, "y1": 0, "z1": 11.5, "x2": 12.35, "y2": 0.7, "z2": 13.3 },
+    { "id": "し13", "x1": 11.9, "y1": 0, "z1": 13.5, "x2": 12.35, "y2": 0.7, "z2": 15.3 },
+    { "id": "し12", "x1": 11.9, "y1": 0, "z1": 15.5, "x2": 12.35, "y2": 0.7, "z2": 17.3 },
+    { "id": "し11", "x1": 11.9, "y1": 0, "z1": 17.5, "x2": 12.35, "y2": 0.7, "z2": 19.3 },
+];
+return boothData;
+}
+
+
+
+
+
+
+
+	</script>
+
+   </body>
+
+</html>
