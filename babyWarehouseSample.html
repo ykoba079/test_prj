@@ -49,25 +49,62 @@
         pendingHoverPick: false,
         lastHoverMesh: null
     };
+    const WAREHOUSE = {
+        minX: 0,
+        maxX: 58,
+        minZ: -24,
+        maxZ: 24,
+        wallHeight: 5,
+        wallThickness: 0.35,
+        columnHeight: 5,
+        baySpacing: 1.5,
+        levels: [0.16, 1.16, 2.16],
+        rackRows: [
+            { code: "A", startX: 4.5, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
+            { code: "B", startX: 5.45, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
+            { code: "C", startX: 11.2, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
+            { code: "D", startX: 12.15, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
+            { code: "E", startX: 17.9, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
+            { code: "F", startX: 18.85, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
+            { code: "G", startX: 24.6, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
+            { code: "H", startX: 25.55, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
+            { code: "I", startX: 31.3, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
+            { code: "J", startX: 32.25, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
+            { code: "K", startX: 38, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
+            { code: "L", startX: 38.95, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
+            { code: "N", z: -9.2, rx: 0, segments: [{ startX: 18, bayCount: 7 }, { startX: 31, bayCount: 5 }] },
+            { code: "O", z: -10.15, rx: 0, segments: [{ startX: 18, bayCount: 7 }, { startX: 31, bayCount: 5 }] },
+            { code: "P", z: 9.85, rx: 0, wallSide: true, segments: [{ startX: 43, bayCount: 9 }] },
+            { code: "Q", startX: 44, bayCount: 6, z: -21, rx: Math.PI / 2, pickFace: true },
+            { code: "R", startX: 44.95, bayCount: 6, z: -21, rx: Math.PI / 2, pickFace: true },
+            { code: "U", startX: 20, bayCount: 8, z: -18.3, rx: 0, bulk: true },
+            { code: "V", startX: 20, bayCount: 8, z: -19.25, rx: 0, bulk: true }
+        ],
+        rack: {
+            bayWidth: 3,
+            depth: 0.9,
+            height: 3.4,
+            shelfThickness: 0.08,
+            postThickness: 0.08,
+            shelfLevels: [0.08, 1.08, 2.08],
+            rackGroupBays: 4,
+            slotInset: 0.75
+        }
+    };
 
     const createScene = function () {
         const scene = new BABYLON.Scene(engine);
 
-        const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 3, new BABYLON.Vector3(0, 20, -20), scene);
-        camera.setTarget(new BABYLON.Vector3(10, 5, 0),);
+        const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 72, new BABYLON.Vector3(29, 2, 0), scene);
+        camera.setTarget(new BABYLON.Vector3(29, 3, 0),);
         camera.attachControl(canvas, true);
         camera.wheelDeltaPercentage = 0.005;
 
         const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
         light.intensity = 0.8;
 
-        //Ground
-        var ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 60, height: 40}, scene);
-        ground.position.x = 15;
-        ground.position.z = -5;
-        const groundMat = new BABYLON.StandardMaterial("groundMat");
-        groundMat.diffuseTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/Ground.png", scene);
-        ground.material = groundMat;
+        createWarehouseShell(scene);
+        createWarehouseFixtures(scene);
 
         createGUIButton();
         let guiCanvas = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
@@ -82,20 +119,6 @@
         infoButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
         guiCanvas.addControl(infoButton);
 
-
-        //倉庫モデル読込
-        BABYLON.SceneLoader.ImportMeshAsync("", "https://raw.githubusercontent.com/ykoba079/sample1/master/", "souko.glb").then((result) => {
-            result.meshes[0].scaling.x = -0.4;
-            result.meshes[0].scaling.y = 0.4;
-            result.meshes[0].scaling.z = 0.4;
-            result.meshes[0].position.x = 10;
-            result.meshes[0].position.y = 1.1;
-            for(let i=0;i<result.meshes.length;i++){
-                result.meshes[i].isPickable = false;
-            }
-
-        });
-
          //荷データ読込
         niData = getNiData();
 
@@ -106,7 +129,10 @@
             myMaterial.emissiveColor = createNiColor(niData[i].出荷数,200);
             myMaterial.alpha = 0.7;
 
-            const box = BABYLON.MeshBuilder.CreateBox(niData[i].name, {width: 0.5, height: 0.5, depth: 0.5})
+            const itemSize = niData[i].size === "large"
+                ? {width: 1, height: 0.7, depth: 0.75}
+                : {width: 0.5, height: 0.5, depth: 0.5};
+            const box = BABYLON.MeshBuilder.CreateBox(niData[i].name, itemSize)
             box.id = niData[i].id;
             box.name = niData[i].name;
             box.position.x = niData[i].x;
@@ -117,7 +143,7 @@
             box.y = niData[i].y;
             box.z = niData[i].z;
             box.出荷数 = niData[i].出荷数;
-            box.metadata = { type: "item" };
+            box.metadata = { type: "item", isPlaced: true, baseHeight: itemSize.height };
             niData[i].box = box;
 
             const dragBehavior = new BABYLON.PointerDragBehavior();
@@ -127,6 +153,9 @@
                 //ドラッグの開始
                 dragBehavior.moveAttached = true;
                 dragBehavior._startSlot = { x: box.x, z: box.z };
+                dragBehavior._isSnapped = false;
+                box.metadata.isPlaced = false;
+                niBoxScaleSet(box.x, box.z);
             })
             dragBehavior.onDragObservable.add((event)=>{
                 //ドラッグ中
@@ -141,9 +170,11 @@
                         if(!isSlotOccupied(marker.x, marker.y, marker.z)){
                             dragBehavior.moveAttached = false;
                             //マーカーの座標をドラッグ中のBOXに設定
-                            event.pointerInfo.pickInfo.pickedMesh.x = marker.x;
-                            event.pointerInfo.pickInfo.pickedMesh.y = marker.y;
-                            event.pointerInfo.pickInfo.pickedMesh.z = marker.z;
+                            box.x = marker.x;
+                            box.y = marker.y;
+                            box.z = marker.z;
+                            box.metadata.isPlaced = true;
+                            dragBehavior._isSnapped = true;
 
                             if(dragBehavior._startSlot){
                                 niBoxScaleSet(dragBehavior._startSlot.x,dragBehavior._startSlot.z) ;
@@ -158,6 +189,10 @@
             })
             dragBehavior.onDragEndObservable.add((event)=>{
                 //ドラッグの終了
+                if(!dragBehavior._isSnapped){
+                    box.metadata.isPlaced = false;
+                    buildOccupiedSlots();
+                }
             })
         }
 
@@ -167,10 +202,10 @@
         var mkMaterial = new BABYLON.StandardMaterial("mkMaterial", scene);
         mkMaterial.diffuseColor = new BABYLON.Color3(0.82, 0.89, 0.82);
         for (let i=0;i<mkData.length;i++){
-            const box = BABYLON.MeshBuilder.CreateBox(mkData[i].id, {width: 0.6, height: 0.05, depth: 0.6})
+            const box = BABYLON.MeshBuilder.CreateBox(mkData[i].id, {width: 0.52, height: 0.04, depth: 0.52})
             box.material = mkMaterial;
             box.position.x = mkData[i].x;
-            box.position.y = mkData[i].y+0.02;
+            box.position.y = mkData[i].y+0.035;
             box.position.z = mkData[i].z;
             box.id = mkData[i].id;
             box.x = mkData[i].x; //商品を置いたときに使用する座標
@@ -179,56 +214,7 @@
             box.name = "マーカー";
             box.metadata = { type: "marker" };
         }
-        var tanaData = getTanaData();
-        BABYLON.SceneLoader.ImportMeshAsync("", "https://raw.githubusercontent.com/ykoba079/sample1/master/", "tana.glb").then((result) => {
-            var sourceMeshes = result.meshes.filter(mesh => mesh.getTotalVertices && mesh.getTotalVertices() > 0);
-            var sourceTransforms = new Map();
-            sourceMeshes.forEach(mesh => {
-                sourceTransforms.set(mesh, {
-                    position: mesh.position.clone(),
-                    scaling: mesh.scaling.clone(),
-                    rotation: mesh.rotation.clone(),
-                    rotationQuaternion: mesh.rotationQuaternion ? mesh.rotationQuaternion.clone() : null
-                });
-            });
-            var sourceRoot = result.meshes[0];
-            if(tanaData.length > 0){
-                sourceRoot.scaling.set(0.5, 0.67, 0.5);
-                sourceRoot.position.set(tanaData[0].x, tanaData[0].y, tanaData[0].z);
-                sourceRoot.rotate(BABYLON.Axis.Y, tanaData[0].rx, BABYLON.Space.WORLD);
-                sourceRoot.freezeWorldMatrix();
-            }
-            sourceMeshes.forEach(mesh => {
-                mesh.isPickable = false;
-                if(mesh.material && mesh.material.freeze){
-                    mesh.material.freeze();
-                }
-                mesh.freezeWorldMatrix();
-            });
-
-            for (let i=1; i<tanaData.length;i++){
-                var rackRoot = new BABYLON.TransformNode("tana_" + i, scene);
-                rackRoot.scaling.set(0.5, 0.67, 0.5);
-                rackRoot.position.set(tanaData[i].x, tanaData[i].y, tanaData[i].z);
-                rackRoot.rotation.y = tanaData[i].rx;
-                rackRoot.freezeWorldMatrix();
-
-                sourceMeshes.forEach((sourceMesh, meshIndex) => {
-                    var sourceTransform = sourceTransforms.get(sourceMesh);
-                    var instance = sourceMesh.createInstance("tana_" + i + "_" + meshIndex);
-                    instance.parent = rackRoot;
-                    instance.position.copyFrom(sourceTransform.position);
-                    instance.scaling.copyFrom(sourceTransform.scaling);
-                    if(sourceTransform.rotationQuaternion){
-                        instance.rotationQuaternion = sourceTransform.rotationQuaternion.clone();
-                    }else{
-                        instance.rotation.copyFrom(sourceTransform.rotation);
-                    }
-                    instance.isPickable = false;
-                    instance.freezeWorldMatrix();
-                });
-            }
-        });
+        createWarehouseRacks(scene);
 
         scene.onPointerMove = function castRay(){
             if (appState.pendingHoverPick) {
@@ -284,8 +270,305 @@ function createGUIButton(){
     guiCanvas.addControl(guiButton);
 }
 
+function createWarehouseShell(scene){
+    const width = WAREHOUSE.maxX - WAREHOUSE.minX;
+    const depth = WAREHOUSE.maxZ - WAREHOUSE.minZ;
+    const centerX = (WAREHOUSE.minX + WAREHOUSE.maxX) / 2;
+    const centerZ = (WAREHOUSE.minZ + WAREHOUSE.maxZ) / 2;
+
+    const floorMat = new BABYLON.StandardMaterial("warehouseFloorMat", scene);
+    floorMat.diffuseColor = new BABYLON.Color3(0.55, 0.56, 0.52);
+    floorMat.specularColor = new BABYLON.Color3(0.12, 0.12, 0.12);
+
+    const wallMat = new BABYLON.StandardMaterial("warehouseWallMat", scene);
+    wallMat.diffuseColor = new BABYLON.Color3(0.78, 0.8, 0.78);
+    wallMat.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+
+    const columnMat = new BABYLON.StandardMaterial("warehouseColumnMat", scene);
+    columnMat.diffuseColor = new BABYLON.Color3(0.72, 0.72, 0.68);
+
+    const lineMat = new BABYLON.StandardMaterial("warehouseLineMat", scene);
+    lineMat.diffuseColor = new BABYLON.Color3(1, 0.78, 0.12);
+    lineMat.emissiveColor = new BABYLON.Color3(0.2, 0.12, 0);
+
+    const floor = BABYLON.MeshBuilder.CreateGround("ground", {width, height: depth}, scene);
+    floor.position.set(centerX, 0, centerZ);
+    floor.material = floorMat;
+    floor.metadata = { type: "floor" };
+
+    const wallY = WAREHOUSE.wallHeight / 2;
+    const northWall = BABYLON.MeshBuilder.CreateBox("northWall", {width, height: WAREHOUSE.wallHeight, depth: WAREHOUSE.wallThickness}, scene);
+    northWall.position.set(centerX, wallY, WAREHOUSE.maxZ);
+    const southWall = BABYLON.MeshBuilder.CreateBox("southWall", {width, height: WAREHOUSE.wallHeight, depth: WAREHOUSE.wallThickness}, scene);
+    southWall.position.set(centerX, wallY, WAREHOUSE.minZ);
+    const eastWall = BABYLON.MeshBuilder.CreateBox("eastWall", {width: WAREHOUSE.wallThickness, height: WAREHOUSE.wallHeight, depth}, scene);
+    eastWall.position.set(WAREHOUSE.maxX, wallY, centerZ);
+    const westWall = BABYLON.MeshBuilder.CreateBox("westWall", {width: WAREHOUSE.wallThickness, height: WAREHOUSE.wallHeight, depth}, scene);
+    westWall.position.set(WAREHOUSE.minX, wallY, centerZ);
+
+    [northWall, southWall, eastWall, westWall].forEach(wall => {
+        wall.material = wallMat;
+        wall.isPickable = false;
+        wall.freezeWorldMatrix();
+    });
+
+    const columnXs = [22, 38];
+    const columnZs = [-8, 8];
+    columnXs.forEach(x => {
+        columnZs.forEach(z => {
+            const column = BABYLON.MeshBuilder.CreateBox("column", {width: 0.35, height: WAREHOUSE.columnHeight, depth: 0.35}, scene);
+            column.position.set(x, WAREHOUSE.columnHeight / 2, z);
+            column.material = columnMat;
+            column.isPickable = false;
+            column.freezeWorldMatrix();
+        });
+    });
+
+    for (let i=0; i<4; i++){
+        const dockLine = BABYLON.MeshBuilder.CreateBox("dockLine", {width: 4, height: 0.03, depth: 0.12}, scene);
+        dockLine.position.set(2.2, 0.03, -18 + i * 4);
+        dockLine.rotation.y = Math.PI / 2;
+        dockLine.material = lineMat;
+        dockLine.isPickable = false;
+        dockLine.freezeWorldMatrix();
+    }
+}
+
+function createWarehouseFixtures(scene){
+    const matCache = {};
+    const mat = (name, color) => {
+        if(!matCache[name]){
+            matCache[name] = new BABYLON.StandardMaterial(name, scene);
+            matCache[name].diffuseColor = color;
+        }
+        return matCache[name];
+    };
+    const makeBox = (name, size, position, material, rotationY = 0) => {
+        const mesh = BABYLON.MeshBuilder.CreateBox(name, size, scene);
+        mesh.position.set(position.x, position.y, position.z);
+        mesh.rotation.y = rotationY;
+        mesh.material = material;
+        mesh.isPickable = false;
+        mesh.freezeWorldMatrix();
+        return mesh;
+    };
+
+    const officeFloorMat = mat("officeFloorMat", new BABYLON.Color3(0.78, 0.92, 0.94));
+    const officeWallMat = mat("officeWallMat", new BABYLON.Color3(0.72, 0.78, 0.78));
+    const deskMat = mat("deskMat", new BABYLON.Color3(0.52, 0.48, 0.42));
+    const chairMat = mat("chairMat", new BABYLON.Color3(0.12, 0.16, 0.18));
+    const conveyorMat = mat("conveyorMat", new BABYLON.Color3(0.18, 0.2, 0.22));
+    const rollerMat = mat("rollerMat", new BABYLON.Color3(0.55, 0.57, 0.58));
+    const stagingMat = mat("stagingMat", new BABYLON.Color3(0.9, 0.72, 0.2));
+    const palletMat = mat("palletMat", new BABYLON.Color3(0.46, 0.34, 0.22));
+    const bulkMat = mat("bulkMat", new BABYLON.Color3(0.45, 0.48, 0.52));
+
+    // 右上の事務室と会議・更衣室エリア
+    makeBox("officeFloor", {width: 15, height: 0.04, depth: 12}, {x: 50, y: 0.04, z: 17}, officeFloorMat);
+    [
+        {x: 42.5, z: 17, w: 0.2, d: 12},
+        {x: 57.5, z: 17, w: 0.2, d: 12},
+        {x: 50, z: 23, w: 15, d: 0.2},
+        {x: 50, z: 11, w: 15, d: 0.2},
+        {x: 47, z: 17, w: 0.16, d: 12}
+    ].forEach(wall => makeBox("officePartition", {width: wall.w, height: 2.4, depth: wall.d}, {x: wall.x, y: 1.2, z: wall.z}, officeWallMat));
+
+    for (let row=0; row<3; row++){
+        for (let col=0; col<4; col++){
+            const x = 49 + col * 1.7;
+            const z = 20.5 - row * 2.1;
+            makeBox("officeDesk", {width: 1.2, height: 0.08, depth: 0.7}, {x, y: 0.8, z}, deskMat);
+            makeBox("officeChair", {width: 0.45, height: 0.5, depth: 0.45}, {x, y: 0.35, z: z - 0.75}, chairMat);
+        }
+    }
+    makeBox("meetingTable", {width: 2.2, height: 0.08, depth: 1.4}, {x: 45, y: 0.8, z: 14}, deskMat);
+    for (let i=0; i<6; i++){
+        makeBox("meetingChair", {width: 0.4, height: 0.45, depth: 0.4}, {x: 44 + (i % 3), y: 0.32, z: 13.1 + Math.floor(i / 3) * 1.8}, chairMat);
+    }
+
+    // 中央のコンベアと検品/梱包ステーション
+    makeBox("mainConveyor", {width: 24, height: 0.25, depth: 0.7}, {x: 23, y: 0.55, z: 0}, conveyorMat);
+    makeBox("dockConveyor", {width: 11, height: 0.25, depth: 0.7}, {x: 8, y: 0.55, z: -6}, conveyorMat, Math.PI / 2);
+    makeBox("sortConveyor", {width: 8, height: 0.25, depth: 0.7}, {x: 34, y: 0.55, z: -4}, conveyorMat, Math.PI / 2);
+    for (let i=0; i<19; i++){
+        makeBox("conveyorRoller", {width: 0.12, height: 0.05, depth: 0.85}, {x: 11 + i * 1.3, y: 0.72, z: 0}, rollerMat);
+    }
+    for (let i=0; i<4; i++){
+        makeBox("packTable", {width: 2.4, height: 0.12, depth: 1}, {x: 18 + i * 4, y: 0.75, z: -3}, deskMat);
+        makeBox("packTerminal", {width: 0.45, height: 0.55, depth: 0.35}, {x: 17.2 + i * 4, y: 1.05, z: -3.4}, chairMat);
+    }
+
+    // トラック側の広い大型品・出荷待機エリア
+    for (let i=0; i<5; i++){
+        makeBox("stagingLane", {width: 5.5, height: 0.025, depth: 0.08}, {x: 6 + i * 2.2, y: 0.04, z: -15}, stagingMat, Math.PI / 2);
+    }
+    for (let i=0; i<10; i++){
+        makeBox("bulkPallet", {width: 1.1, height: 0.18, depth: 0.9}, {x: 4 + (i % 5) * 2, y: 0.25, z: -21 + Math.floor(i / 5) * 2.2}, palletMat);
+        makeBox("bulkItem", {width: 0.9, height: 0.65, depth: 0.75}, {x: 4 + (i % 5) * 2, y: 0.68, z: -21 + Math.floor(i / 5) * 2.2}, bulkMat);
+    }
+}
+
+function createWarehouseRacks(scene){
+    const rackMat = new BABYLON.StandardMaterial("rackFrameMat", scene);
+    rackMat.diffuseColor = new BABYLON.Color3(0.45, 0.48, 0.5);
+    const shelfMat = new BABYLON.StandardMaterial("rackShelfMat", scene);
+    shelfMat.diffuseColor = new BABYLON.Color3(0.64, 0.66, 0.66);
+
+    const rackData = getTanaData();
+    rackData.forEach((rack, index) => {
+        const root = new BABYLON.TransformNode("rack_" + index, scene);
+        root.position.set(rack.x, rack.y, rack.z);
+        root.rotation.y = rack.rx;
+
+        const length = rack.length || WAREHOUSE.rack.bayWidth;
+        const depth = rack.depth || WAREHOUSE.rack.depth;
+        const shelfLevels = WAREHOUSE.rack.shelfLevels;
+        const postSpan = rack.postSpan || WAREHOUSE.rack.rackGroupBays * WAREHOUSE.baySpacing;
+        const xPositions = [];
+        for (let x=-length / 2; x<length / 2; x+=postSpan){
+            xPositions.push(x);
+        }
+        xPositions.push(length / 2);
+        const zPositions = [-depth / 2, depth / 2];
+
+        shelfLevels.forEach((levelY) => {
+            const shelf = BABYLON.MeshBuilder.CreateBox("rackShelf", {
+                width: length,
+                height: WAREHOUSE.rack.shelfThickness,
+                depth
+            }, scene);
+            shelf.parent = root;
+            shelf.position.y = levelY;
+            shelf.material = shelfMat;
+            shelf.isPickable = false;
+            shelf.freezeWorldMatrix();
+        });
+
+        xPositions.forEach(x => {
+            zPositions.forEach(z => {
+                const post = BABYLON.MeshBuilder.CreateBox("rackPost", {
+                    width: WAREHOUSE.rack.postThickness,
+                    height: WAREHOUSE.rack.height,
+                    depth: WAREHOUSE.rack.postThickness
+                }, scene);
+                post.parent = root;
+                post.position.set(x, WAREHOUSE.rack.height / 2, z);
+                post.material = rackMat;
+                post.isPickable = false;
+                post.freezeWorldMatrix();
+            });
+        });
+
+        root.freezeWorldMatrix();
+    });
+}
+
+function createWarehouseLayout(){
+    return { rows: WAREHOUSE.rackRows, levels: WAREHOUSE.levels };
+}
+
+function createWarehouseMarkers(){
+    const layout = createWarehouseLayout();
+    const markers = [];
+    for (let rowIndex=0; rowIndex<layout.rows.length; rowIndex++){
+        const row = layout.rows[rowIndex];
+        const segments = row.segments || [{ startX: row.startX, bayCount: row.bayCount }];
+        let rowBayNumber = 1;
+        for (let segmentIndex=0; segmentIndex<segments.length; segmentIndex++){
+            const segment = segments[segmentIndex];
+            const bays = Array.from({ length: segment.bayCount }, (_, index) => index);
+            const baySpacing = row.baySpacing || WAREHOUSE.baySpacing;
+            const slotInset = row.slotInset ?? baySpacing / 2;
+            for (let bayIndex=0; bayIndex<bays.length; bayIndex++){
+                const bay = bays[bayIndex];
+                const slotOffset = bay * baySpacing + slotInset;
+                const x = row.pickFace ? row.startX : segment.startX + slotOffset;
+                const z = row.pickFace ? (segment.startZ ?? row.z) + slotOffset : row.z;
+                const levels = row.bulk ? [WAREHOUSE.levels[0]] : layout.levels;
+                for (let levelIndex=0; levelIndex<levels.length; levelIndex++){
+                    const y = levels[levelIndex];
+                    markers.push({
+                        id: `${row.code}${String(rowBayNumber).padStart(2, "0")}${String(levelIndex + 1).padStart(2, "0")}`,
+                        x,
+                        y,
+                        z
+                    });
+                }
+                rowBayNumber++;
+            }
+        }
+    }
+    return markers;
+}
+
+function createWarehouseItems(){
+    const productNames = [
+        "USBマウス 黒", "USBマウス 白", "USBキーボード", "USB-Cケーブル 1m",
+        "HDMIケーブル 2m", "SSD 512GB", "HDD 2TB", "PCモニター 24",
+        "CPUクーラー", "PC電源 650W", "Webカメラ", "無線ルーター",
+        "コーヒー豆", "緑茶", "レトルト食品", "非常食A",
+        "ノート A4", "ボールペン 黒", "テープ", "乾電池 AA",
+        "制御基板", "センサー", "小型モーター", "保守部品"
+    ];
+    const markers = createWarehouseMarkers();
+    const items = [];
+    for (let i=0; i<markers.length; i++){
+        if(i % 5 === 0){
+            continue;
+        }
+        const marker = markers[i];
+        const isLargeItem = marker.id.startsWith("U") || marker.id.startsWith("V");
+        const productName = isLargeItem ? ["大型家電", "ケース品", "長尺部材", "重量物パレット"][i % 4] : productNames[i % productNames.length];
+        const shippingCount = ((i * 37) % 197) + 3;
+        items.push({
+            id: 10000 + i,
+            name: `${productName} ${marker.id}`,
+            x: marker.x,
+            y: marker.y,
+            z: marker.z,
+            出荷数: shippingCount,
+            size: isLargeItem ? "large" : "standard"
+        });
+    }
+    return items;
+}
+
+function createWarehouseRackData(){
+    const layout = createWarehouseLayout();
+    const racks = [];
+    for (let rowIndex=0; rowIndex<layout.rows.length; rowIndex++){
+        const row = layout.rows[rowIndex];
+        const segments = row.segments || [{ startX: row.startX, bayCount: row.bayCount }];
+        const baySpacing = row.baySpacing || WAREHOUSE.baySpacing;
+        const rackGroupBays = row.rackGroupBays || WAREHOUSE.rack.rackGroupBays;
+        for (let segmentIndex=0; segmentIndex<segments.length; segmentIndex++){
+            const segment = segments[segmentIndex];
+            const rackLength = segment.bayCount * baySpacing;
+            const rackDepth = WAREHOUSE.rack.depth;
+            const rackX = row.pickFace
+                ? row.startX
+                : segment.startX + rackLength / 2;
+            const rackZ = row.pickFace
+                ? (segment.startZ ?? row.z) + rackLength / 2
+                : row.z;
+            racks.push({
+                x: rackX,
+                y: 0,
+                z: rackZ,
+                rx: row.rx,
+                length: rackLength,
+                depth: rackDepth,
+                postSpan: rackGroupBays * baySpacing
+            });
+        }
+    }
+    return racks;
+}
+
 
 function getNiData(){
+    return createWarehouseItems();
+
     var niData = [
 
 {"id":11 ,"name":"USBマウス（黒）","x":4,"y":1,"z":8,"出荷数":24},          {"id":14,"name":"USBマウス（黒小）","x":5,"y":1,"z":8,"出荷数":89},          {"id":17,"name":"USBキーボード","x":6,"y":1,"z":8,"出荷数":129},
@@ -387,6 +670,9 @@ function slotKey(x, y, z){
 function buildOccupiedSlots(){
     appState.occupiedSlots.clear();
     for (let i=0; i<niData.length; i++){
+        if(!niData[i].box.metadata || !niData[i].box.metadata.isPlaced){
+            continue;
+        }
         appState.occupiedSlots.add(slotKey(niData[i].box.x, niData[i].box.y, niData[i].box.z));
     }
 }
@@ -401,27 +687,33 @@ function setBoxBasePosition(box){
 }
 
 function applyBoxLayout(item){
+    const baseHeight = item.box.metadata?.baseHeight || 0.5;
     if(appState.showFixedHeight){
         item.box.scaling.y = 1;
-        item.box.position.y = item.box.y + 0.5/2;
+        item.box.position.y = item.box.y + baseHeight/2;
     }else{
         item.box.scaling.y = item.出荷数*ITEM_HEIGHT_SCALE;
-        item.box.position.y = item.box.y + item.box.scaling.y/4;
+        item.box.position.y = item.box.y + (baseHeight * item.box.scaling.y)/2;
     }
     setBoxBasePosition(item.box);
 }
 
+function getBoxVisualHeight(item){
+    const baseHeight = item.box.metadata?.baseHeight || 0.5;
+    return baseHeight * item.box.scaling.y;
+}
+
 function updateColumnLayout(x,z){
     var columnItems = niData
-        .filter(el => el.box.x == x && el.box.z == z)
+        .filter(el => el.box.metadata && el.box.metadata.isPlaced && el.box.x == x && el.box.z == z)
         .sort((a, b) => a.box.y - b.box.y);
 
     for (let i=0; i<columnItems.length; i++){
         applyBoxLayout(columnItems[i]);
         if(!appState.showFixedHeight && i > 0){
             var prev = columnItems[i - 1];
-            columnItems[i].box.position.y = prev.box.position.y + (prev.出荷数*ITEM_HEIGHT_SCALE)/4;
-            columnItems[i].box.position.y = columnItems[i].box.position.y + (columnItems[i].出荷数*ITEM_HEIGHT_SCALE)/4;
+            columnItems[i].box.position.y = prev.box.position.y + getBoxVisualHeight(prev)/2;
+            columnItems[i].box.position.y = columnItems[i].box.position.y + getBoxVisualHeight(columnItems[i])/2;
         }
     }
 }
@@ -431,6 +723,9 @@ function niBoxScaleReSet(){
     appState.showFixedHeight = !appState.showFixedHeight;
     var updatedColumns = new Set();
     for (let i=0; i<niData.length;i++){
+        if(!niData[i].box.metadata || !niData[i].box.metadata.isPlaced){
+            continue;
+        }
         var key = `${niData[i].box.x}:${niData[i].box.z}`;
         if(!updatedColumns.has(key)){
             updateColumnLayout(niData[i].box.x, niData[i].box.z);
@@ -466,6 +761,8 @@ function createNiColor(i数量,i最大値){
 }
 
 function getTanaData(){
+    return createWarehouseRackData();
+
     var tanaData = [
             {"x":5,"y":1,"z":8,"rx":Math.PI/2},
             {"x":8,"y":1,"z":8,"rx":Math.PI/2},
@@ -510,6 +807,8 @@ function getTanaData(){
 }
 
 function getMkData(){
+    return createWarehouseMarkers();
+
     var mkData = [
         {"id":"A010101","x":4,"y":1,"z":8},  {"id":"A010201","x":5,"y":1,"z":8},  {"id":"A010301","x":6,"y":1,"z":8},
         {"id":"A010102","x":4,"y":2,"z":8},  {"id":"A010202","x":5,"y":2,"z":8},  {"id":"A010302","x":6,"y":2,"z":8},
