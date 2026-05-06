@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	   <title>物体検出デモ（Webかめら版）</title>
+	<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+	<style>
+		body {
+			margin: 0;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+			background-color: #000;
+			color: #fff;
+			gap: 12px;
+			font-family: sans-serif;
+            padding: 20px;
+            box-sizing: border-box;
+		}
+		video { display:none; }
+		.controls {
+			display:flex;
+			gap:8px;
+			align-items:center;
+		}
+		canvas {
+			max-width: 640px;
+			width: 90vw;
+			height: auto;
+			background: #222;
+			border: 4px dashed rgba(255,255,255,0.6);
+			border-radius: 16px;
+			box-sizing: border-box;
+			display: block;
+		}
+        #status {
+            font-size: 14px;
+            color: #1e88e5;
+            font-weight: bold;
+        }
+
+	</style>
+</head>
+<body>
+	<h2>画像物体検出</h2>
+	<div id="status">モデル読み込み中...</div>
+	<video id="video" autoplay playsinline></video>
+	<canvas id="canvas"></canvas>
+
+
+	<script>
+		const video = document.getElementById('video');
+		const canvas = document.getElementById('canvas');
+		const ctx = canvas.getContext('2d');
+        const status = document.getElementById('status');
+
+		let model = null;
+		let cameraAvailable = false;
+		let detecting = false;
+  
+        // モデルのロード
+        async function loadModel() {
+            try {
+                model = await cocoSsd.load();
+                status.textContent = '準備完了';
+				return model;
+            } catch (e) {
+                status.textContent = 'モデルの読み込みに失敗しました';
+                console.error(e);
+            }
+        }
+
+
+
+		async function setupCamera(){
+			try{
+				const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio:false });
+				video.srcObject = stream;
+				await new Promise(resolve => video.onloadedmetadata = resolve);
+				video.play();
+				cameraAvailable = true;
+				return true;
+			}catch(e){
+				console.warn('camera not available', e);
+				cameraAvailable = false;
+				return false;
+			}
+		}
+
+		function fitCanvasToSource(width, height){
+			// canvas にソースの解像度を正確に設定する（表示サイズはCSSで制御）
+			canvas.width = width;
+			canvas.height = height;
+		}
+
+		function showMessageOnCanvas(text){
+			const w = Math.min(1280, window.innerWidth * 0.9);
+			const h = 360;
+			fitCanvasToSource(w, h);
+			ctx.fillStyle = '#222';
+			ctx.fillRect(0,0,canvas.width,canvas.height);
+			ctx.fillStyle = 'white';
+			ctx.textAlign = 'center';
+			ctx.font = '20px sans-serif';
+			ctx.fillText(text, canvas.width/2, canvas.height/2);
+		}
+
+		function drawDetections(predictions){
+			predictions.forEach(pred => {
+				const [x,y,w,h] = pred.bbox;
+				ctx.strokeStyle = 'lime';
+				ctx.lineWidth = Math.max(2, Math.round(Math.min(canvas.width, canvas.height) / 200));
+				ctx.strokeRect(x,y,w,h);
+				// ラベル
+				const label = `${pred.class} ${(pred.score*100).toFixed(1)}%`;
+				ctx.fillStyle = 'rgba(0,0,0,0.6)';
+				const textW = ctx.measureText(label).width + 8;
+				const textH = 20;
+				ctx.fillRect(x, y - textH, textW, textH);
+				ctx.fillStyle = 'white';
+				ctx.font = '16px sans-serif';
+				ctx.fillText(label, x + 4, y - 4);
+			});
+		}
+
+		async function detectOnSource(source){
+			if(!model) await loadModel();
+			try{
+				const predictions = await model.detect(source);
+				return predictions;
+			}catch(e){
+				console.error('detection error', e);
+				return [];
+			}
+		}
+
+		// カメラ用のループ（描画 + 非同期検出）
+		async function startCameraLoop(){
+			fitCanvasToSource(video.videoWidth, video.videoHeight);
+			let lastPreds = [];
+			async function loop(){
+				ctx.clearRect(0,0,canvas.width,canvas.height);
+				ctx.drawImage(video, 0,0, canvas.width, canvas.height);
+				// 前回検出結果を描画
+				drawDetections(lastPreds);
+				if(!detecting){
+					detecting = true;
+					detectOnSource(video).then(preds => {
+						lastPreds = preds;
+						detecting = false;
+					}).catch(()=>{ detecting=false; });
+				}
+				requestAnimationFrame(loop);
+			}
+			loop();
+		}
+
+
+		// 初期化
+		(async function main(){
+			await loadModel();
+			const ok = await setupCamera();
+			if(ok){
+				startCameraLoop();
+			}else{
+				showMessageOnCanvas('カメラが利用できません。');
+			}
+		})();
+
+	
+	</script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物体検出デモ（画像ファイル選択版）</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #000;
+            color: #fff;
+            gap: 20px;
+            font-family: sans-serif;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            z-index: 10;
+        }
+        input[type="file"] {
+            background: #222;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            color: white;
+            cursor: pointer;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 70vh;
+            background: #222;
+            border: 4px dashed rgba(255,255,255,0.4);
+            border-radius: 16px;
+            display: block;
+        }
+        #status {
+            font-size: 14px;
+            color: #1e88e5;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <h2>画像物体検出</h2>
+        <div id="status">モデル読み込み中...</div>
+        <input type="file" id="fileInput" accept="image/*" disabled>
+        <div class="note">画像を選択すると自動で解析が始まります</div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const status = document.getElementById('status');
+
+        let model = null;
+
+        // モデルのロード
+        async function loadModel() {
+            try {
+                model = await cocoSsd.load();
+                status.textContent = '準備完了：画像を選択してください';
+                fileInput.disabled = false;
+            } catch (e) {
+                status.textContent = 'モデルの読み込みに失敗しました';
+                console.error(e);
+            }
+        }
+
+        // 検出結果を描画する関数
+        function drawDetections(predictions) {
+            predictions.forEach(pred => {
+                const [x, y, w, h] = pred.bbox;
+                
+                // 枠の描画
+                ctx.strokeStyle = '#00FF00';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(x, y, w, h);
+
+                // ラベル背景の描画
+                const label = `${pred.class} ${(pred.score * 100).toFixed(1)}%`;
+                ctx.font = '32px sans-serif';
+                const textWidth = ctx.measureText(label).width;
+                
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+                ctx.fillRect(x, y - 35, textWidth + 20, 35);
+
+                // テキストの描画
+                ctx.fillStyle = '#000';
+		
+                ctx.fillText(label, x + 5, y - 7);
+            });
+        }
+
+        // ファイルが選択された時の処理
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = async () => {
+                    // Canvasサイズを画像に合わせる
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // 画像を描画
+                    ctx.drawImage(img, 0, 0);
+                    
+                    status.textContent = '解析中...';
+                    
+                    // 物体検出実行
+                    const predictions = await model.detect(img);
+                    
+                    // 結果を描画
+                    drawDetections(predictions);
+                    
+                    status.textContent = `完了：${predictions.length} 個の物体を検出しました`;
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 開始
+        loadModel();
+    </script>
+</body>
+</html>

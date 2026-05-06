@@ -1,0 +1,197 @@
+<html>
+<head>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <style>
+        body,#renderCanvas { width: 100%; height: 100%;}
+    </style>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true);
+
+        //各種定義
+        const cvRg = Math.PI/180;
+        var earth_dist = 12;       //太陽-地球の距離
+        var moon_dist = 2;      //地球-月の距離
+        var sun_r = 4;            //太陽の大きさ
+        var earth_r = 1;          //地球の大きさ
+        var moon_r = 0.3;         //月の大きさ
+        var moon_shadow_height=6; //月の影の長さ
+        var earth_dec=0;            //地球初期位置
+        var moon_dec=180;             //月初期位置
+
+        const createScene = async function () {
+            // シーンを作成
+            const scene = new BABYLON.Scene(engine);
+
+            // カメラを作成し、シーンに追加
+            const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 4, 10, BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(canvas, true);
+
+            // 環境光を追加
+            const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+
+            // WebXRのデフォルト体験を作成
+            const xr = await BABYLON.WebXRDefaultExperience.CreateAsync(scene);
+
+            //太陽、地球、月の球体生成
+            var sun = BABYLON.MeshBuilder.CreateSphere("sun", {diameter: sun_r, segments: 32}, scene);
+            var earth = BABYLON.MeshBuilder.CreateSphere("earth", {diameter: earth_r, segments: 32}, scene);
+            var moon = BABYLON.MeshBuilder.CreateSphere("moon", {diameter: moon_r, segments: 32}, scene);
+
+            //太陽はパーティクルヘルパーを使用する
+            BABYLON.ParticleHelper.CreateAsync("sun", scene).then((set) => {
+                //set.emitter.options.diameter = sun_r;
+                set.systems[0].particleEmitterType.radius=sun_r/2;
+                set.systems[2].particleEmitterType.radius=sun_r/2;
+                set.systems[1].particleEmitterType.radius=sun_r/2;
+                set.systems[0].maxSize=1;
+                set.systems[2].maxSize=1;
+                set.systems[1].maxScaleX=sun_r/2;
+                set.systems[1].maxScaleY=sun_r/2;
+                set.start();
+            });
+            var sun_material = new BABYLON.StandardMaterial("sun_material", scene);
+            sun_material.diffuseColor = new BABYLON.Color3(0.3773, 0.0930,0.0266);
+            sun_material.emissiveColor = new BABYLON.Color3(0.3773, 0.0930,0.0266);
+            sun.material = sun_material;
+            sun.renderingGroupId = 3; 
+
+
+            const arc1 = BABYLON.Curve3.ArcThru3Points(new BABYLON.Vector3(0, 0,  earth_dist), new BABYLON.Vector3(earth_dist, 0,  0), new BABYLON.Vector3(0, 0,-earth_dist));
+            const arcLine1 = BABYLON.MeshBuilder.CreateLines("arc1", {points: arc1.getPoints()})
+            const arc2 = BABYLON.Curve3.ArcThru3Points(new BABYLON.Vector3(0, 0,  -earth_dist), new BABYLON.Vector3(-earth_dist, 0,  0), new BABYLON.Vector3(0, 0,earth_dist));
+            const arcLine2 = BABYLON.MeshBuilder.CreateLines("arc2", {points: arc2.getPoints()})
+
+            //月の影の三角錐を作成
+            var moonShadow = BABYLON.MeshBuilder.CreateCylinder("moonShadow", {height:moon_shadow_height, diameterTop: 0, diameterBottom:moon_r, updatable:true}, scene); 
+            var moonShadowPos = moonShadow.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+            var numberOfVertices =moonShadowPos.length/3;	
+            for(var i = 0; i<numberOfVertices; i++) {
+                moonShadowPos[i*3+1] = moonShadowPos[i*3+1] +moon_shadow_height/2;
+            }
+            moonShadow.updateVerticesData(BABYLON.VertexBuffer.PositionKind, moonShadowPos);
+            var moonShadow_material = new BABYLON.StandardMaterial("material", scene);
+            moonShadow_material.emissiveColor = new BABYLON.Color3(1, 0, 0);
+            moonShadow_material.alpha = 0.4;
+            moonShadow.material= moonShadow_material;
+            moonShadow.renderingGroupId = 3;  
+
+            //地球のマテリアル作成
+            var earth_material = new BABYLON.StandardMaterial("earth_material", scene);
+            earth_material.diffuseTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/babyBook15/earthTecture1k.jpg", scene);
+            earth_material.diffuseTexture.vScale = -1;
+            earth_material.diffuseTexture.uScale = -1;
+            earth_material.bumpTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/babyBook15/earthNormalMap.jpg", scene);
+            earth_material.bumpTexture.vScale = -1;
+            earth_material.bumpTexture.uScale = -1;
+            earth_material.invertNormalMapX = true;
+            earth_material.invertNormalMapY = true;
+            earth_material.specularColor = new BABYLON.Color3(0, 0, 0);
+            earth.material= earth_material;
+            earth.renderingGroupId = 3;  
+
+            //月のマテリアル作成
+            var moon_material =  new BABYLON.StandardMaterial("moon_material", scene);
+            moon_material.diffuseTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/babyBook15/moon1k.jpg", scene);
+            moon_material.diffuseTexture.vScale = -1;
+            moon_material.diffuseTexture.uScale = -1;
+            moon_material.bumpTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/babyBook15/moonNormalMap.jpg", scene);
+            moon_material.bumpTexture.vScale = -1;
+            moon_material.bumpTexture.uScale = -1;
+            moon_material.invertNormalMapX = true;
+            moon_material.invertNormalMapY = true;
+            moon_material.specularColor = new BABYLON.Color3(0, 0, 0);
+            moon.material= moon_material;
+            moon.renderingGroupId = 3;  
+            
+            //12か月分の簡易表示
+            var arrEarth=[];
+            var arrMoon=[];
+            var arrShadow=[];
+            for(i=0;i<=12;i++){
+            arrEarth.push(earth.clone());
+            arrMoon.push(moon.clone());
+            arrShadow.push(moonShadow.clone());
+            }
+            for(var objEarth of arrEarth){
+                earth_dec = earth_dec+30;
+                objEarth .position.x =  Math.sin(cvRg * earth_dec)*earth_dist;
+                objEarth .position.z =  Math.cos(cvRg * earth_dec)*earth_dist;
+            }
+            for(i=0;i<=12;i++){
+                moon_dec=moon_dec+30;
+                arrMoon[i].position.x = Math.sin(cvRg * moon_dec)*moon_dist + arrEarth[i].position.x;
+                arrMoon[i].position.z = Math.cos(cvRg * moon_dec)*moon_dist + arrEarth[i].position.z;
+                rotateX(arrMoon[i].position,arrEarth[i].position,25)
+
+                arrShadow[i].position.x = arrMoon[i].position.x;
+                arrShadow[i].position.y = arrMoon[i].position.y;
+                arrShadow[i].position.z = arrMoon[i].position.z;
+
+                const direction = sun.position.subtract(arrMoon[i].position);
+                direction.normalize();
+                const rot = BABYLON.Quaternion.FromUnitVectorsToRef(new BABYLON.Vector3(0,-1,0), direction, new BABYLON.Quaternion());
+                arrShadow[i].rotationQuaternion = rot;
+
+                const posArc1 = new BABYLON.Vector3(arrEarth[i].position.x-moon_dist,arrEarth[i].position.y,arrEarth[i].position.z);
+                let posArc2 = new BABYLON.Vector3(arrEarth[i].position.x,arrEarth[i].position.y,arrEarth[i].position.z-moon_dist);
+                rotateX(posArc2,arrEarth[i].position,25);
+                const posArc3 = new BABYLON.Vector3(arrEarth[i].position.x+moon_dist,arrEarth[i].position.y,arrEarth[i].position.z);
+                let posArc4 = new BABYLON.Vector3(arrEarth[i].position.x,arrEarth[i].position.y,arrEarth[i].position.z+moon_dist);
+                rotateX(posArc4,arrEarth[i].position,25);
+                const arc1 = BABYLON.Curve3.ArcThru3Points(posArc1,posArc2,posArc3);
+                const arcLine1 = BABYLON.MeshBuilder.CreateLines("arc1", {points: arc1.getPoints()})
+                const arc2 = BABYLON.Curve3.ArcThru3Points(posArc3,posArc4,posArc1);
+                const arcLine2 = BABYLON.MeshBuilder.CreateLines("arc2", {points: arc2.getPoints()})
+            }
+            moonShadow.visibility=false;
+            
+            // テレポート機能の設定を遅延させ、初期化完了後に設定する
+            xr.baseExperience.onStateChangedObservable.add((state) => {
+                if (state === BABYLON.WebXRState.READY) {
+                    // テレポート機能の設定
+                    const teleportation = xr.baseExperience.featuresManager.enableFeature(
+                        BABYLON.WebXRFeatureName.TELEPORTATION,
+                        "latest",
+                        {
+                            floorMeshes: [ground], // テレポート先として有効なメッシュを指定
+                        }
+                    );
+                }
+            });
+            // コントローラーの入力を監視
+            xr.input.onControllerAddedObservable.add(controller => {
+                // ボタンが押されたときのイベントリスナーを追加
+                controller.onMotionControllerInitObservable.add(motionController => {
+                    motionController.onTriggerStateChangedObservable.add((state) => {
+                        if (state.pressed) {
+                            console.log("コントローラーのボタンが押されました！");
+                            alert("コントローラーのボタンが押されました！");
+                        }
+                    });
+                });
+            });
+
+
+            return scene;
+        };
+
+        createScene().then(sceneToRender => {
+            engine.runRenderLoop(() => sceneToRender.render());
+        });
+
+        //X軸回りで回転
+function rotateX(posMoon ,posEarth,rg){
+    var y = posMoon.y - posEarth.y;
+    var z = posMoon.z - posEarth.z;
+
+    posMoon.y = y * Math.cos(cvRg*rg) - z * Math.sin(cvRg*rg) + posEarth.y;
+    posMoon.z = y * Math.sin(cvRg*rg) + z * Math.cos(cvRg*rg) + posEarth.z;
+}
+
+    </script>
+</body>
+</html>

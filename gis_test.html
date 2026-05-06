@@ -1,0 +1,87 @@
+<html lang="ja">
+    <head>
+        <title>名古屋駅周辺BlenderGIS</title>
+        <meta charset="utf-8"/>
+        <script src="./js/jquery-3.6.0.js"></script>
+        <script src="./js/threejs/build/three.js"></script>
+        <script src="./js/threejs/examples/js/controls/OrbitControls.js"></script>
+        <script src="./js/threejs/examples/js/loaders/GLTFLoader.js"></script>
+    </head>
+    <body>
+<!--shinobi1--><script type="text/javascript" src="//xa.shinobi.jp/ufo/190862404"></script><noscript><a href="//xa.shinobi.jp/bin/gg?190862404" target="_blank"><img src="//xa.shinobi.jp/bin/ll?190862404" border="0"></a><br><span style="font-size:9px"><img style="margin:0;vertical-align:text-bottom;" src="//img.shinobi.jp/tadaima/fj.gif" width="19" height="11"> </span></noscript><!--shinobi2-->        <div class="pageHeader">
+            <div class="divMgnLeft">　【操作】 左ドラッグ：視点回転　右ドラッグ：視点平行移動　ホイール：拡大縮小 
+                <a href="./index.html">戻る</a></div>
+        </div>
+        <div class="pageMain">
+            <canvas id="cvs"></canvas>
+            10秒ほど待って表示されなかったらF5でリロードしてみてください。
+        </div>
+    </body>
+</html>
+
+<script>
+    const cvWidth=1280;
+    const cvHeight=840;
+    const sprScaleMaster=5;
+    const sprWidth=400;
+    const sprHeight=100;
+
+    const cvsElement = document.querySelector('#cvs');
+    const renderer = new THREE.WebGLRenderer({
+        canvas: cvsElement,
+        alpha:true,
+    });
+
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(cvWidth,cvHeight);
+
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(45,cvWidth / cvHeight , 0.1, 1000);
+    camera.position.set(-100,60,60);
+
+
+    const controls = new THREE.OrbitControls(camera, cvsElement);
+
+
+    const directionalLight = new THREE.DirectionalLight(0xEEEEEE, 1.0);
+    directionalLight.position.set(100,100,60);
+    scene.add(directionalLight);
+
+    const ambientLight = new THREE.AmbientLight(0x979797,1.0);
+    scene.add(ambientLight);
+
+
+
+    const glbLoader = new THREE.GLTFLoader();
+
+
+    glbLoader.load('./img/nagoyamae.glb', function(gltf){
+        model = gltf.scene;
+        model.traverse((object)=>{
+            if(object.isMesh){
+                object.scale.set(0.1,0.1,0.1);
+            }
+        });
+        scene.add(model);
+    }, undefined, function(e){
+        console.error(e);
+    });
+
+
+
+
+
+    function tick(){
+        //レンダリング
+    
+        renderer.render(scene,camera);
+        requestAnimationFrame(tick);
+
+
+    }
+
+
+    tick();
+    
+</script>
