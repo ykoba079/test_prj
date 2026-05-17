@@ -47,38 +47,104 @@
         showFixedHeight: false,
         occupiedSlots: new Set(),
         pendingHoverPick: false,
-        lastHoverMesh: null
+        lastHoverMesh: null,
+        markerMeshes: []
     };
+    function createDensePickRackRows(){
+        const rowCodes = [
+            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+            "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
+            "U", "V", "W", "X", "Y", "Z", "AA", "AB", "AC", "AD",
+            "AE", "AF", "AG", "AH"
+        ];
+        const rows = [];
+        for (let pairIndex=0; pairIndex<17; pairIndex++){
+            if(pairIndex === 4){
+                continue;
+            }
+            if(pairIndex >= 13){
+                const movedIndex = pairIndex - 13;
+                const z = -2.6 - movedIndex * 3.3;
+                const segments = [
+                    { startX: 50, bayCount: 5 },
+                    { startX: 58.4, bayCount: 5 },
+                    { startX: 66.8, bayCount: 5 },
+                    { startX: 75.2, bayCount: 5 }
+                ];
+                rows.push({
+                    code: rowCodes[pairIndex * 2],
+                    z,
+                    rx: 0,
+                    baySpacing: 1.2,
+                    rackGroupBays: 5,
+                    segments
+                });
+                rows.push({
+                    code: rowCodes[pairIndex * 2 + 1],
+                    z: z - 0.95,
+                    rx: 0,
+                    baySpacing: 1.2,
+                    rackGroupBays: 5,
+                    segments
+                });
+                continue;
+            }
+            const startX = 4.5 + pairIndex * 4.8;
+            const segments = [
+                { startZ: 5, bayCount: 5 },
+                { startZ: 13.4, bayCount: 5 },
+                { startZ: 21.8, bayCount: 5 },
+                { startZ: 30.2, bayCount: 5 }
+            ];
+            rows.push({
+                code: rowCodes[pairIndex * 2],
+                startX,
+                z: 5,
+                rx: Math.PI / 2,
+                pickFace: true,
+                baySpacing: 1.2,
+                rackGroupBays: 5,
+                segments
+            });
+            rows.push({
+                code: rowCodes[pairIndex * 2 + 1],
+                startX: startX + 0.95,
+                z: 5,
+                rx: Math.PI / 2,
+                pickFace: true,
+                baySpacing: 1.2,
+                rackGroupBays: 5,
+                segments
+            });
+        }
+        return rows;
+    }
+
     const WAREHOUSE = {
         minX: 0,
-        maxX: 58,
+        maxX: 86,
         minZ: -24,
-        maxZ: 24,
+        maxZ: 42,
         wallHeight: 5,
         wallThickness: 0.35,
         columnHeight: 5,
+        columns: [
+            {x: 24, z: 25},
+            {x: 43, z: 25},
+            {x: 67.6, z: 25},
+            {x: 24, z: 9},
+            {x: 43, z: 9},
+            {x: 67.6, z: 9},
+            {x: 22, z: -10},
+            {x: 43, z: -10},
+            {x: 67.6, z: -10}
+        ],
         baySpacing: 1.5,
         levels: [0.16, 1.16, 2.16],
         rackRows: [
-            { code: "A", startX: 4.5, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
-            { code: "B", startX: 5.45, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
-            { code: "C", startX: 11.2, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
-            { code: "D", startX: 12.15, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
-            { code: "E", startX: 17.9, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
-            { code: "F", startX: 18.85, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
-            { code: "G", startX: 24.6, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
-            { code: "H", startX: 25.55, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
-            { code: "I", startX: 31.3, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
-            { code: "J", startX: 32.25, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
-            { code: "K", startX: 38, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
-            { code: "L", startX: 38.95, z: 5, rx: Math.PI / 2, pickFace: true, baySpacing: 1.2, rackGroupBays: 5, segments: [{ startZ: 5, bayCount: 5 }, { startZ: 13.4, bayCount: 5 }] },
-            { code: "N", z: -9.2, rx: 0, segments: [{ startX: 18, bayCount: 7 }, { startX: 31, bayCount: 5 }] },
-            { code: "O", z: -10.15, rx: 0, segments: [{ startX: 18, bayCount: 7 }, { startX: 31, bayCount: 5 }] },
-            { code: "P", z: 9.85, rx: 0, wallSide: true, segments: [{ startX: 43, bayCount: 9 }] },
-            { code: "Q", startX: 44, bayCount: 6, z: -21, rx: Math.PI / 2, pickFace: true },
-            { code: "R", startX: 44.95, bayCount: 6, z: -21, rx: Math.PI / 2, pickFace: true },
-            { code: "U", startX: 20, bayCount: 8, z: -18.3, rx: 0, bulk: true },
-            { code: "V", startX: 20, bayCount: 8, z: -19.25, rx: 0, bulk: true }
+            ...createDensePickRackRows(),
+            { code: "WA", z: 40.8, rx: 0, wallSide: true, segments: [{ startX: 4, bayCount: 12 }, { startX: 26, bayCount: 12 }, { startX: 48, bayCount: 10 }] },
+            { code: "WB", z: 39.85, rx: 0, segments: [{ startX: 4, bayCount: 12 }, { startX: 26, bayCount: 12 }, { startX: 48, bayCount: 10 }] }
         ],
         rack: {
             bayWidth: 3,
@@ -95,8 +161,8 @@
     const createScene = function () {
         const scene = new BABYLON.Scene(engine);
 
-        const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 72, new BABYLON.Vector3(29, 2, 0), scene);
-        camera.setTarget(new BABYLON.Vector3(29, 3, 0),);
+        const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 115, new BABYLON.Vector3(43, 2, 5), scene);
+        camera.setTarget(new BABYLON.Vector3(43, 3, 5),);
         camera.attachControl(canvas, true);
         camera.wheelDeltaPercentage = 0.005;
 
@@ -119,16 +185,12 @@
         infoButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
         guiCanvas.addControl(infoButton);
 
-         //荷データ読込
+        // 荷データ読込
         niData = getNiData();
 
+        const itemMaterialCache = createItemMaterialCache(scene);
         for (let i=0; i<niData.length;i++){
-            var myMaterial = new BABYLON.StandardMaterial("myMaterial", scene);
-
-            myMaterial.diffuseColor = createNiColor(niData[i].出荷数,200);
-            myMaterial.emissiveColor = createNiColor(niData[i].出荷数,200);
-            myMaterial.alpha = 0.7;
-
+            const myMaterial = getSharedItemMaterial(itemMaterialCache, niData[i].出荷数);
             const itemSize = niData[i].size === "large"
                 ? {width: 1, height: 0.7, depth: 0.75}
                 : {width: 0.5, height: 0.5, depth: 0.5};
@@ -150,15 +212,16 @@
             box.addBehavior(dragBehavior);
 
             dragBehavior.onDragStartObservable.add((event)=>{
-                //ドラッグの開始
+                // ドラッグ開始
                 dragBehavior.moveAttached = true;
                 dragBehavior._startSlot = { x: box.x, z: box.z };
                 dragBehavior._isSnapped = false;
                 box.metadata.isPlaced = false;
+                setMarkersVisible(true);
                 niBoxScaleSet(box.x, box.z);
             })
             dragBehavior.onDragObservable.add((event)=>{
-                //ドラッグ中
+                // ドラッグ中
                 var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, BABYLON.Matrix.Identity(), camera);
                 var hits = scene.multiPickWithRay(ray, function(mesh) {
                     return mesh.metadata && mesh.metadata.type === "marker";
@@ -169,7 +232,7 @@
                         var marker = hits[i].pickedMesh;
                         if(!isSlotOccupied(marker.x, marker.y, marker.z)){
                             dragBehavior.moveAttached = false;
-                            //マーカーの座標をドラッグ中のBOXに設定
+                            // マーカーの座標をドラッグ中のBOXに設定
                             box.x = marker.x;
                             box.y = marker.y;
                             box.z = marker.z;
@@ -188,11 +251,12 @@
                 }
             })
             dragBehavior.onDragEndObservable.add((event)=>{
-                //ドラッグの終了
+                // ドラッグ終了
                 if(!dragBehavior._isSnapped){
                     box.metadata.isPlaced = false;
                     buildOccupiedSlots();
                 }
+                setMarkersVisible(false);
             })
         }
 
@@ -213,6 +277,8 @@
             box.z = mkData[i].z;
             box.name = "マーカー";
             box.metadata = { type: "marker" };
+            appState.markerMeshes.push(box);
+            box.setEnabled(false);
         }
         createWarehouseRacks(scene);
 
@@ -228,7 +294,7 @@
                 });
                 if (hit.pickedMesh && hit.pickedMesh !== appState.lastHoverMesh){
                     appState.lastHoverMesh = hit.pickedMesh;
-                    //荷データをボタンで表示する
+                    // 荷データをボタンで表示する
                     createInfoButton(hit.pickedMesh);
                 }
             });
@@ -270,6 +336,82 @@ function createGUIButton(){
     guiCanvas.addControl(guiButton);
 }
 
+function createItemMaterialCache(scene){
+    return {
+        scene,
+        maxQuantity: 200,
+        bucketCount: 16,
+        materials: new Map()
+    };
+}
+
+function getSharedItemMaterial(cache, quantity){
+    const safeQuantity = Number.isFinite(quantity) ? quantity : 0;
+    const bucket = Math.max(0, Math.min(cache.bucketCount - 1, Math.floor((safeQuantity / cache.maxQuantity) * cache.bucketCount)));
+    if(!cache.materials.has(bucket)){
+        const material = new BABYLON.StandardMaterial("itemMaterial_" + bucket, cache.scene);
+        const color = createNiColor((bucket + 0.5) * cache.maxQuantity / cache.bucketCount, cache.maxQuantity);
+        material.diffuseColor = color;
+        material.emissiveColor = color;
+        material.alpha = 0.7;
+        material.freeze();
+        cache.materials.set(bucket, material);
+    }
+    return cache.materials.get(bucket);
+}
+
+function setMarkersVisible(isVisible){
+    for (let i=0; i<appState.markerMeshes.length; i++){
+        appState.markerMeshes[i].setEnabled(isVisible);
+    }
+}
+
+function createAsphaltTexture(scene){
+    const size = 512;
+    const texture = new BABYLON.DynamicTexture("asphaltNoiseTexture", {width: size, height: size}, scene, false);
+    const context = texture.getContext();
+    const imageData = context.createImageData(size, size);
+    const gridSize = 17;
+    const coarseNoise = Array.from({ length: gridSize }, () =>
+        Array.from({ length: gridSize }, () => Math.random() * 28 - 14)
+    );
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const smoothStep = (t) => t * t * (3 - 2 * t);
+    for (let y=0; y<size; y++){
+        for (let x=0; x<size; x++){
+            const offset = (y * size + x) * 4;
+            const gx = (x / size) * (gridSize - 1);
+            const gy = (y / size) * (gridSize - 1);
+            const x0 = Math.floor(gx);
+            const y0 = Math.floor(gy);
+            const x1 = Math.min(gridSize - 1, x0 + 1);
+            const y1 = Math.min(gridSize - 1, y0 + 1);
+            const tx = smoothStep(gx - x0);
+            const ty = smoothStep(gy - y0);
+            const localMottle = lerp(
+                lerp(coarseNoise[y0][x0], coarseNoise[y0][x1], tx),
+                lerp(coarseNoise[y1][x0], coarseNoise[y1][x1], tx),
+                ty
+            );
+            const fineGrain = Math.random() * 20 - 10;
+            const darkStone = Math.random() > 0.975 ? -26 : 0;
+            const lightStone = Math.random() > 0.988 ? 22 : 0;
+            const value = Math.max(96, Math.min(174, 132 + localMottle + fineGrain + darkStone + lightStone));
+            imageData.data[offset] = value;
+            imageData.data[offset + 1] = value + 1;
+            imageData.data[offset + 2] = value;
+            imageData.data[offset + 3] = 255;
+        }
+    }
+    context.putImageData(imageData, 0, 0);
+    texture.update(false);
+    texture.uScale = 1;
+    texture.vScale = 1;
+    texture.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+    texture.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
+    return texture;
+}
+
 function createWarehouseShell(scene){
     const width = WAREHOUSE.maxX - WAREHOUSE.minX;
     const depth = WAREHOUSE.maxZ - WAREHOUSE.minZ;
@@ -277,51 +419,121 @@ function createWarehouseShell(scene){
     const centerZ = (WAREHOUSE.minZ + WAREHOUSE.maxZ) / 2;
 
     const floorMat = new BABYLON.StandardMaterial("warehouseFloorMat", scene);
-    floorMat.diffuseColor = new BABYLON.Color3(0.55, 0.56, 0.52);
-    floorMat.specularColor = new BABYLON.Color3(0.12, 0.12, 0.12);
+    floorMat.diffuseColor = new BABYLON.Color3(0.68, 0.69, 0.65);
+    floorMat.specularColor = new BABYLON.Color3(0.03, 0.03, 0.025);
 
     const wallMat = new BABYLON.StandardMaterial("warehouseWallMat", scene);
-    wallMat.diffuseColor = new BABYLON.Color3(0.78, 0.8, 0.78);
+    wallMat.diffuseColor = new BABYLON.Color3(0.82, 0.84, 0.82);
     wallMat.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
 
     const columnMat = new BABYLON.StandardMaterial("warehouseColumnMat", scene);
-    columnMat.diffuseColor = new BABYLON.Color3(0.72, 0.72, 0.68);
+    columnMat.diffuseColor = new BABYLON.Color3(0.66, 0.67, 0.64);
 
     const lineMat = new BABYLON.StandardMaterial("warehouseLineMat", scene);
     lineMat.diffuseColor = new BABYLON.Color3(1, 0.78, 0.12);
     lineMat.emissiveColor = new BABYLON.Color3(0.2, 0.12, 0);
 
+    const yardMat = new BABYLON.StandardMaterial("truckYardMat", scene);
+    yardMat.diffuseColor = new BABYLON.Color3(0.82, 0.84, 0.82);
+    yardMat.specularColor = new BABYLON.Color3(0.015, 0.015, 0.015);
+    yardMat.diffuseTexture = createAsphaltTexture(scene);
+
+    const dockSlopeMat = new BABYLON.StandardMaterial("dockSlopeMat", scene);
+    dockSlopeMat.diffuseColor = new BABYLON.Color3(0.46, 0.47, 0.44);
+    dockSlopeMat.specularColor = new BABYLON.Color3(0.025, 0.025, 0.02);
+
+    const yard = BABYLON.MeshBuilder.CreateGround("truckYardGround", {width: width + 20, height: depth + 28}, scene);
+    yard.position.set(centerX, -0.9, centerZ - 5);
+    yard.material = yardMat;
+    yard.isPickable = false;
+    yard.freezeWorldMatrix();
+
+    const foundation = BABYLON.MeshBuilder.CreateBox("warehouseFoundation", {width: width + 1.2, height: 0.92, depth: depth + 1.2}, scene);
+    foundation.position.set(centerX, -0.48, centerZ);
+    foundation.material = dockSlopeMat;
+    foundation.isPickable = false;
+    foundation.freezeWorldMatrix();
+
     const floor = BABYLON.MeshBuilder.CreateGround("ground", {width, height: depth}, scene);
-    floor.position.set(centerX, 0, centerZ);
+    floor.position.set(centerX, 0.01, centerZ);
     floor.material = floorMat;
     floor.metadata = { type: "floor" };
+
+    const dockApron = BABYLON.MeshBuilder.CreateBox("dockApron", {width: 16, height: 0.08, depth: 3.5}, scene);
+    dockApron.position.set(10.5, -0.38, -25.55);
+    dockApron.rotation.x = -0.16;
+    dockApron.material = dockSlopeMat;
+    dockApron.isPickable = false;
+    dockApron.freezeWorldMatrix();
+
+    [5.5, 10.5, 15.5].forEach(x => {
+        const parkingLane = BABYLON.MeshBuilder.CreateBox("truckParkingLane", {width: 3.7, height: 0.025, depth: 14}, scene);
+        parkingLane.position.set(x, -0.88, -32);
+        parkingLane.material = lineMat;
+        parkingLane.isPickable = false;
+        parkingLane.freezeWorldMatrix();
+    });
 
     const wallY = WAREHOUSE.wallHeight / 2;
     const northWall = BABYLON.MeshBuilder.CreateBox("northWall", {width, height: WAREHOUSE.wallHeight, depth: WAREHOUSE.wallThickness}, scene);
     northWall.position.set(centerX, wallY, WAREHOUSE.maxZ);
-    const southWall = BABYLON.MeshBuilder.CreateBox("southWall", {width, height: WAREHOUSE.wallHeight, depth: WAREHOUSE.wallThickness}, scene);
-    southWall.position.set(centerX, wallY, WAREHOUSE.minZ);
     const eastWall = BABYLON.MeshBuilder.CreateBox("eastWall", {width: WAREHOUSE.wallThickness, height: WAREHOUSE.wallHeight, depth}, scene);
     eastWall.position.set(WAREHOUSE.maxX, wallY, centerZ);
     const westWall = BABYLON.MeshBuilder.CreateBox("westWall", {width: WAREHOUSE.wallThickness, height: WAREHOUSE.wallHeight, depth}, scene);
     westWall.position.set(WAREHOUSE.minX, wallY, centerZ);
 
-    [northWall, southWall, eastWall, westWall].forEach(wall => {
+    const wallMeshes = [northWall, eastWall, westWall];
+    const southWallOpenings = [
+        { minX: 3.5, maxX: 7.5, openHeight: 3.6 },
+        { minX: 8.5, maxX: 12.5, openHeight: 3.6 },
+        { minX: 13.5, maxX: 17.5, openHeight: 3.6 },
+        { minX: 38, maxX: 40, openHeight: 2.3 }
+    ];
+    const makeSouthWallPart = (name, minX, maxX, y, height) => {
+        const partWidth = maxX - minX;
+        if(partWidth <= 0 || height <= 0){
+            return;
+        }
+        const wallPart = BABYLON.MeshBuilder.CreateBox(name, {
+            width: partWidth,
+            height,
+            depth: WAREHOUSE.wallThickness
+        }, scene);
+        wallPart.position.set(minX + partWidth / 2, y, WAREHOUSE.minZ);
+        wallMeshes.push(wallPart);
+    };
+    let wallCursor = WAREHOUSE.minX;
+    southWallOpenings.forEach(opening => {
+        makeSouthWallPart("southWall", wallCursor, opening.minX, wallY, WAREHOUSE.wallHeight);
+        makeSouthWallPart(
+            "southWallHeader",
+            opening.minX,
+            opening.maxX,
+            opening.openHeight + (WAREHOUSE.wallHeight - opening.openHeight) / 2,
+            WAREHOUSE.wallHeight - opening.openHeight
+        );
+        wallCursor = opening.maxX;
+    });
+    makeSouthWallPart("southWall", wallCursor, WAREHOUSE.maxX, wallY, WAREHOUSE.wallHeight);
+
+    wallMeshes.forEach(wall => {
         wall.material = wallMat;
         wall.isPickable = false;
         wall.freezeWorldMatrix();
     });
 
-    const columnXs = [22, 38];
-    const columnZs = [-8, 8];
-    columnXs.forEach(x => {
-        columnZs.forEach(z => {
-            const column = BABYLON.MeshBuilder.CreateBox("column", {width: 0.35, height: WAREHOUSE.columnHeight, depth: 0.35}, scene);
-            column.position.set(x, WAREHOUSE.columnHeight / 2, z);
-            column.material = columnMat;
-            column.isPickable = false;
-            column.freezeWorldMatrix();
-        });
+    WAREHOUSE.columns.forEach(pos => {
+        const columnBase = BABYLON.MeshBuilder.CreateBox("columnBase", {width: 0.8, height: 0.08, depth: 0.8}, scene);
+        columnBase.position.set(pos.x, 0.04, pos.z);
+        columnBase.material = columnMat;
+        columnBase.isPickable = false;
+        columnBase.freezeWorldMatrix();
+
+        const column = BABYLON.MeshBuilder.CreateBox("column", {width: 0.48, height: WAREHOUSE.columnHeight, depth: 0.48}, scene);
+        column.position.set(pos.x, WAREHOUSE.columnHeight / 2, pos.z);
+        column.material = columnMat;
+        column.isPickable = false;
+        column.freezeWorldMatrix();
     });
 
     for (let i=0; i<4; i++){
@@ -340,6 +552,7 @@ function createWarehouseFixtures(scene){
         if(!matCache[name]){
             matCache[name] = new BABYLON.StandardMaterial(name, scene);
             matCache[name].diffuseColor = color;
+            matCache[name].specularColor = new BABYLON.Color3(0.04, 0.04, 0.04);
         }
         return matCache[name];
     };
@@ -352,49 +565,135 @@ function createWarehouseFixtures(scene){
         mesh.freezeWorldMatrix();
         return mesh;
     };
+    const makeSupportLeg = (name, x, z, height, material) => {
+        makeBox(name, {width: 0.12, height, depth: 0.12}, {x, y: height / 2, z}, material);
+    };
+    const makeLeggedTable = (name, x, z, width, depth, tableHeight, material, legMaterial) => {
+        makeBox(name, {width, height: 0.12, depth}, {x, y: tableHeight, z}, material);
+        const legHeight = tableHeight - 0.06;
+        const insetX = width / 2 - 0.18;
+        const insetZ = depth / 2 - 0.18;
+        [
+            {x: x - insetX, z: z - insetZ},
+            {x: x + insetX, z: z - insetZ},
+            {x: x - insetX, z: z + insetZ},
+            {x: x + insetX, z: z + insetZ}
+        ].forEach(pos => makeSupportLeg(name + "Leg", pos.x, pos.z, legHeight, legMaterial));
+    };
 
-    const officeFloorMat = mat("officeFloorMat", new BABYLON.Color3(0.78, 0.92, 0.94));
-    const officeWallMat = mat("officeWallMat", new BABYLON.Color3(0.72, 0.78, 0.78));
-    const deskMat = mat("deskMat", new BABYLON.Color3(0.52, 0.48, 0.42));
+    const officeFloorMat = mat("officeFloorMat", new BABYLON.Color3(0.74, 0.86, 0.88));
+    const officeWallMat = mat("officeWallMat", new BABYLON.Color3(0.7, 0.74, 0.74));
+    const deskMat = mat("deskMat", new BABYLON.Color3(0.45, 0.42, 0.36));
     const chairMat = mat("chairMat", new BABYLON.Color3(0.12, 0.16, 0.18));
-    const conveyorMat = mat("conveyorMat", new BABYLON.Color3(0.18, 0.2, 0.22));
-    const rollerMat = mat("rollerMat", new BABYLON.Color3(0.55, 0.57, 0.58));
-    const stagingMat = mat("stagingMat", new BABYLON.Color3(0.9, 0.72, 0.2));
+    const conveyorMat = mat("conveyorMat", new BABYLON.Color3(0.15, 0.17, 0.19));
+    const rollerMat = mat("rollerMat", new BABYLON.Color3(0.68, 0.7, 0.7));
+    const supportMat = mat("equipmentSupportMat", new BABYLON.Color3(0.2, 0.22, 0.22));
+    const stagingMat = mat("stagingMat", new BABYLON.Color3(1, 0.78, 0.16));
     const palletMat = mat("palletMat", new BABYLON.Color3(0.46, 0.34, 0.22));
     const bulkMat = mat("bulkMat", new BABYLON.Color3(0.45, 0.48, 0.52));
+    const dockShadowMat = mat("dockShadowMat", new BABYLON.Color3(0.08, 0.09, 0.09));
+    const doorMat = mat("doorMat", new BABYLON.Color3(0.22, 0.25, 0.27));
+    const glassMat = mat("windowGlassMat", new BABYLON.Color3(0.46, 0.72, 0.9));
+    const supplyFloorMat = mat("supplyFloorMat", new BABYLON.Color3(0.57, 0.61, 0.57));
+    const cartMat = mat("cartMat", new BABYLON.Color3(0.18, 0.2, 0.22));
+    const printerMat = mat("printerMat", new BABYLON.Color3(0.88, 0.9, 0.86));
+    const truckBodyMat = mat("truckBodyMat", new BABYLON.Color3(0.88, 0.9, 0.86));
+    const truckCabMat = mat("truckCabMat", new BABYLON.Color3(0.12, 0.28, 0.45));
+    const truckWindowMat = mat("truckWindowMat", new BABYLON.Color3(0.42, 0.66, 0.78));
+    const tireMat = mat("truckTireMat", new BABYLON.Color3(0.04, 0.04, 0.04));
+    const dockPlateMat = mat("dockPlateMat", new BABYLON.Color3(0.62, 0.63, 0.58));
+    glassMat.alpha = 0.48;
+    glassMat.emissiveColor = new BABYLON.Color3(0.08, 0.14, 0.18);
+    truckWindowMat.alpha = 0.55;
 
-    // 右上の事務室と会議・更衣室エリア
-    makeBox("officeFloor", {width: 15, height: 0.04, depth: 12}, {x: 50, y: 0.04, z: 17}, officeFloorMat);
+    [5.5, 10.5, 15.5].forEach(x => {
+        makeBox("truckDockOpening", {width: 3.5, height: 3.35, depth: 0.05}, {x, y: 1.7, z: -23.78}, dockShadowMat);
+        makeBox("truckDockThreshold", {width: 3.8, height: 0.04, depth: 0.65}, {x, y: 0.04, z: -23.72}, stagingMat);
+    });
+
+    createLoadingTruck(scene, makeBox, {
+        truckBodyMat,
+        truckCabMat,
+        truckWindowMat,
+        tireMat,
+        dockPlateMat,
+        palletMat,
+        bulkMat,
+        stagingMat
+    });
+
+    // 下側外壁に接した受付兼事務室。外部ドライバー受付と倉庫内動線の両方に近い位置。
+    makeBox("officeFloor", {width: 14, height: 0.04, depth: 7}, {x: 38, y: 0.04, z: -20.5}, officeFloorMat);
     [
-        {x: 42.5, z: 17, w: 0.2, d: 12},
-        {x: 57.5, z: 17, w: 0.2, d: 12},
-        {x: 50, z: 23, w: 15, d: 0.2},
-        {x: 50, z: 11, w: 15, d: 0.2},
-        {x: 47, z: 17, w: 0.16, d: 12}
+        {x: 31, z: -20.5, w: 0.2, d: 7},
+        {x: 45, z: -20.5, w: 0.2, d: 7},
+        {x: 34, z: -17, w: 6, d: 0.2},
+        {x: 41.5, z: -17, w: 7, d: 0.2},
+        {x: 34.5, z: -24, w: 7, d: 0.2},
+        {x: 42.5, z: -24, w: 5, d: 0.2},
+        {x: 36.5, z: -20.5, w: 0.16, d: 7}
     ].forEach(wall => makeBox("officePartition", {width: wall.w, height: 2.4, depth: wall.d}, {x: wall.x, y: 1.2, z: wall.z}, officeWallMat));
+    makeBox("officeExteriorDoor", {width: 1.45, height: 2.05, depth: 0.08}, {x: 39, y: 1.05, z: -23.76}, doorMat);
+    makeBox("officeExteriorWindow", {width: 2.1, height: 1.05, depth: 0.06}, {x: 34, y: 1.55, z: -23.74}, glassMat);
+    makeBox("officeExteriorWindow", {width: 2.1, height: 1.05, depth: 0.06}, {x: 43, y: 1.55, z: -23.74}, glassMat);
 
-    for (let row=0; row<3; row++){
-        for (let col=0; col<4; col++){
-            const x = 49 + col * 1.7;
-            const z = 20.5 - row * 2.1;
+    for (let row=0; row<2; row++){
+        for (let col=0; col<3; col++){
+            const x = 38.2 + col * 1.65;
+            const z = -18.3 - row * 1.8;
             makeBox("officeDesk", {width: 1.2, height: 0.08, depth: 0.7}, {x, y: 0.8, z}, deskMat);
             makeBox("officeChair", {width: 0.45, height: 0.5, depth: 0.45}, {x, y: 0.35, z: z - 0.75}, chairMat);
         }
     }
-    makeBox("meetingTable", {width: 2.2, height: 0.08, depth: 1.4}, {x: 45, y: 0.8, z: 14}, deskMat);
+    makeBox("meetingTable", {width: 2.2, height: 0.08, depth: 1.4}, {x: 33.3, y: 0.8, z: -20}, deskMat);
     for (let i=0; i<6; i++){
-        makeBox("meetingChair", {width: 0.4, height: 0.45, depth: 0.4}, {x: 44 + (i % 3), y: 0.32, z: 13.1 + Math.floor(i / 3) * 1.8}, chairMat);
+        makeBox("meetingChair", {width: 0.4, height: 0.45, depth: 0.4}, {x: 32.3 + (i % 3), y: 0.32, z: -20.9 + Math.floor(i / 3) * 1.8}, chairMat);
     }
 
-    // 中央のコンベアと検品/梱包ステーション
+    // 右上外壁に接した備品・台車置き場。
+    makeBox("supplyRoomFloor", {width: 14, height: 0.04, depth: 10}, {x: 79, y: 0.05, z: 37}, supplyFloorMat);
+    [
+        {x: 72, z: 37, w: 0.2, d: 10},
+        {x: 85.9, z: 37, w: 0.2, d: 10},
+        {x: 79, z: 41.9, w: 14, d: 0.2},
+        {x: 75.5, z: 32, w: 7, d: 0.2},
+        {x: 84, z: 32, w: 4, d: 0.2}
+    ].forEach(wall => makeBox("supplyRoomWall", {width: wall.w, height: 2.4, depth: wall.d}, {x: wall.x, y: 1.2, z: wall.z}, officeWallMat));
+    makeBox("supplyRoomDoor", {width: 1.6, height: 2.05, depth: 0.08}, {x: 80.2, y: 1.05, z: 32.12}, doorMat);
+    makeBox("supplyRoomWindow", {width: 2.2, height: 1, depth: 0.06}, {x: 84, y: 1.55, z: 32.14}, glassMat);
+    for (let i=0; i<4; i++){
+        const x = 74.5 + i * 1.45;
+        makeBox("handCartBase", {width: 0.9, height: 0.08, depth: 1.1}, {x, y: 0.25, z: 35.2}, cartMat);
+        makeBox("handCartHandle", {width: 0.08, height: 0.95, depth: 0.08}, {x: x - 0.38, y: 0.75, z: 35.7}, cartMat);
+        makeBox("handCartHandle", {width: 0.08, height: 0.95, depth: 0.08}, {x: x + 0.38, y: 0.75, z: 35.7}, cartMat);
+    }
+    makeLeggedTable("printerTable", 82.2, 38.5, 2.6, 0.95, 0.78, deskMat, supportMat);
+    makeBox("labelPrinter", {width: 0.85, height: 0.5, depth: 0.6}, {x: 81.6, y: 1.1, z: 38.5}, printerMat);
+    makeBox("supplyCabinet", {width: 2.4, height: 1.8, depth: 0.75}, {x: 74.5, y: 0.94, z: 40.4}, bulkMat);
+
     makeBox("mainConveyor", {width: 24, height: 0.25, depth: 0.7}, {x: 23, y: 0.55, z: 0}, conveyorMat);
     makeBox("dockConveyor", {width: 11, height: 0.25, depth: 0.7}, {x: 8, y: 0.55, z: -6}, conveyorMat, Math.PI / 2);
     makeBox("sortConveyor", {width: 8, height: 0.25, depth: 0.7}, {x: 34, y: 0.55, z: -4}, conveyorMat, Math.PI / 2);
+    for (let i=0; i<7; i++){
+        const x = 12 + i * 3.6;
+        makeSupportLeg("mainConveyorStand", x, -0.32, 0.43, supportMat);
+        makeSupportLeg("mainConveyorStand", x, 0.32, 0.43, supportMat);
+    }
+    for (let i=0; i<4; i++){
+        const z = -10.5 + i * 3;
+        makeSupportLeg("dockConveyorStand", 7.68, z, 0.43, supportMat);
+        makeSupportLeg("dockConveyorStand", 8.32, z, 0.43, supportMat);
+    }
+    for (let i=0; i<3; i++){
+        const z = -7 + i * 3;
+        makeSupportLeg("sortConveyorStand", 33.68, z, 0.43, supportMat);
+        makeSupportLeg("sortConveyorStand", 34.32, z, 0.43, supportMat);
+    }
     for (let i=0; i<19; i++){
         makeBox("conveyorRoller", {width: 0.12, height: 0.05, depth: 0.85}, {x: 11 + i * 1.3, y: 0.72, z: 0}, rollerMat);
     }
     for (let i=0; i<4; i++){
-        makeBox("packTable", {width: 2.4, height: 0.12, depth: 1}, {x: 18 + i * 4, y: 0.75, z: -3}, deskMat);
+        makeLeggedTable("packTable", 18 + i * 4, -3, 2.4, 1, 0.75, deskMat, supportMat);
         makeBox("packTerminal", {width: 0.45, height: 0.55, depth: 0.35}, {x: 17.2 + i * 4, y: 1.05, z: -3.4}, chairMat);
     }
 
@@ -402,23 +701,73 @@ function createWarehouseFixtures(scene){
     for (let i=0; i<5; i++){
         makeBox("stagingLane", {width: 5.5, height: 0.025, depth: 0.08}, {x: 6 + i * 2.2, y: 0.04, z: -15}, stagingMat, Math.PI / 2);
     }
-    for (let i=0; i<10; i++){
-        makeBox("bulkPallet", {width: 1.1, height: 0.18, depth: 0.9}, {x: 4 + (i % 5) * 2, y: 0.25, z: -21 + Math.floor(i / 5) * 2.2}, palletMat);
-        makeBox("bulkItem", {width: 0.9, height: 0.65, depth: 0.75}, {x: 4 + (i % 5) * 2, y: 0.68, z: -21 + Math.floor(i / 5) * 2.2}, bulkMat);
+    for (let i=0; i<14; i++){
+        const x = 17 + (i % 7) * 1.8;
+        const z = -21.2 + Math.floor(i / 7) * 2.1;
+        makeBox("bulkPallet", {width: 1.15, height: 0.18, depth: 0.95}, {x, y: 0.25, z}, palletMat);
+        makeBox("bulkItem", {width: 0.95, height: 0.65, depth: 0.8}, {x, y: 0.68, z}, bulkMat);
     }
+}
+
+function createLoadingTruck(scene, makeBox, materials){
+    const dockX = 10.5;
+    const truckWidth = 3.4;
+    const trailerDepth = 7.2;
+    const bedY = 0.04;
+    const trailerCenterZ = -27.55;
+    const cabCenterZ = -33.05;
+
+    makeBox("loadingTruckTrailer", {width: truckWidth, height: 2.15, depth: trailerDepth}, {x: dockX, y: bedY + 1.08, z: trailerCenterZ}, materials.truckBodyMat);
+    makeBox("loadingTruckRearOpening", {width: truckWidth - 0.28, height: 1.82, depth: 0.06}, {x: dockX, y: bedY + 1.02, z: -24.02}, materials.dockPlateMat);
+    makeBox("loadingTruckCargoFloor", {width: truckWidth - 0.25, height: 0.08, depth: trailerDepth - 0.4}, {x: dockX, y: bedY, z: trailerCenterZ + 0.1}, materials.dockPlateMat);
+    makeBox("dockLevelerPlate", {width: 3.35, height: 0.06, depth: 1.15}, {x: dockX, y: bedY + 0.03, z: -24.18}, materials.dockPlateMat);
+
+    makeBox("loadingTruckCab", {width: 3.25, height: 1.8, depth: 2.25}, {x: dockX, y: -0.02, z: cabCenterZ}, materials.truckCabMat);
+    makeBox("loadingTruckCabRoof", {width: 3.1, height: 0.3, depth: 1.55}, {x: dockX, y: 1.03, z: cabCenterZ + 0.18}, materials.truckCabMat);
+    makeBox("loadingTruckWindshield", {width: 2.25, height: 0.72, depth: 0.06}, {x: dockX, y: 0.68, z: cabCenterZ - 1.15}, materials.truckWindowMat);
+    makeBox("loadingTruckGrille", {width: 1.9, height: 0.55, depth: 0.08}, {x: dockX, y: -0.28, z: cabCenterZ - 1.17}, materials.dockPlateMat);
+
+    [
+        {x: dockX - 1.95, z: -25.5},
+        {x: dockX + 1.95, z: -25.5},
+        {x: dockX - 1.95, z: -30.2},
+        {x: dockX + 1.95, z: -30.2},
+        {x: dockX - 1.9, z: -33.15},
+        {x: dockX + 1.9, z: -33.15}
+    ].forEach(pos => {
+        const wheel = BABYLON.MeshBuilder.CreateCylinder("loadingTruckWheel", {diameter: 0.78, height: 0.36, tessellation: 24}, scene);
+        wheel.position.set(pos.x, -0.45, pos.z);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.material = materials.tireMat;
+        wheel.isPickable = false;
+        wheel.freezeWorldMatrix();
+    });
+
+    [
+        {x: dockX - 0.75, z: -24.45},
+        {x: dockX + 0.35, z: -24.85},
+        {x: dockX - 0.1, z: -25.55}
+    ].forEach((pos, index) => {
+        makeBox("unloadingPallet", {width: 0.95, height: 0.16, depth: 0.75}, {x: pos.x, y: bedY + 0.11, z: pos.z}, materials.palletMat);
+        makeBox("unloadingCarton", {width: 0.72, height: 0.55 + index * 0.06, depth: 0.58}, {x: pos.x, y: bedY + 0.48 + index * 0.03, z: pos.z}, materials.bulkMat);
+    });
+    makeBox("unloadingFloorMark", {width: 3.8, height: 0.025, depth: 0.12}, {x: dockX, y: -0.87, z: -35.7}, materials.stagingMat);
 }
 
 function createWarehouseRacks(scene){
     const rackMat = new BABYLON.StandardMaterial("rackFrameMat", scene);
-    rackMat.diffuseColor = new BABYLON.Color3(0.45, 0.48, 0.5);
+    rackMat.diffuseColor = new BABYLON.Color3(0.34, 0.4, 0.45);
+    rackMat.specularColor = new BABYLON.Color3(0.04, 0.045, 0.05);
     const shelfMat = new BABYLON.StandardMaterial("rackShelfMat", scene);
-    shelfMat.diffuseColor = new BABYLON.Color3(0.64, 0.66, 0.66);
+    shelfMat.diffuseColor = new BABYLON.Color3(0.58, 0.63, 0.65);
+    shelfMat.specularColor = new BABYLON.Color3(0.035, 0.04, 0.04);
 
     const rackData = getTanaData();
     rackData.forEach((rack, index) => {
         const root = new BABYLON.TransformNode("rack_" + index, scene);
         root.position.set(rack.x, rack.y, rack.z);
         root.rotation.y = rack.rx;
+        root.computeWorldMatrix(true);
 
         const length = rack.length || WAREHOUSE.rack.bayWidth;
         const depth = rack.depth || WAREHOUSE.rack.depth;
@@ -430,6 +779,7 @@ function createWarehouseRacks(scene){
         }
         xPositions.push(length / 2);
         const zPositions = [-depth / 2, depth / 2];
+        const rackParts = [];
 
         shelfLevels.forEach((levelY) => {
             const shelf = BABYLON.MeshBuilder.CreateBox("rackShelf", {
@@ -441,7 +791,7 @@ function createWarehouseRacks(scene){
             shelf.position.y = levelY;
             shelf.material = shelfMat;
             shelf.isPickable = false;
-            shelf.freezeWorldMatrix();
+            rackParts.push(shelf);
         });
 
         xPositions.forEach(x => {
@@ -455,16 +805,35 @@ function createWarehouseRacks(scene){
                 post.position.set(x, WAREHOUSE.rack.height / 2, z);
                 post.material = rackMat;
                 post.isPickable = false;
-                post.freezeWorldMatrix();
+                rackParts.push(post);
             });
         });
 
-        root.freezeWorldMatrix();
+        const mergedRack = BABYLON.Mesh.MergeMeshes(rackParts, true, true, undefined, false, true);
+        if(mergedRack){
+            mergedRack.name = "rackMerged_" + index;
+            mergedRack.isPickable = false;
+            mergedRack.freezeWorldMatrix();
+        }
+        root.dispose();
     });
 }
 
 function createWarehouseLayout(){
     return { rows: WAREHOUSE.rackRows, levels: WAREHOUSE.levels };
+}
+
+function getBaySlotPosition(row, segment, bay, baySpacing, slotInset){
+    const slotOffset = bay * baySpacing + slotInset;
+    return {
+        x: row.pickFace ? row.startX : segment.startX + slotOffset,
+        z: row.pickFace ? (segment.startZ ?? row.z) + slotOffset : row.z
+    };
+}
+
+function isBlockedByColumn(x, z){
+    const clearance = 1.05;
+    return WAREHOUSE.columns.some(column => Math.hypot(column.x - x, column.z - z) < clearance);
 }
 
 function createWarehouseMarkers(){
@@ -481,9 +850,13 @@ function createWarehouseMarkers(){
             const slotInset = row.slotInset ?? baySpacing / 2;
             for (let bayIndex=0; bayIndex<bays.length; bayIndex++){
                 const bay = bays[bayIndex];
-                const slotOffset = bay * baySpacing + slotInset;
-                const x = row.pickFace ? row.startX : segment.startX + slotOffset;
-                const z = row.pickFace ? (segment.startZ ?? row.z) + slotOffset : row.z;
+                const slotPosition = getBaySlotPosition(row, segment, bay, baySpacing, slotInset);
+                const x = slotPosition.x;
+                const z = slotPosition.z;
+                if(isBlockedByColumn(x, z)){
+                    rowBayNumber++;
+                    continue;
+                }
                 const levels = row.bulk ? [WAREHOUSE.levels[0]] : layout.levels;
                 for (let levelIndex=0; levelIndex<levels.length; levelIndex++){
                     const y = levels[levelIndex];
@@ -511,15 +884,37 @@ function createWarehouseItems(){
         "制御基板", "センサー", "小型モーター", "保守部品"
     ];
     const markers = createWarehouseMarkers();
+    const logisticHotspots = [
+        { x: 23, z: 0 },      // main conveyor
+        { x: 34, z: -4 },     // sort conveyor
+        { x: 10, z: -15 },    // staging lanes
+        { x: 17, z: -21.2 },  // dock pallets
+        { x: 6, z: -23.7 }    // shipping dock
+    ];
+    const availableMarkers = markers.filter((marker, index) => index % 5 !== 0);
+    const markerDistanceToHotspot = (marker) => Math.min(
+        ...logisticHotspots.map(point => Math.hypot(marker.x - point.x, marker.z - point.z))
+    );
+    const maxHotspotDistance = Math.max(...availableMarkers.map(markerDistanceToHotspot));
+    const calculateShippingCount = (marker, index) => {
+        const distance = markerDistanceToHotspot(marker);
+        const distanceRatio = maxHotspotDistance === 0 ? 0 : distance / maxHotspotDistance;
+        const nearScore = 1 - distanceRatio;
+        const dispersion = (Math.sin(marker.x * 0.73 + marker.z * 1.31 + index * 0.17) + 1) / 2;
+        const congestionRelief = ((Math.floor(marker.x / 8) + Math.floor((marker.z + 24) / 8)) % 3) * 14;
+        const distantHighRunner = distanceRatio > 0.62 && index % 31 === 7 ? 115 : 0;
+        const count = 12 + nearScore * 135 + dispersion * 48 + distantHighRunner - congestionRelief;
+        return Math.max(3, Math.min(230, Math.round(count)));
+    };
     const items = [];
     for (let i=0; i<markers.length; i++){
         if(i % 5 === 0){
             continue;
         }
         const marker = markers[i];
-        const isLargeItem = marker.id.startsWith("U") || marker.id.startsWith("V");
+        const isLargeItem = false;
         const productName = isLargeItem ? ["大型家電", "ケース品", "長尺部材", "重量物パレット"][i % 4] : productNames[i % productNames.length];
-        const shippingCount = ((i * 37) % 197) + 3;
+        const shippingCount = calculateShippingCount(marker, i);
         items.push({
             id: 10000 + i,
             name: `${productName} ${marker.id}`,
@@ -543,23 +938,47 @@ function createWarehouseRackData(){
         const rackGroupBays = row.rackGroupBays || WAREHOUSE.rack.rackGroupBays;
         for (let segmentIndex=0; segmentIndex<segments.length; segmentIndex++){
             const segment = segments[segmentIndex];
-            const rackLength = segment.bayCount * baySpacing;
-            const rackDepth = WAREHOUSE.rack.depth;
-            const rackX = row.pickFace
-                ? row.startX
-                : segment.startX + rackLength / 2;
-            const rackZ = row.pickFace
-                ? (segment.startZ ?? row.z) + rackLength / 2
-                : row.z;
-            racks.push({
-                x: rackX,
-                y: 0,
-                z: rackZ,
-                rx: row.rx,
-                length: rackLength,
-                depth: rackDepth,
-                postSpan: rackGroupBays * baySpacing
-            });
+            let runStart = null;
+            const pushRackRun = (startBay, bayCount) => {
+                if(bayCount <= 0){
+                    return;
+                }
+                const rackLength = bayCount * baySpacing;
+                const rackDepth = WAREHOUSE.rack.depth;
+                const rackX = row.pickFace
+                    ? row.startX
+                    : segment.startX + startBay * baySpacing + rackLength / 2;
+                const rackZ = row.pickFace
+                    ? (segment.startZ ?? row.z) + startBay * baySpacing + rackLength / 2
+                    : row.z;
+                racks.push({
+                    x: rackX,
+                    y: 0,
+                    z: rackZ,
+                    rx: row.rx,
+                    length: rackLength,
+                    depth: rackDepth,
+                    postSpan: rackGroupBays * baySpacing
+                });
+            };
+            for (let bayIndex=0; bayIndex<segment.bayCount; bayIndex++){
+                const slotInset = row.slotInset ?? baySpacing / 2;
+                const slotPosition = getBaySlotPosition(row, segment, bayIndex, baySpacing, slotInset);
+                const isBlocked = isBlockedByColumn(slotPosition.x, slotPosition.z);
+                if(isBlocked){
+                    if(runStart !== null){
+                        pushRackRun(runStart, bayIndex - runStart);
+                        runStart = null;
+                    }
+                    continue;
+                }
+                if(runStart === null){
+                    runStart = bayIndex;
+                }
+            }
+            if(runStart !== null){
+                pushRackRun(runStart, segment.bayCount - runStart);
+            }
         }
     }
     return racks;
@@ -568,99 +987,6 @@ function createWarehouseRackData(){
 
 function getNiData(){
     return createWarehouseItems();
-
-    var niData = [
-
-{"id":11 ,"name":"USBマウス（黒）","x":4,"y":1,"z":8,"出荷数":24},          {"id":14,"name":"USBマウス（黒小）","x":5,"y":1,"z":8,"出荷数":89},          {"id":17,"name":"USBキーボード","x":6,"y":1,"z":8,"出荷数":129},
-{"id":12 ,"name":"USBマウス（白）","x":4,"y":2,"z":8,"出荷数":97},          {"id":15,"name":"USBマウス（白小）","x":5,"y":2,"z":8,"出荷数":8},           {"id":18,"name":"USBキーボートテンキー","x":6,"y":2,"z":8,"出荷数":6},
-                                                                          {"id":16,"name":"USBマウス（赤）","x":5,"y":3,"z":8,"出荷数":37},            {"id":19,"name":"USB高級キーボード","x":6,"y":3,"z":8,"出荷数":82},
-{"id":41 ,"name":"フロッピーディスク5","x":8,"y":1,"z":8,"出荷数":3},                                                                                 {"id":47,"name":"CDドライブ","x":10,"y":1,"z":8,"出荷数":35},
-{"id":42 ,"name":"フロッピーディスク3.5","x":8,"y":2,"z":8,"出荷数":13},                                                                              {"id":48,"name":"DVDドライブ","x":10,"y":2,"z":8,"出荷数":47},
-{"id":43 ,"name":"MOディスク","x":8,"y":3,"z":8,"出荷数":16},               {"id":46,"name":"MOドライブ","x":9,"y":3,"z":8,"出荷数":13},                 {"id":49,"name":"JAZZドライブ","x":10,"y":3,"z":8,"出荷数":1},
-{"id":71 ,"name":"USB-Aケーブル　1m","x":11,"y":1,"z":8,"出荷数":62},       {"id":74,"name":"USB-Cケーブル　1m","x":12,"y":1,"z":8,"出荷数":85},         {"id":77,"name":"Lケーブル　1m","x":13,"y":1,"z":8,"出荷数":19},
-{"id":72 ,"name":"USB-Aケーブル　2m","x":11,"y":2,"z":8,"出荷数":56},
-{"id":73 ,"name":"USB-Aケーブル　5m","x":11,"y":3,"z":8,"出荷数":3},        {"id":76,"name":"USB-Cケーブル　3m","x":12,"y":3,"z":8,"出荷数":53},
-{"id":101,"name":"マザーボードG","x":14,"y":1,"z":8,"出荷数":72},           {"id":104,"name":"GT3060","x":15,"y":1,"z":8,"出荷数":18},                   {"id":107,"name":"M2SSD 512MB","x":16,"y":1,"z":8,"出荷数":77},
-{"id":102,"name":"マザーボードAS","x":14,"y":2,"z":8,"出荷数":55},          {"id":105,"name":"GY3070","x":15,"y":2,"z":8,"出荷数":73},
-{"id":103,"name":"マザーボードGM","x":14,"y":3,"z":8,"出荷数":53},          {"id":106,"name":"GT3080","x":15,"y":3,"z":8,"出荷数":67},
-{"id":131,"name":"HDD USB-A 2T","x":17,"y":1,"z":8,"出荷数":80},            {"id":134,"name":"HDD USB-C 2T","x":18,"y":1,"z":8,"出荷数":82},             {"id":137,"name":"ドライバー 16cm","x":19,"y":1,"z":8,"出荷数":80},
-{"id":132,"name":"HDD SATA 2TBL","x":17,"y":2,"z":8,"出荷数":58},           {"id":135,"name":"HDD SATA 6TBK","x":18,"y":2,"z":8,"出荷数":15},            {"id":138,"name":"ドライバー 13cm","x":19,"y":2,"z":8,"出荷数":16},
-{"id":133,"name":"HDD SATA 4TBK","x":17,"y":3,"z":8,"出荷数":46},
-{"id":161,"name":"PCモニター 21.5BF","x":20,"y":1,"z":8,"出荷数":17},       {"id":164,"name":"PCモニター 21.5PH","x":21,"y":1,"z":8,"出荷数":18},        {"id":167,"name":"PCモニター 21.5AS","x":22,"y":1,"z":8,"出荷数":11},
-{"id":162,"name":"PCモニター 23.5BF","x":20,"y":2,"z":8,"出荷数":20},       {"id":165,"name":"PCモニター 23.5PH","x":21,"y":2,"z":8,"出荷数":20},
-{"id":163,"name":"PCモニター 27BF","x":20,"y":3,"z":8,"出荷数":6},          {"id":166,"name":"PCモニター 27PH","x":21,"y":3,"z":8,"出荷数":33},          {"id":169,"name":"PCモニター 29AS","x":22,"y":3,"z":8,"出荷数":39},
-{"id":191,"name":"CPUクーラー　10ｃｍ","x":23,"y":1,"z":8,"出荷数":48},     {"id":194,"name":"PC電源400W","x":24,"y":1,"z":8,"出荷数":41},               {"id":197,"name":"PC電源400W GOLD","x":25,"y":1,"z":8,"出荷数":26},
-{"id":192,"name":"CPUクーラー　12ｃｍ","x":23,"y":2,"z":8,"出荷数":31},     {"id":195,"name":"PC電源600W","x":24,"y":2,"z":8,"出荷数":21},
-{"id":193,"name":"CPUクーラー　14ｃｍ","x":23,"y":3,"z":8,"出荷数":43},     {"id":196,"name":"PC電源900W","x":24,"y":3,"z":8,"出荷数":38},               {"id":199,"name":"PC電源1000W GOLD","x":25,"y":3,"z":8,"出荷数":44},
-{"id":221,"name":"PC電源500W Silver","x":26,"y":1,"z":8,"出荷数":25},                                                                                        {"id":227,"name":"静電ペン（白）","x":28,"y":1,"z":8,"出荷数":22},
-{"id":222,"name":"PC電源700W Silver","x":26,"y":2,"z":8,"出荷数":1},        {"id":225,"name":"マルチカバー","x":27,"y":2,"z":8,"出荷数":48},
-{"id":223,"name":"PC電源900W Silver","x":26,"y":3,"z":8,"出荷数":10},       {"id":226,"name":"Webカメラ30","x":27,"y":3,"z":8,"出荷数":21},              {"id":229,"name":"静電ペン（黒）","x":28,"y":3,"z":8,"出荷数":3},
-{"id":251,"name":"圧力御前３合","x":29,"y":1,"z":8,"出荷数":17},            {"id":254,"name":"炭火御前３合","x":30,"y":1,"z":8,"出荷数":15},
-{"id":252,"name":"圧力御前５合","x":29,"y":2,"z":8,"出荷数":50},            {"id":255,"name":"炭火御前５合","x":30,"y":2,"z":8,"出荷数":10},
-{"id":253,"name":"ふっくら御前３合","x":29,"y":3,"z":8,"出荷数":2},                                                                                      {"id":259,"name":"ミスト御前GOLD","x":31,"y":3,"z":8,"出荷数":23},
-{"id":281,"name":"まな板　24ｃｍ","x":32,"y":1,"z":8,"出荷数":0},           {"id":284,"name":"まな板　28ｃｍ","x":33,"y":1,"z":8,"出荷数":1},            {"id":287,"name":"まな板　（薄）","x":34,"y":1,"z":8,"出荷数":44},
-{"id":283,"name":"綿棒（小）","x":32,"y":3,"z":8,"出荷数":35},
-
-
-
-
-                                                                            {"id":404,"name":"洗剤　除菌","x":10,"y":1,"z":3,"出荷数":94},               {"id":407,"name":"洗剤　部屋干し","x":10,"y":1,"z":4,"出荷数":194},
-{"id":402,"name":"コーヒー　キリマン","x":10,"y":2,"z":2,"出荷数":167},     {"id":405,"name":"コーヒー　ルワンダ","x":10,"y":2,"z":3,"出荷数":69},       {"id":408,"name":"コーヒー　コロンビア","x":10,"y":2,"z":4,"出荷数":15},
-{"id":403,"name":"コーヒー　クリスタル","x":10,"y":3,"z":2,"出荷数":114},   {"id":406,"name":"コーヒー　ジャマイカ","x":10,"y":3,"z":3,"出荷数":169},
-{"id":431,"name":"扇風機","x":11,"y":1,"z":2,"出荷数":1},              {"id":434,"name":"お茶　静岡","x":11,"y":1,"z":3,"出荷数":133},              {"id":437,"name":"お茶　宇治","x":11,"y":1,"z":4,"出荷数":119},
-{"id":432,"name":"ほうじ茶　","x":11,"y":2,"z":2,"出荷数":181},             {"id":435,"name":"麦茶","x":11,"y":2,"z":3,"出荷数":181},
-{"id":433,"name":"抹茶","x":11,"y":3,"z":2,"出荷数":69},                    {"id":436,"name":"湯たんぽ","x":11,"y":3,"z":3,"出荷数":105},
-{"id":461,"name":"カップ麺　醤油","x":15,"y":1,"z":2,"出荷数":28},          {"id":464,"name":"カップ麺　とんこつ","x":15,"y":1,"z":3,"出荷数":27},       {"id":467,"name":"カップ麺　味噌","x":15,"y":1,"z":4,"出荷数":98},
-{"id":462,"name":"インスタント麺　醤油","x":15,"y":2,"z":2,"出荷数":144},   {"id":465,"name":"インスタント麺　塩","x":15,"y":2,"z":3,"出荷数":60},
-{"id":463,"name":"レトルトカレー和風","x":15,"y":3,"z":2,"出荷数":20},      {"id":466,"name":"レトルトカレー洋風","x":15,"y":3,"z":3,"出荷数":87},       {"id":469,"name":"レトルトカレーホテル風","x":15,"y":3,"z":4,"出荷数":80},
-{"id":491,"name":"マサラスパイス","x":16,"y":1,"z":2,"出荷数":10},          {"id":494,"name":"地中海スパイス","x":16,"y":1,"z":3,"出荷数":71},           {"id":497,"name":"クレイジースパイス","x":16,"y":1,"z":4,"出荷数":24},
-{"id":492,"name":"塩　ドイツ","x":16,"y":2,"z":2,"出荷数":90},              {"id":495,"name":"塩　ピンク","x":16,"y":2,"z":3,"出荷数":121},
-{"id":493,"name":"レトルト　ビーフシチュー","x":16,"y":3,"z":2,"出荷数":69},{"id":496,"name":"非常食A","x":16,"y":3,"z":3,"出荷数":15},
-{"id":521,"name":"鯖缶","x":20,"y":1,"z":2,"出荷数":16},                    {"id":524,"name":"いわし缶","x":20,"y":1,"z":3,"出荷数":27},                 {"id":527,"name":"飯缶","x":20,"y":1,"z":4,"出荷数":84},
-{"id":522,"name":"ペン黒","x":20,"y":2,"z":2,"出荷数":46},                  {"id":525,"name":"ペン赤","x":20,"y":2,"z":3,"出荷数":119},
-{"id":523,"name":"ボールペン黒","x":20,"y":3,"z":2,"出荷数":31},            {"id":526,"name":"ボールペン赤","x":20,"y":3,"z":3,"出荷数":93},             {"id":529,"name":"ボールペン青","x":20,"y":3,"z":4,"出荷数":56},
-                                                                            {"id":554,"name":"ノギス","x":21,"y":1,"z":3,"出荷数":54},                   {"id":557,"name":"レーザーポインタ","x":21,"y":1,"z":4,"出荷数":1},
-{"id":552,"name":"スキャナ","x":21,"y":2,"z":2,"出荷数":0},                 {"id":555,"name":"レーザースキャナ","x":21,"y":2,"z":3,"出荷数":40},         {"id":558,"name":"レンチ","x":21,"y":2,"z":4,"出荷数":78},
-{"id":553,"name":"ドライバープラス","x":21,"y":3,"z":2,"出荷数":77},        {"id":556,"name":"ドライバーマイナス","x":21,"y":3,"z":3,"出荷数":1},        {"id":559,"name":"六角ドライバー","x":21,"y":3,"z":4,"出荷数":76},
-{"id":581,"name":"はんだごて","x":25,"y":1,"z":2,"出荷数":58},              {"id":584,"name":"ガスはんだごて","x":25,"y":1,"z":3,"出荷数":66},           {"id":587,"name":"はんだ","x":25,"y":1,"z":4,"出荷数":30},
-{"id":582,"name":"ねじ6mm","x":25,"y":2,"z":2,"出荷数":16},                 {"id":585,"name":"ねじ3mm","x":25,"y":2,"z":3,"出荷数":80},                  {"id":588,"name":"ねじ詰め合わせ","x":25,"y":2,"z":4,"出荷数":95},
-{"id":583,"name":"ビーカー","x":25,"y":3,"z":2,"出荷数":78},                {"id":586,"name":"シャーレ","x":25,"y":3,"z":3,"出荷数":20},                 {"id":589,"name":"試験管","x":25,"y":3,"z":4,"出荷数":17},
-                                                                            {"id":614,"name":"真空管","x":26,"y":1,"z":3,"出荷数":100},
-{"id":612,"name":"パワートランジスタ","x":26,"y":2,"z":2,"出荷数":84},      {"id":615,"name":"プリント基板","x":26,"y":2,"z":3,"出荷数":65},
-{"id":613,"name":"電解コンデンサ","x":26,"y":3,"z":2,"出荷数":67},          {"id":616,"name":"コンデンサ","x":26,"y":3,"z":3,"出荷数":18},
-{"id":641,"name":"チップ抵抗","x":30,"y":1,"z":2,"出荷数":74},              {"id":644,"name":"セラミックコンデンサ","x":30,"y":1,"z":3,"出荷数":83},
-{"id":642,"name":"トルグスイッチ","x":30,"y":2,"z":2,"出荷数":22},          {"id":645,"name":"非常スイッチ","x":30,"y":2,"z":3,"出荷数":49},
-{"id":643,"name":"LED明","x":30,"y":3,"z":2,"出荷数":3},                    {"id":646,"name":"懐中電灯","x":30,"y":3,"z":3,"出荷数":49},                 {"id":649,"name":"蛍光灯棒型","x":30,"y":3,"z":4,"出荷数":31},
-{"id":671,"name":"ガスバーナー","x":31,"y":1,"z":2,"出荷数":31},            {"id":674,"name":"バーベキューセット","x":31,"y":1,"z":3,"出荷数":35},       {"id":677,"name":"ガスコンロ","x":31,"y":1,"z":4,"出荷数":13},
-{"id":672,"name":"ステンレスカップ","x":31,"y":2,"z":2,"出荷数":66},        {"id":675,"name":"ケトル","x":31,"y":2,"z":3,"出荷数":16},                   {"id":678,"name":"ガス缶","x":31,"y":2,"z":4,"出荷数":78},
-                                                                            {"id":734,"name":"土鍋","x":35,"y":1,"z":3,"出荷数":280},    {"id":737,"name":"電気ストーブ","x":35,"y":1,"z":4,"出荷数":260},
-{"id":703,"name":"カレンダーA","x":35,"y":3,"z":2,"出荷数":30},             {"id":706,"name":"カレンダーB","x":35,"y":3,"z":3,"出荷数":21},              {"id":709,"name":"カレンダーC","x":35,"y":3,"z":4,"出荷数":3},
-                                                                            {"id":735,"name":"クリスマス包装紙","x":36,"y":2,"z":3,"出荷数":58},         {"id":738,"name":"クリスマスリボン","x":36,"y":2,"z":4,"出荷数":35},
-{"id":733,"name":"クリスマスツリー","x":36,"y":3,"z":2,"出荷数":59},        {"id":736,"name":"ツリー飾りA","x":36,"y":3,"z":3,"出荷数":59},              {"id":739,"name":"ツリー飾りB","x":36,"y":3,"z":4,"出荷数":30},
-
-                                                                            {"id":946,"name":"キーボード　白","x":21,"y":3,"z":-5,"出荷数":57},          {"id":949,"name":"キーボード２","x":21,"y":3,"z":-4,"出荷数":7},
-{"id":971,"name":"キーボードテンキー","x":25,"y":1,"z":-6,"出荷数":54},     {"id":974,"name":"キーボードテンキー　白","x":25,"y":1,"z":-5,"出荷数":98},  {"id":977,"name":"キーボードテンキー２","x":25,"y":1,"z":-4,"出荷数":49},
-{"id":972,"name":"クリーナー","x":25,"y":2,"z":-6,"出荷数":6},              {"id":975,"name":"USBケーブル　10cm","x":25,"y":2,"z":-5,"出荷数":20},       {"id":978,"name":"USBケーブル　30cm","x":25,"y":2,"z":-4,"出荷数":16},
-{"id":973,"name":"USBケーブル　80cm","x":25,"y":3,"z":-6,"出荷数":95},      {"id":976,"name":"USBケーブル　150cm","x":25,"y":3,"z":-5,"出荷数":100},     {"id":979,"name":"USBケーブルC　10cm","x":25,"y":3,"z":-4,"出荷数":4},
-{"id":1003,"name":"CDドライブ","x":26,"y":3,"z":-6,"出荷数":2},             {"id":1006,"name":"DVDドライブ","x":26,"y":3,"z":-5,"出荷数":66},            {"id":1009,"name":"BRドライブ","x":26,"y":3,"z":-4,"出荷数":48},
-{"id":1031,"name":"CD10枚","x":30,"y":1,"z":-6,"出荷数":17},                {"id":1034,"name":"CD50枚","x":30,"y":1,"z":-5,"出荷数":90},                 {"id":1037,"name":"CD100枚","x":30,"y":1,"z":-4,"出荷数":27},
-{"id":1032,"name":"DVD10枚","x":30,"y":2,"z":-6,"出荷数":38},               {"id":1035,"name":"DVD50枚","x":30,"y":2,"z":-5,"出荷数":56},                {"id":1038,"name":"DVD100枚","x":30,"y":2,"z":-4,"出荷数":38},
-{"id":1033,"name":"BR10枚","x":30,"y":3,"z":-6,"出荷数":45},                {"id":1036,"name":"BR50枚","x":30,"y":3,"z":-5,"出荷数":43},                 {"id":1039,"name":"BR100枚","x":30,"y":3,"z":-4,"出荷数":10},
-{"id":1061,"name":"デジタルカメラ1","x":31,"y":1,"z":-6,"出荷数":6},        {"id":1064,"name":"デジタルカメラ2","x":31,"y":1,"z":-5,"出荷数":1},         {"id":1067,"name":"デジタルカメラ3","x":31,"y":1,"z":-4,"出荷数":14},
-{"id":1062,"name":"一眼レフ1","x":31,"y":2,"z":-6,"出荷数":69},             {"id":1065,"name":"一眼レフ2","x":31,"y":2,"z":-5,"出荷数":54},              {"id":1068,"name":"一眼レフ3","x":31,"y":2,"z":-4,"出荷数":76},
-{"id":1063,"name":"カメラレンズ1","x":31,"y":3,"z":-6,"出荷数":26},         {"id":1066,"name":"カメラレンズ2","x":31,"y":3,"z":-5,"出荷数":4},           {"id":1069,"name":"カメラレンズ3","x":31,"y":3,"z":-4,"出荷数":35},
-{"id":1091,"name":"ドットサイト1","x":35,"y":1,"z":-6,"出荷数":2},          {"id":1094,"name":"ドットサイト2","x":35,"y":1,"z":-5,"出荷数":12},          {"id":1097,"name":"ドットサイト3","x":35,"y":1,"z":-4,"出荷数":15},
-{"id":1092,"name":"カメラキャップ1","x":35,"y":2,"z":-6,"出荷数":34},       {"id":1095,"name":"カメラキャップ2","x":35,"y":2,"z":-5,"出荷数":20},        {"id":1098,"name":"カメラキャップ3","x":35,"y":2,"z":-4,"出荷数":63},
-{"id":1093,"name":"バッテリー1","x":35,"y":3,"z":-6,"出荷数":6},            {"id":1096,"name":"バッテリー2","x":35,"y":3,"z":-5,"出荷数":19},            {"id":1099,"name":"バッテリー3","x":35,"y":3,"z":-4,"出荷数":29},
-{"id":1122,"name":"カメラカバー1","x":36,"y":2,"z":-6,"出荷数":6},          {"id":1125,"name":"カメラカバー2","x":36,"y":2,"z":-5,"出荷数":11},          {"id":1128,"name":"カメラカバー3","x":36,"y":2,"z":-4,"出荷数":7},
-{"id":1123,"name":"ドローン1","x":36,"y":3,"z":-6,"出荷数":9},              {"id":1126,"name":"ドローン2","x":36,"y":3,"z":-5,"出荷数":9},               {"id":1129,"name":"ドローン3","x":36,"y":3,"z":-4,"出荷数":6},
-
-
- ];
-    var json1 = JSON.stringify(niData);
-    niDtList = JSON.parse(json1);
-
-    return niDtList;
 }
 
 function slotKey(x, y, z){
@@ -740,193 +1066,22 @@ function niBoxScaleSet(x,z){
     buildOccupiedSlots();
 }
 
-//BOXの色を数量から作成する。少：赤　→　多：緑
-function createNiColor(i数量,i最大値){
-    let iColR=0;
-    let iColG=0;
-    let i中央値=i最大値/2;
-    if(i数量<=i中央値){
-        iColR = 1.0;
-        iColG = i数量/i中央値*0.8;
-    }else{
-        if(i数量>i最大値){
-            iColR=0;
-        }else{
-            iColR=Math.abs(i数量-i最大値)/i最大値*0.8;
-        }
-        iColG=1.0;
-    }
-
-    return new BABYLON.Color3(iColR, iColG, 0);
+//BOXの色を数量から作成する。少：緑　→　多：赤
+function createNiColor(quantity, maxValue){
+    const ratio = maxValue === 0 ? 0 : Math.max(0, Math.min(1, quantity / maxValue));
+    const redStart = 0.28;
+    const redRatio = Math.max(0, (ratio - redStart) / (1 - redStart));
+    const colorR = Math.min(1, 0.12 + ratio * 0.95 + redRatio * 0.45);
+    const colorG = Math.max(0.08, 1 - redRatio * 1.05);
+    return new BABYLON.Color3(colorR, colorG, 0);
 }
 
 function getTanaData(){
     return createWarehouseRackData();
-
-    var tanaData = [
-            {"x":5,"y":1,"z":8,"rx":Math.PI/2},
-            {"x":8,"y":1,"z":8,"rx":Math.PI/2},
-            {"x":11,"y":1,"z":8,"rx":Math.PI/2},
-            {"x":14,"y":1,"z":8,"rx":Math.PI/2},
-            {"x":17,"y":1,"z":8,"rx":Math.PI/2},
-            {"x":20,"y":1,"z":8,"rx":Math.PI/2},
-            {"x":23,"y":1,"z":8,"rx":Math.PI/2},
-            {"x":26,"y":1,"z":8,"rx":Math.PI/2},
-            {"x":29,"y":1,"z":8,"rx":Math.PI/2},
-            {"x":32,"y":1,"z":8,"rx":Math.PI/2},
-            {"x":35,"y":1,"z":8,"rx":Math.PI/2},
-            {"x":38,"y":1,"z":8,"rx":Math.PI/2},
-
-            {"x":10,"y":1,"z":3,"rx":0},
-            {"x":11,"y":1,"z":3,"rx":0},
-            {"x":15,"y":1,"z":3,"rx":0},
-            {"x":16,"y":1,"z":3,"rx":0},
-            {"x":20,"y":1,"z":3,"rx":0},
-            {"x":21,"y":1,"z":3,"rx":0},
-            {"x":25,"y":1,"z":3,"rx":0},
-            {"x":26,"y":1,"z":3,"rx":0},
-            {"x":30,"y":1,"z":3,"rx":0},
-            {"x":31,"y":1,"z":3,"rx":0},
-            {"x":35,"y":1,"z":3,"rx":0},
-            {"x":36,"y":1,"z":3,"rx":0},
-
-            {"x":20,"y":1,"z":-5,"rx":0},
-            {"x":21,"y":1,"z":-5,"rx":0},
-            {"x":25,"y":1,"z":-5,"rx":0},
-            {"x":26,"y":1,"z":-5,"rx":0},
-            {"x":30,"y":1,"z":-5,"rx":0},
-            {"x":31,"y":1,"z":-5,"rx":0},
-            {"x":35,"y":1,"z":-5,"rx":0},
-            {"x":36,"y":1,"z":-5,"rx":0},
-
-
-
-    ];
-    var json1 = JSON.stringify(tanaData);
-    return JSON.parse(json1);
 }
 
 function getMkData(){
     return createWarehouseMarkers();
-
-    var mkData = [
-        {"id":"A010101","x":4,"y":1,"z":8},  {"id":"A010201","x":5,"y":1,"z":8},  {"id":"A010301","x":6,"y":1,"z":8},
-        {"id":"A010102","x":4,"y":2,"z":8},  {"id":"A010202","x":5,"y":2,"z":8},  {"id":"A010302","x":6,"y":2,"z":8},
-        {"id":"A010103","x":4,"y":3,"z":8},  {"id":"A010203","x":5,"y":3,"z":8},  {"id":"A010303","x":6,"y":3,"z":8},
-        {"id":"A020101","x":7,"y":1,"z":8},  {"id":"A020201","x":8,"y":1,"z":8},  {"id":"A020301","x":9,"y":1,"z":8},
-        {"id":"A020102","x":7,"y":2,"z":8},  {"id":"A020202","x":8,"y":2,"z":8},  {"id":"A020302","x":9,"y":2,"z":8},
-        {"id":"A020103","x":7,"y":3,"z":8},  {"id":"A020203","x":8,"y":3,"z":8},  {"id":"A020303","x":9,"y":3,"z":8},
-        {"id":"A030101","x":10,"y":1,"z":8},  {"id":"A030201","x":11,"y":1,"z":8},  {"id":"A030301","x":12,"y":1,"z":8},
-        {"id":"A030102","x":10,"y":2,"z":8},  {"id":"A030202","x":11,"y":2,"z":8},  {"id":"A030302","x":12,"y":2,"z":8},
-        {"id":"A030103","x":10,"y":3,"z":8},  {"id":"A030203","x":11,"y":3,"z":8},  {"id":"A030303","x":12,"y":3,"z":8},
-        {"id":"A030101","x":13,"y":1,"z":8},  {"id":"A030201","x":14,"y":1,"z":8},  {"id":"A030301","x":15,"y":1,"z":8},
-        {"id":"A030102","x":13,"y":2,"z":8},  {"id":"A030202","x":14,"y":2,"z":8},  {"id":"A030302","x":15,"y":2,"z":8},
-        {"id":"A030103","x":13,"y":3,"z":8},  {"id":"A030203","x":14,"y":3,"z":8},  {"id":"A030303","x":15,"y":3,"z":8},
-        {"id":"A030101","x":16,"y":1,"z":8},  {"id":"A030201","x":17,"y":1,"z":8},  {"id":"A030301","x":18,"y":1,"z":8},
-        {"id":"A030102","x":16,"y":2,"z":8},  {"id":"A030202","x":17,"y":2,"z":8},  {"id":"A030302","x":18,"y":2,"z":8},
-        {"id":"A030103","x":16,"y":3,"z":8},  {"id":"A030203","x":17,"y":3,"z":8},  {"id":"A030303","x":18,"y":3,"z":8},
-        {"id":"A030101","x":19,"y":1,"z":8},  {"id":"A030201","x":20,"y":1,"z":8},  {"id":"A030301","x":21,"y":1,"z":8},
-        {"id":"A030102","x":19,"y":2,"z":8},  {"id":"A030202","x":20,"y":2,"z":8},  {"id":"A030302","x":21,"y":2,"z":8},
-        {"id":"A030103","x":19,"y":3,"z":8},  {"id":"A030203","x":20,"y":3,"z":8},  {"id":"A030303","x":21,"y":3,"z":8},
-        {"id":"A030101","x":22,"y":1,"z":8},  {"id":"A030201","x":23,"y":1,"z":8},  {"id":"A030301","x":24,"y":1,"z":8},
-        {"id":"A030102","x":22,"y":2,"z":8},  {"id":"A030202","x":23,"y":2,"z":8},  {"id":"A030302","x":24,"y":2,"z":8},
-        {"id":"A030103","x":22,"y":3,"z":8},  {"id":"A030203","x":23,"y":3,"z":8},  {"id":"A030303","x":24,"y":3,"z":8},
-        {"id":"A030101","x":25,"y":1,"z":8},  {"id":"A030201","x":26,"y":1,"z":8},  {"id":"A030301","x":27,"y":1,"z":8},
-        {"id":"A030102","x":25,"y":2,"z":8},  {"id":"A030202","x":26,"y":2,"z":8},  {"id":"A030302","x":27,"y":2,"z":8},
-        {"id":"A030103","x":25,"y":3,"z":8},  {"id":"A030203","x":26,"y":3,"z":8},  {"id":"A030303","x":27,"y":3,"z":8},
-        {"id":"A030101","x":28,"y":1,"z":8},  {"id":"A030201","x":29,"y":1,"z":8},  {"id":"A030301","x":30,"y":1,"z":8},
-        {"id":"A030102","x":28,"y":2,"z":8},  {"id":"A030202","x":29,"y":2,"z":8},  {"id":"A030302","x":30,"y":2,"z":8},
-        {"id":"A030103","x":28,"y":3,"z":8},  {"id":"A030203","x":29,"y":3,"z":8},  {"id":"A030303","x":30,"y":3,"z":8},
-        {"id":"A030101","x":31,"y":1,"z":8},  {"id":"A030201","x":32,"y":1,"z":8},  {"id":"A030301","x":33,"y":1,"z":8},
-        {"id":"A030102","x":31,"y":2,"z":8},  {"id":"A030202","x":32,"y":2,"z":8},  {"id":"A030302","x":33,"y":2,"z":8},
-        {"id":"A030103","x":31,"y":3,"z":8},  {"id":"A030203","x":32,"y":3,"z":8},  {"id":"A030303","x":33,"y":3,"z":8},
-        {"id":"A030101","x":34,"y":1,"z":8},  {"id":"A030201","x":35,"y":1,"z":8},  {"id":"A030301","x":36,"y":1,"z":8},
-        {"id":"A030102","x":34,"y":2,"z":8},  {"id":"A030202","x":35,"y":2,"z":8},  {"id":"A030302","x":36,"y":2,"z":8},
-        {"id":"A030103","x":34,"y":3,"z":8},  {"id":"A030203","x":35,"y":3,"z":8},  {"id":"A030303","x":36,"y":3,"z":8},
-        {"id":"A030101","x":37,"y":1,"z":8},  {"id":"A030201","x":38,"y":1,"z":8},  {"id":"A030301","x":39,"y":1,"z":8},
-        {"id":"A030102","x":37,"y":2,"z":8},  {"id":"A030202","x":38,"y":2,"z":8},  {"id":"A030302","x":39,"y":2,"z":8},
-        {"id":"A030103","x":37,"y":3,"z":8},  {"id":"A030203","x":38,"y":3,"z":8},  {"id":"A030303","x":39,"y":3,"z":8},
-
-        {"id":"A030101","x":10,"y":1,"z":2},  {"id":"A030201","x":10,"y":1,"z":3},  {"id":"A030301","x":10,"y":1,"z":4},
-        {"id":"A030102","x":10,"y":2,"z":2},  {"id":"A030202","x":10,"y":2,"z":3},  {"id":"A030302","x":10,"y":2,"z":4},
-        {"id":"A030103","x":10,"y":3,"z":2},  {"id":"A030203","x":10,"y":3,"z":3},  {"id":"A030303","x":10,"y":3,"z":4},
-        {"id":"A030101","x":11,"y":1,"z":2},  {"id":"A030201","x":11,"y":1,"z":3},  {"id":"A030301","x":11,"y":1,"z":4},
-        {"id":"A030102","x":11,"y":2,"z":2},  {"id":"A030202","x":11,"y":2,"z":3},  {"id":"A030302","x":11,"y":2,"z":4},
-        {"id":"A030103","x":11,"y":3,"z":2},  {"id":"A030203","x":11,"y":3,"z":3},  {"id":"A030303","x":11,"y":3,"z":4},
-
-        {"id":"A030101","x":15,"y":1,"z":2},  {"id":"A030201","x":15,"y":1,"z":3},  {"id":"A030301","x":15,"y":1,"z":4},
-        {"id":"A030102","x":15,"y":2,"z":2},  {"id":"A030202","x":15,"y":2,"z":3},  {"id":"A030302","x":15,"y":2,"z":4},
-        {"id":"A030103","x":15,"y":3,"z":2},  {"id":"A030203","x":15,"y":3,"z":3},  {"id":"A030303","x":15,"y":3,"z":4},
-        {"id":"A030101","x":16,"y":1,"z":2},  {"id":"A030201","x":16,"y":1,"z":3},  {"id":"A030301","x":16,"y":1,"z":4},
-        {"id":"A030102","x":16,"y":2,"z":2},  {"id":"A030202","x":16,"y":2,"z":3},  {"id":"A030302","x":16,"y":2,"z":4},
-        {"id":"A030103","x":16,"y":3,"z":2},  {"id":"A030203","x":16,"y":3,"z":3},  {"id":"A030303","x":16,"y":3,"z":4},
-
-        {"id":"A030101","x":20,"y":1,"z":2},  {"id":"A030201","x":20,"y":1,"z":3},  {"id":"A030301","x":20,"y":1,"z":4},
-        {"id":"A030102","x":20,"y":2,"z":2},  {"id":"A030202","x":20,"y":2,"z":3},  {"id":"A030302","x":20,"y":2,"z":4},
-        {"id":"A030103","x":20,"y":3,"z":2},  {"id":"A030203","x":20,"y":3,"z":3},  {"id":"A030303","x":20,"y":3,"z":4},
-        {"id":"A030101","x":21,"y":1,"z":2},  {"id":"A030201","x":21,"y":1,"z":3},  {"id":"A030301","x":21,"y":1,"z":4},
-        {"id":"A030102","x":21,"y":2,"z":2},  {"id":"A030202","x":21,"y":2,"z":3},  {"id":"A030302","x":21,"y":2,"z":4},
-        {"id":"A030103","x":21,"y":3,"z":2},  {"id":"A030203","x":21,"y":3,"z":3},  {"id":"A030303","x":21,"y":3,"z":4},
-
-        {"id":"A030101","x":25,"y":1,"z":2},  {"id":"A030201","x":25,"y":1,"z":3},  {"id":"A030301","x":25,"y":1,"z":4},
-        {"id":"A030102","x":25,"y":2,"z":2},  {"id":"A030202","x":25,"y":2,"z":3},  {"id":"A030302","x":25,"y":2,"z":4},
-        {"id":"A030103","x":25,"y":3,"z":2},  {"id":"A030203","x":25,"y":3,"z":3},  {"id":"A030303","x":25,"y":3,"z":4},
-        {"id":"A030101","x":26,"y":1,"z":2},  {"id":"A030201","x":26,"y":1,"z":3},  {"id":"A030301","x":26,"y":1,"z":4},
-        {"id":"A030102","x":26,"y":2,"z":2},  {"id":"A030202","x":26,"y":2,"z":3},  {"id":"A030302","x":26,"y":2,"z":4},
-        {"id":"A030103","x":26,"y":3,"z":2},  {"id":"A030203","x":26,"y":3,"z":3},  {"id":"A030303","x":26,"y":3,"z":4},
-
-        {"id":"A030101","x":30,"y":1,"z":2},  {"id":"A030201","x":30,"y":1,"z":3},  {"id":"A030301","x":30,"y":1,"z":4},
-        {"id":"A030102","x":30,"y":2,"z":2},  {"id":"A030202","x":30,"y":2,"z":3},  {"id":"A030302","x":30,"y":2,"z":4},
-        {"id":"A030103","x":30,"y":3,"z":2},  {"id":"A030203","x":30,"y":3,"z":3},  {"id":"A030303","x":30,"y":3,"z":4},
-        {"id":"A030101","x":31,"y":1,"z":2},  {"id":"A030201","x":31,"y":1,"z":3},  {"id":"A030301","x":31,"y":1,"z":4},
-        {"id":"A030102","x":31,"y":2,"z":2},  {"id":"A030202","x":31,"y":2,"z":3},  {"id":"A030302","x":31,"y":2,"z":4},
-        {"id":"A030103","x":31,"y":3,"z":2},  {"id":"A030203","x":31,"y":3,"z":3},  {"id":"A030303","x":31,"y":3,"z":4},
-
-        {"id":"A030101","x":35,"y":1,"z":2},  {"id":"A030201","x":35,"y":1,"z":3},  {"id":"A030301","x":35,"y":1,"z":4},
-        {"id":"A030102","x":35,"y":2,"z":2},  {"id":"A030202","x":35,"y":2,"z":3},  {"id":"A030302","x":35,"y":2,"z":4},
-        {"id":"A030103","x":35,"y":3,"z":2},  {"id":"A030203","x":35,"y":3,"z":3},  {"id":"A030303","x":35,"y":3,"z":4},
-        {"id":"A030101","x":36,"y":1,"z":2},  {"id":"A030201","x":36,"y":1,"z":3},  {"id":"A030301","x":36,"y":1,"z":4},
-        {"id":"A030102","x":36,"y":2,"z":2},  {"id":"A030202","x":36,"y":2,"z":3},  {"id":"A030302","x":36,"y":2,"z":4},
-        {"id":"A030103","x":36,"y":3,"z":2},  {"id":"A030203","x":36,"y":3,"z":3},  {"id":"A030303","x":36,"y":3,"z":4},
-
-
-        {"id":"A030101","x":20,"y":1,"z":-4},  {"id":"A030201","x":20,"y":1,"z":-5},  {"id":"A030301","x":20,"y":1,"z":-6},
-        {"id":"A030102","x":20,"y":2,"z":-4},  {"id":"A030202","x":20,"y":2,"z":-5},  {"id":"A030302","x":20,"y":2,"z":-6},
-        {"id":"A030103","x":20,"y":3,"z":-4},  {"id":"A030203","x":20,"y":3,"z":-5},  {"id":"A030303","x":20,"y":3,"z":-6},
-        {"id":"A030101","x":21,"y":1,"z":-4},  {"id":"A030201","x":21,"y":1,"z":-5},  {"id":"A030301","x":21,"y":1,"z":-6},
-        {"id":"A030102","x":21,"y":2,"z":-4},  {"id":"A030202","x":21,"y":2,"z":-5},  {"id":"A030302","x":21,"y":2,"z":-6},
-        {"id":"A030103","x":21,"y":3,"z":-4},  {"id":"A030203","x":21,"y":3,"z":-5},  {"id":"A030303","x":21,"y":3,"z":-6},
-
-        {"id":"A030101","x":25,"y":1,"z":-4},  {"id":"A030201","x":25,"y":1,"z":-5},  {"id":"A030301","x":25,"y":1,"z":-6},
-        {"id":"A030102","x":25,"y":2,"z":-4},  {"id":"A030202","x":25,"y":2,"z":-5},  {"id":"A030302","x":25,"y":2,"z":-6},
-        {"id":"A030103","x":25,"y":3,"z":-4},  {"id":"A030203","x":25,"y":3,"z":-5},  {"id":"A030303","x":25,"y":3,"z":-6},
-        {"id":"A030101","x":26,"y":1,"z":-4},  {"id":"A030201","x":26,"y":1,"z":-5},  {"id":"A030301","x":26,"y":1,"z":-6},
-        {"id":"A030102","x":26,"y":2,"z":-4},  {"id":"A030202","x":26,"y":2,"z":-5},  {"id":"A030302","x":26,"y":2,"z":-6},
-        {"id":"A030103","x":26,"y":3,"z":-4},  {"id":"A030203","x":26,"y":3,"z":-5},  {"id":"A030303","x":26,"y":3,"z":-6},
-
-        {"id":"A030101","x":30,"y":1,"z":-4},  {"id":"A030201","x":30,"y":1,"z":-5},  {"id":"A030301","x":30,"y":1,"z":-6},
-        {"id":"A030102","x":30,"y":2,"z":-4},  {"id":"A030202","x":30,"y":2,"z":-5},  {"id":"A030302","x":30,"y":2,"z":-6},
-        {"id":"A030103","x":30,"y":3,"z":-4},  {"id":"A030203","x":30,"y":3,"z":-5},  {"id":"A030303","x":30,"y":3,"z":-6},
-        {"id":"A030101","x":31,"y":1,"z":-4},  {"id":"A030201","x":31,"y":1,"z":-5},  {"id":"A030301","x":31,"y":1,"z":-6},
-        {"id":"A030102","x":31,"y":2,"z":-4},  {"id":"A030202","x":31,"y":2,"z":-5},  {"id":"A030302","x":31,"y":2,"z":-6},
-        {"id":"A030103","x":31,"y":3,"z":-4},  {"id":"A030203","x":31,"y":3,"z":-5},  {"id":"A030303","x":31,"y":3,"z":-6},
-
-        {"id":"A030101","x":35,"y":1,"z":-4},  {"id":"A030201","x":35,"y":1,"z":-5},  {"id":"A030301","x":35,"y":1,"z":-6},
-        {"id":"A030102","x":35,"y":2,"z":-4},  {"id":"A030202","x":35,"y":2,"z":-5},  {"id":"A030302","x":35,"y":2,"z":-6},
-        {"id":"A030103","x":35,"y":3,"z":-4},  {"id":"A030203","x":35,"y":3,"z":-5},  {"id":"A030303","x":35,"y":3,"z":-6},
-        {"id":"A030101","x":36,"y":1,"z":-4},  {"id":"A030201","x":36,"y":1,"z":-5},  {"id":"A030301","x":36,"y":1,"z":-6},
-        {"id":"A030102","x":36,"y":2,"z":-4},  {"id":"A030202","x":36,"y":2,"z":-5},  {"id":"A030302","x":36,"y":2,"z":-6},
-        {"id":"A030103","x":36,"y":3,"z":-4},  {"id":"A030203","x":36,"y":3,"z":-5},  {"id":"A030303","x":36,"y":3,"z":-6},
-
-
-
-
-
-
-            ];
-    var json1 = JSON.stringify(mkData);
-    return JSON.parse(json1);
 }
-
 
 </script>
