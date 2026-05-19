@@ -12,27 +12,226 @@
                 height: 100%;
                 margin: 0;
                 padding: 0;
+                font-family: "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif;
+                background-color: #f4efe6;
+            }
+            body {
+                display: flex;
+                flex-direction: column;
+            }
+            .divMgnLeft {
+                flex: 0 0 auto;
+                padding: 4px 8px;
+                font-size: 13px;
+                line-height: 1.35;
+                background: #efe6d6;
+                color: #232821;
+            }
+            #appShell {
+                flex: 1 1 auto;
+                min-height: 0;
+                display: flex;
+                width: 100%;
+            }
+            #canvasPane {
+                flex: 1 1 auto;
+                min-width: 0;
+                height: 100%;
             }
             #renderCanvas {
                 width: 100%;
                 height: 100%;
                 touch-action: none;
+                display: block;
+                border-right: 1px solid #51564d;
+            }
+            #productPanel {
+                flex: 0 0 420px;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                background: #f7f8f5;
+                border-left: 1px solid #c8cec4;
+                color: #1f261f;
+            }
+            .productPanelHeader {
+                padding: 10px 12px;
+                border-bottom: 1px solid #d7ddd2;
+                background: #edf2e9;
+            }
+            .productHeaderRow {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .productPanelTitle {
+                flex: 0 0 auto;
+                margin: 0;
+                font-size: 15px;
+                font-weight: 700;
+            }
+            .productPanelMeta {
+                margin-top: 6px;
+                font-size: 12px;
+                color: #526052;
+            }
+            .panelSection {
+                padding: 10px 12px;
+                border-bottom: 1px solid #d7ddd2;
+            }
+            .detailGrid {
+                display: grid;
+                grid-template-columns: 58px 1fr;
+                gap: 3px 8px;
+                font-size: 12px;
+                line-height: 1.45;
+                min-height: 87px;
+            }
+            .detailGrid dt {
+                color: #687466;
+            }
+            .detailGrid dd {
+                margin: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .panelSearch {
+                flex: 1 1 auto;
+                min-width: 0;
+                width: 100%;
+                box-sizing: border-box;
+                padding: 6px 8px;
+                border: 1px solid #bdc8b8;
+                border-radius: 6px;
+                background: #fff;
+                font: inherit;
+                font-size: 12px;
+            }
+            .toolbarGrid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            .panelButton {
+                min-height: 30px;
+                padding: 5px 8px;
+                border: 1px solid #aebba8;
+                border-radius: 6px;
+                background: #ffffff;
+                color: #263026;
+                font: inherit;
+                font-size: 12px;
+                cursor: pointer;
+            }
+            .panelButton:hover {
+                background: #eef5ea;
+            }
+            .panelButton.is-active {
+                background: #ece0ff;
+                border-color: #a46be8;
+                color: #35135c;
+            }
+            #productList {
+                flex: 1 1 auto;
+                overflow: auto;
+            }
+            .productTable {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+                font-size: 12px;
+            }
+            .productTable th {
+                position: sticky;
+                top: 0;
+                z-index: 1;
+                padding: 6px 6px;
+                background: #dfe7dc;
+                border-bottom: 1px solid #c7d0c3;
+                text-align: left;
+                font-weight: 700;
+                cursor: pointer;
+                user-select: none;
+            }
+            .productTable th:hover {
+                background: #d2decf;
+            }
+            .productTable td {
+                padding: 6px;
+                border-bottom: 1px solid #e1e6de;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .productTable tr {
+                cursor: pointer;
+            }
+            .productTable tr:hover,
+            .productTable tr.is-active {
+                background: #fff4bf;
+            }
+            .productTable tr.is-active td {
+                box-shadow: inset 3px 0 0 #ffb300;
+            }
+            .productTable .col-shelf {
+                width: 72px;
+            }
+            .productTable .col-id {
+                width: 54px;
+            }
+            .productTable .col-quantity {
+                width: 54px;
+                text-align: right;
+            }
+            .productTable .col-stock {
+                width: 54px;
+                text-align: right;
             }
         </style>
 
         <script src="https://cdn.babylonjs.com/babylon.js"></script>
         <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.js"></script>
         <script src="https://cdn.babylonjs.com/materialsLibrary/babylon.gridMaterial.js"></script>
-        <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
-
     </head>
 
-   <body style="background-color: antiquewhite;">
+   <body>
     <!--shinobi1--><script type="text/javascript" src="//xa.shinobi.jp/ufo/190862403"></script><noscript><a href="//xa.shinobi.jp/bin/gg?190862403" target="_blank"><img src="//xa.shinobi.jp/bin/ll?190862403" border="0"></a><br><span style="font-size:9px"><img style="margin:0;vertical-align:text-bottom;" src="//img.shinobi.jp/tadaima/fj.gif" width="19" height="11"> </span></noscript><!--shinobi2-->
-    <div class="divMgnLeft">　【操作】 左ドラッグ：視点回転　右ドラッグ：視点平行移動　ホイール：拡大縮小 　マウスカーソルを重ねると情報表示　クリックは何もしません
+    <div class="divMgnLeft">　【操作】 左ドラッグ：視点回転　右ドラッグ：視点平行移動　ホイール：拡大縮小 　マウスカーソルを重ねると情報表示　クリック：商品選択
         <a href="./index.html">戻る</a></div>
 
-     <canvas id="renderCanvas" style="height:1000px;border-style: dotted;" ></canvas>
+     <div id="appShell">
+        <div id="canvasPane">
+            <canvas id="renderCanvas"></canvas>
+        </div>
+        <aside id="productPanel">
+            <div class="panelSection">
+                <div class="toolbarGrid">
+                    <button id="heightToggleButton" class="panelButton" type="button">高さ: 出荷数</button>
+                    <button id="clearSelectionButton" class="panelButton" type="button">商品選択解除</button>
+                    <button id="resetCameraButton" class="panelButton" type="button">視点リセット</button>
+                    <button id="focusSelectionButton" class="panelButton" type="button">選択中の商品へ移動</button>
+                </div>
+            </div>
+            <div class="panelSection">
+                <dl id="hoverDetails" class="detailGrid">
+                    <dt>棚ID</dt><dd data-detail-field="shelf">-</dd>
+                    <dt>商品ID</dt><dd data-detail-field="id">-</dd>
+                    <dt>商品名</dt><dd data-detail-field="name">-</dd>
+                    <dt>出荷数</dt><dd data-detail-field="shipping">-</dd>
+                    <dt>在庫数</dt><dd data-detail-field="stock">-</dd>
+                </dl>
+            </div>
+            <div class="productPanelHeader">
+                <div class="productHeaderRow">
+                    <p class="productPanelTitle">商品一覧</p>
+                    <input id="productSearch" class="panelSearch" type="search" placeholder="商品名・商品ID・棚IDで検索">
+                </div>
+                <div id="productPanelMeta" class="productPanelMeta">出荷数順に表示</div>
+            </div>
+            <div id="productList"></div>
+        </aside>
+     </div>
 
    </body>
 
@@ -43,12 +242,22 @@
     const canvas = document.getElementById("renderCanvas"); // Get the canvas element
     const engine = new BABYLON.Engine(canvas, true); // Generate the BABYLON 3D engine
     const ITEM_HEIGHT_SCALE = 0.05;
+    let niData = [];
+    let mkData = [];
     const appState = {
-        showFixedHeight: false,
-        occupiedSlots: new Set(),
+        heightMode: "shipping",
         pendingHoverPick: false,
         lastHoverMesh: null,
-        markerMeshes: []
+        markerMeshes: [],
+        activeItemId: null,
+        itemById: new Map(),
+        productRows: new Map(),
+        productSort: { key: "出荷数", direction: "desc" },
+        productSearch: "",
+        camera: null,
+        itemLocationMarker: null,
+        itemHeightGuide: null,
+        itemLevelMarker: null
     };
     function createDensePickRackRows(){
         const rowCodes = [
@@ -165,31 +374,21 @@
         camera.setTarget(new BABYLON.Vector3(43, 3, 5),);
         camera.attachControl(canvas, true);
         camera.wheelDeltaPercentage = 0.005;
+        appState.camera = camera;
 
         const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
         light.intensity = 0.8;
+        createItemSelectionMarkers(scene);
 
         createWarehouseShell(scene);
         createWarehouseFixtures(scene);
-
-        createGUIButton();
-        let guiCanvas = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
-        infoButton = BABYLON.GUI.Button.CreateSimpleButton("infoButton", "");
-        infoButton.width = "300px"
-        infoButton.height = "80px";
-        infoButton.top = "50px";
-        infoButton.color = "white";
-        infoButton.cornerRadius = 5;
-        infoButton.background = "green";
-        infoButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-        infoButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        guiCanvas.addControl(infoButton);
 
         // 荷データ読込
         niData = getNiData();
 
         const itemMaterialCache = createItemMaterialCache(scene);
         for (let i=0; i<niData.length;i++){
+            const item = niData[i];
             const myMaterial = getSharedItemMaterial(itemMaterialCache, niData[i].出荷数);
             const itemSize = niData[i].size === "large"
                 ? {width: 1, height: 0.7, depth: 0.75}
@@ -204,9 +403,14 @@
             box.x = niData[i].x;
             box.y = niData[i].y;
             box.z = niData[i].z;
+            box.shelfId = niData[i].shelfId;
             box.出荷数 = niData[i].出荷数;
             box.metadata = { type: "item", isPlaced: true, baseHeight: itemSize.height };
+            box.renderOutline = false;
+            box.outlineWidth = 0.1;
+            box.outlineColor = new BABYLON.Color3(0.64, 0.16, 1);
             niData[i].box = box;
+            appState.itemById.set(String(box.id), niData[i]);
 
             const dragBehavior = new BABYLON.PointerDragBehavior();
             box.addBehavior(dragBehavior);
@@ -214,56 +418,93 @@
             dragBehavior.onDragStartObservable.add((event)=>{
                 // ドラッグ開始
                 dragBehavior.moveAttached = true;
-                dragBehavior._startSlot = { x: box.x, z: box.z };
-                dragBehavior._isSnapped = false;
-                box.metadata.isPlaced = false;
+                dragBehavior._dragState = {
+                    hasMoved: false,
+                    startedPlaced: !!box.metadata.isPlaced,
+                    originalSlot: box.metadata.isPlaced
+                        ? { x: box.x, y: box.y, z: box.z, shelfId: box.shelfId || item.shelfId }
+                        : null,
+                    currentSnap: null
+                };
                 setMarkersVisible(true);
-                niBoxScaleSet(box.x, box.z);
             })
             dragBehavior.onDragObservable.add((event)=>{
                 // ドラッグ中
-                var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, BABYLON.Matrix.Identity(), camera);
-                var hits = scene.multiPickWithRay(ray, function(mesh) {
+                const dragState = dragBehavior._dragState || {};
+                if(!dragState.hasMoved){
+                    dragState.hasMoved = true;
+                    if(!dragState.startedPlaced){
+                        box.metadata.isPlaced = false;
+                    }
+                }
+                const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, BABYLON.Matrix.Identity(), camera);
+                const hits = scene.multiPickWithRay(ray, function(mesh) {
                     return mesh.metadata && mesh.metadata.type === "marker";
                 });
 
-                for(var i=0; i< hits.length; i++){
+                let snappedMarker = null;
+                for(let i=0; i< hits.length; i++){
                     if (hits[i].pickedMesh){
-                        var marker = hits[i].pickedMesh;
-                        if(!isSlotOccupied(marker.x, marker.y, marker.z)){
-                            dragBehavior.moveAttached = false;
-                            // マーカーの座標をドラッグ中のBOXに設定
-                            box.x = marker.x;
-                            box.y = marker.y;
-                            box.z = marker.z;
-                            box.metadata.isPlaced = true;
-                            dragBehavior._isSnapped = true;
-
-                            if(dragBehavior._startSlot){
-                                niBoxScaleSet(dragBehavior._startSlot.x,dragBehavior._startSlot.z) ;
-                            }
-                            niBoxScaleSet(marker.x,marker.z) ;
-                            dragBehavior._startSlot = { x: marker.x, z: marker.z };
+                        const marker = hits[i].pickedMesh;
+                        if(!isSlotOccupiedByOtherBox(marker.x, marker.y, marker.z, box)){
+                            snappedMarker = marker;
+                            break;
                         }else{
                             //空いてないマーカーなのでフィットさせない
                         }
                     }
                 }
+                if(snappedMarker){
+                    dragBehavior.moveAttached = false;
+                    // マーカーの座標をドラッグ中のBOXに設定
+                    box.x = snappedMarker.x;
+                    box.y = snappedMarker.y;
+                    box.z = snappedMarker.z;
+                    box.shelfId = snappedMarker.id;
+                    item.shelfId = snappedMarker.id;
+                    box.metadata.isPlaced = true;
+                    if(dragState.currentSnap && (dragState.currentSnap.x !== snappedMarker.x || dragState.currentSnap.z !== snappedMarker.z)){
+                        niBoxScaleSet(dragState.currentSnap.x, dragState.currentSnap.z);
+                    }
+                    niBoxScaleSet(snappedMarker.x, snappedMarker.z);
+                    dragState.currentSnap = { x: snappedMarker.x, z: snappedMarker.z };
+                }else{
+                    dragBehavior.moveAttached = true;
+                    if(dragState.currentSnap){
+                        niBoxScaleSet(dragState.currentSnap.x, dragState.currentSnap.z);
+                    }
+                    dragState.currentSnap = null;
+                    if(!dragState.startedPlaced){
+                        box.metadata.isPlaced = false;
+                    }
+                }
             })
             dragBehavior.onDragEndObservable.add((event)=>{
                 // ドラッグ終了
-                if(!dragBehavior._isSnapped){
+                const dragState = dragBehavior._dragState || {};
+                if(dragState.hasMoved && !dragState.currentSnap && dragState.originalSlot){
+                    box.x = dragState.originalSlot.x;
+                    box.y = dragState.originalSlot.y;
+                    box.z = dragState.originalSlot.z;
+                    box.shelfId = dragState.originalSlot.shelfId;
+                    item.shelfId = dragState.originalSlot.shelfId;
+                    box.metadata.isPlaced = true;
+                    niBoxScaleSet(box.x, box.z);
+                }else if(dragState.hasMoved && !dragState.currentSnap){
                     box.metadata.isPlaced = false;
-                    buildOccupiedSlots();
                 }
                 setMarkersVisible(false);
+                updateProductRow(box.id);
+                updateItemLocationMarker();
+                dragBehavior._dragState = null;
             })
         }
 
-        niBoxScaleReSet();
+        updateAllBoxHeights();
+        renderProductList();
 
         mkData = getMkData();
-        var mkMaterial = new BABYLON.StandardMaterial("mkMaterial", scene);
+        const mkMaterial = new BABYLON.StandardMaterial("mkMaterial", scene);
         mkMaterial.diffuseColor = new BABYLON.Color3(0.82, 0.89, 0.82);
         for (let i=0;i<mkData.length;i++){
             const box = BABYLON.MeshBuilder.CreateBox(mkData[i].id, {width: 0.52, height: 0.04, depth: 0.52})
@@ -289,20 +530,36 @@
             appState.pendingHoverPick = true;
             requestAnimationFrame(function() {
                 appState.pendingHoverPick = false;
-                var hit = scene.pick(scene.pointerX, scene.pointerY, function(mesh) {
+                const hit = scene.pick(scene.pointerX, scene.pointerY, function(mesh) {
                     return mesh.metadata && mesh.metadata.type === "item";
                 });
-                if (hit.pickedMesh && hit.pickedMesh !== appState.lastHoverMesh){
-                    appState.lastHoverMesh = hit.pickedMesh;
-                    // 荷データをボタンで表示する
-                    createInfoButton(hit.pickedMesh);
+                if (hit.pickedMesh){
+                    if(hit.pickedMesh !== appState.lastHoverMesh){
+                        appState.lastHoverMesh = hit.pickedMesh;
+                        // 荷データをボタンで表示する
+                        updateHoverDetailsFromMesh(hit.pickedMesh);
+                    }
+                }else if(appState.lastHoverMesh){
+                    appState.lastHoverMesh = null;
+                    updateHoverDetails(null);
                 }
             });
         }
+        scene.onPointerObservable.add((pointerInfo) => {
+            if(pointerInfo.type !== BABYLON.PointerEventTypes.POINTERPICK){
+                return;
+            }
+            const pickedMesh = pointerInfo.pickInfo?.pickedMesh;
+            if(pickedMesh && pickedMesh.metadata && pickedMesh.metadata.type === "item"){
+                setActiveItem(pickedMesh.id, true);
+            }
+        });
 
         return scene;
     };
     const scene = createScene();
+    initPanelControls();
+    updateHoverDetails(null);
     engine.runRenderLoop(function () {
             scene.render();
     });
@@ -311,29 +568,404 @@
             engine.resize();
     });
 
-    function createInfoButton(pickedMesh){
-        infoButton.textBlock.text= "ID："+ pickedMesh.id + "\n" + "品名："+pickedMesh.name + "\n" + "出荷数："+pickedMesh.出荷数;
+    function updateHoverDetailsFromMesh(pickedMesh){
+        const item = appState.itemById.get(String(pickedMesh.id));
+        updateHoverDetails(item || null);
 }
 
-function createGUIButton(){
-    //Creates a gui label to display the cannon
-    let guiCanvas = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
-    let guiButton = BABYLON.GUI.Button.CreateSimpleButton("guiButton", "表示変更（高さ）");
-    guiButton.width = "160px"
-    guiButton.height = "30px";
-    guiButton.top = "10px";
-    guiButton.color = "white";
-    guiButton.cornerRadius = 5;
-    guiButton.background = "green";
-    guiButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-    guiButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+function getItemShelfText(item){
+    if(!item.box || !item.box.metadata || !item.box.metadata.isPlaced){
+        return "仮置き";
+    }
+    return item.shelfId || item.box.shelfId || "-";
+}
 
-    guiButton.onPointerClickObservable.add(() => {
-        //ボタンをクリックしたら荷のBOXの高さを、固定と可変で切り替える
-        niBoxScaleReSet();
+function renderDetails(targetId, item){
+    const target = document.getElementById(targetId);
+    if(!target){
+        return;
+    }
+    const values = item
+        ? {
+            shelf: getItemShelfText(item),
+            id: item.id,
+            name: item.name,
+            shipping: item.出荷数,
+            stock: item.在庫数
+        }
+        : {
+            shelf: "-",
+            id: "-",
+            name: "-",
+            shipping: "-",
+            stock: "-"
+        };
+    Object.keys(values).forEach(key => {
+        const field = target.querySelector(`[data-detail-field='${key}']`);
+        if(field){
+            field.textContent = values[key];
+            field.title = values[key] === "-" ? "" : String(values[key]);
+        }
     });
-    //ボタンを表示
-    guiCanvas.addControl(guiButton);
+}
+
+function updateHoverDetails(item){
+    renderDetails("hoverDetails", item);
+}
+
+function initPanelControls(){
+    const search = document.getElementById("productSearch");
+    if(search){
+        search.addEventListener("input", () => {
+            appState.productSearch = search.value.trim();
+            renderProductList();
+        });
+    }
+
+    const heightButton = document.getElementById("heightToggleButton");
+    if(heightButton){
+        heightButton.addEventListener("click", () => {
+            cycleHeightMode();
+            updatePanelButtons();
+        });
+    }
+
+    const clearButton = document.getElementById("clearSelectionButton");
+    if(clearButton){
+        clearButton.addEventListener("click", () => clearActiveItem());
+    }
+
+    const resetButton = document.getElementById("resetCameraButton");
+    if(resetButton){
+        resetButton.addEventListener("click", () => resetCameraView());
+    }
+
+    const focusButton = document.getElementById("focusSelectionButton");
+    if(focusButton){
+        focusButton.addEventListener("click", () => focusActiveItem());
+    }
+
+    updatePanelButtons();
+}
+
+function updatePanelButtons(){
+    const heightButton = document.getElementById("heightToggleButton");
+    if(heightButton){
+        const labels = {
+            fixed: "高さ: 固定",
+            shipping: "高さ: 出荷数",
+            stock: "高さ: 在庫数"
+        };
+        heightButton.textContent = labels[appState.heightMode] || labels.shipping;
+        heightButton.classList.toggle("is-active", appState.heightMode !== "fixed");
+    }
+}
+
+function resetCameraView(){
+    if(!appState.camera){
+        return;
+    }
+    appState.camera.alpha = -Math.PI / 2;
+    appState.camera.beta = Math.PI / 2.5;
+    appState.camera.radius = 115;
+    appState.camera.setTarget(new BABYLON.Vector3(43, 3, 5));
+}
+
+function focusActiveItem(){
+    const item = appState.itemById.get(String(appState.activeItemId));
+    if(!appState.camera || !item?.box){
+        return;
+    }
+    const x = item.box.metadata?.isPlaced ? item.box.x : item.box.position.x;
+    const z = item.box.metadata?.isPlaced ? item.box.z : item.box.position.z;
+    const y = Math.max(1.5, item.box.position.y);
+    appState.camera.setTarget(new BABYLON.Vector3(x, y, z));
+    appState.camera.radius = 18;
+}
+
+function updateProductRow(itemId){
+    const item = appState.itemById.get(String(itemId));
+    const row = appState.productRows.get(String(itemId));
+    if(!item){
+        return;
+    }
+    if(!row){
+        return;
+    }
+    const shelfCell = row.querySelector("[data-field='shelf']");
+    if(shelfCell){
+        shelfCell.textContent = getItemShelfText(item);
+    }
+}
+
+function scrollProductRowIntoView(row){
+    const list = document.getElementById("productList");
+    if(!list || !row){
+        return;
+    }
+    const rowRect = row.getBoundingClientRect();
+    const listRect = list.getBoundingClientRect();
+    const header = list.querySelector(".productTable thead");
+    const headerHeight = header ? header.getBoundingClientRect().height : 0;
+    const visibleTop = listRect.top + headerHeight + 6;
+    const visibleBottom = listRect.bottom - 6;
+    if(rowRect.top < visibleTop){
+        list.scrollBy({ top: rowRect.top - visibleTop, behavior: "smooth" });
+    }else if(rowRect.bottom > visibleBottom){
+        list.scrollBy({ top: rowRect.bottom - visibleBottom, behavior: "smooth" });
+    }
+}
+
+function createItemSelectionMarkers(scene){
+    const markerMat = new BABYLON.StandardMaterial("selectedItemMarkerMat", scene);
+    markerMat.diffuseColor = new BABYLON.Color3(0.58, 0.16, 0.95);
+    markerMat.emissiveColor = new BABYLON.Color3(0.24, 0.04, 0.42);
+    markerMat.specularColor = new BABYLON.Color3(0.2, 0.1, 0.28);
+    const marker = BABYLON.MeshBuilder.CreateCylinder("selectedItemMarker", {
+        height: 1.75,
+        diameterTop: 1.7,
+        diameterBottom: 0,
+        tessellation: 4
+    }, scene);
+    marker.rotation.y = Math.PI / 4;
+    marker.material = markerMat;
+    marker.isPickable = false;
+    marker.setEnabled(false);
+    appState.itemLocationMarker = marker;
+
+    const guideMat = new BABYLON.StandardMaterial("selectedItemHeightGuideMat", scene);
+    guideMat.diffuseColor = new BABYLON.Color3(0.72, 0.32, 1);
+    guideMat.emissiveColor = new BABYLON.Color3(0.18, 0.02, 0.3);
+    guideMat.alpha = 0.55;
+    const heightGuide = BABYLON.MeshBuilder.CreateCylinder("selectedItemHeightGuide", {
+        height: 1,
+        diameter: 0.08,
+        tessellation: 16
+    }, scene);
+    heightGuide.material = guideMat;
+    heightGuide.isPickable = false;
+    heightGuide.setEnabled(false);
+    appState.itemHeightGuide = heightGuide;
+
+    const levelMat = new BABYLON.StandardMaterial("selectedItemLevelMarkerMat", scene);
+    levelMat.diffuseColor = new BABYLON.Color3(0.86, 0.48, 1);
+    levelMat.emissiveColor = new BABYLON.Color3(0.28, 0.04, 0.42);
+    levelMat.alpha = 0.62;
+    const levelMarker = BABYLON.MeshBuilder.CreateCylinder("selectedItemLevelMarker", {
+        height: 0.04,
+        diameter: 1.45,
+        tessellation: 32
+    }, scene);
+    levelMarker.material = levelMat;
+    levelMarker.isPickable = false;
+    levelMarker.setEnabled(false);
+    appState.itemLevelMarker = levelMarker;
+}
+
+function updateItemLocationMarker(){
+    const marker = appState.itemLocationMarker;
+    const heightGuide = appState.itemHeightGuide;
+    const levelMarker = appState.itemLevelMarker;
+    const item = appState.itemById.get(String(appState.activeItemId));
+    if(!marker || !item?.box){
+        if(marker){
+            marker.setEnabled(false);
+        }
+        if(heightGuide){
+            heightGuide.setEnabled(false);
+        }
+        if(levelMarker){
+            levelMarker.setEnabled(false);
+        }
+        return;
+    }
+    const markerX = item.box.metadata?.isPlaced ? item.box.x : item.box.position.x;
+    const markerZ = item.box.metadata?.isPlaced ? item.box.z : item.box.position.z;
+    const itemHeight = getBoxVisualHeight(item);
+    const itemBottomY = item.box.position.y - itemHeight / 2;
+    const markerY = WAREHOUSE.rack.height + 1.1;
+    marker.position.set(markerX, markerY, markerZ);
+    marker.setEnabled(true);
+    if(heightGuide){
+        const guideHeight = Math.max(0.05, markerY - itemBottomY);
+        heightGuide.position.set(markerX, itemBottomY + guideHeight / 2, markerZ);
+        heightGuide.scaling.y = guideHeight;
+        heightGuide.setEnabled(true);
+    }
+    if(levelMarker){
+        levelMarker.position.set(markerX, itemBottomY + 0.035, markerZ);
+        levelMarker.setEnabled(true);
+    }
+}
+
+function clearActiveItem(){
+    if(appState.activeItemId !== null){
+        const prevItem = appState.itemById.get(String(appState.activeItemId));
+        const prevRow = appState.productRows.get(String(appState.activeItemId));
+        if(prevItem?.box){
+            prevItem.box.renderOutline = false;
+        }
+        if(prevRow){
+            prevRow.classList.remove("is-active");
+        }
+    }
+    if(appState.itemLocationMarker){
+        appState.itemLocationMarker.setEnabled(false);
+    }
+    if(appState.itemHeightGuide){
+        appState.itemHeightGuide.setEnabled(false);
+    }
+    if(appState.itemLevelMarker){
+        appState.itemLevelMarker.setEnabled(false);
+    }
+    appState.activeItemId = null;
+}
+
+function setActiveItem(itemId, shouldScroll){
+    const key = String(itemId);
+    if(appState.activeItemId === key){
+        if(shouldScroll){
+            const activeRow = appState.productRows.get(key);
+            scrollProductRowIntoView(activeRow);
+        }
+        return;
+    }
+    clearActiveItem();
+    const item = appState.itemById.get(key);
+    const row = appState.productRows.get(key);
+    if(!item){
+        return;
+    }
+    appState.activeItemId = key;
+    if(item.box){
+        item.box.renderOutline = true;
+        updateHoverDetailsFromMesh(item.box);
+        updateItemLocationMarker();
+    }
+    if(row){
+        row.classList.add("is-active");
+        if(shouldScroll){
+            scrollProductRowIntoView(row);
+        }
+    }
+}
+
+function renderProductList(){
+    const list = document.getElementById("productList");
+    const meta = document.getElementById("productPanelMeta");
+    if(!list){
+        return;
+    }
+    appState.productRows.clear();
+    const sortedItems = [...niData].sort(compareProductItems);
+    const visibleItems = sortedItems.filter(matchesProductSearch);
+    if(meta){
+        meta.textContent = `${visibleItems.length}件 / 全${sortedItems.length}件 / ${getSortLabel()}`;
+    }
+
+    const table = document.createElement("table");
+    table.className = "productTable";
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th class="col-shelf" data-sort-key="shelfId">棚ID</th>
+                <th class="col-id" data-sort-key="id">商品ID</th>
+                <th data-sort-key="name">商品名</th>
+                <th class="col-quantity" data-sort-key="出荷数">出荷数</th>
+                <th class="col-stock" data-sort-key="在庫数">在庫数</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
+    table.querySelectorAll("th[data-sort-key]").forEach(header => {
+        const key = header.dataset.sortKey;
+        header.textContent = `${header.textContent}${getSortMark(key)}`;
+        header.addEventListener("click", () => {
+            setProductSort(key);
+            renderProductList();
+        });
+    });
+    const tbody = table.querySelector("tbody");
+    visibleItems.forEach(item => {
+        const row = document.createElement("tr");
+        row.dataset.itemId = item.id;
+        row.innerHTML = `
+            <td class="col-shelf" data-field="shelf">${getItemShelfText(item)}</td>
+            <td class="col-id">${item.id}</td>
+            <td title="${item.name}">${item.name}</td>
+            <td class="col-quantity">${item.出荷数}</td>
+            <td class="col-stock">${item.在庫数}</td>
+        `;
+        row.addEventListener("click", () => setActiveItem(item.id, false));
+        appState.productRows.set(String(item.id), row);
+        tbody.appendChild(row);
+    });
+    list.replaceChildren(table);
+    if(appState.activeItemId !== null){
+        const row = appState.productRows.get(String(appState.activeItemId));
+        if(row){
+            row.classList.add("is-active");
+        }
+    }
+}
+
+function matchesProductSearch(item){
+    const query = appState.productSearch.trim().toLowerCase();
+    if(!query){
+        return true;
+    }
+    return [
+        item.id,
+        item.name,
+        getItemShelfText(item)
+    ].some(value => String(value).toLowerCase().includes(query));
+}
+
+function getSortValue(item, key){
+    if(key === "shelfId"){
+        return getItemShelfText(item);
+    }
+    return item[key];
+}
+
+function compareProductItems(a, b){
+    const { key, direction } = appState.productSort;
+    const directionFactor = direction === "asc" ? 1 : -1;
+    const aValue = getSortValue(a, key);
+    const bValue = getSortValue(b, key);
+    if(typeof aValue === "number" && typeof bValue === "number"){
+        return (aValue - bValue) * directionFactor;
+    }
+    return String(aValue).localeCompare(String(bValue), "ja") * directionFactor;
+}
+
+function setProductSort(key){
+    if(appState.productSort.key === key){
+        appState.productSort.direction = appState.productSort.direction === "asc" ? "desc" : "asc";
+        return;
+    }
+    appState.productSort = {
+        key,
+        direction: key === "出荷数" || key === "在庫数" ? "desc" : "asc"
+    };
+}
+
+function getSortLabel(){
+    const labels = {
+        shelfId: "棚ID",
+        id: "商品ID",
+        name: "商品名",
+        出荷数: "出荷数",
+        在庫数: "在庫数"
+    };
+    return `${labels[appState.productSort.key] || appState.productSort.key}${appState.productSort.direction === "asc" ? "昇順" : "降順"}`;
+}
+
+function getSortMark(key){
+    if(appState.productSort.key !== key){
+        return "";
+    }
+    return appState.productSort.direction === "asc" ? " ▲" : " ▼";
 }
 
 function createItemMaterialCache(scene){
@@ -915,13 +1547,16 @@ function createWarehouseItems(){
         const isLargeItem = false;
         const productName = isLargeItem ? ["大型家電", "ケース品", "長尺部材", "重量物パレット"][i % 4] : productNames[i % productNames.length];
         const shippingCount = calculateShippingCount(marker, i);
+        const stockCount = Math.max(shippingCount + 8, Math.round(shippingCount * (1.35 + ((i * 17) % 35) / 100)));
         items.push({
             id: 10000 + i,
+            shelfId: marker.id,
             name: `${productName} ${marker.id}`,
             x: marker.x,
             y: marker.y,
             z: marker.z,
             出荷数: shippingCount,
+            在庫数: stockCount,
             size: isLargeItem ? "large" : "standard"
         });
     }
@@ -993,18 +1628,17 @@ function slotKey(x, y, z){
     return `${x}:${y}:${z}`;
 }
 
-function buildOccupiedSlots(){
-    appState.occupiedSlots.clear();
+function isSlotOccupiedByOtherBox(x, y, z, draggedBox){
     for (let i=0; i<niData.length; i++){
-        if(!niData[i].box.metadata || !niData[i].box.metadata.isPlaced){
+        const item = niData[i];
+        if(item.box === draggedBox || !item.box.metadata || !item.box.metadata.isPlaced){
             continue;
         }
-        appState.occupiedSlots.add(slotKey(niData[i].box.x, niData[i].box.y, niData[i].box.z));
+        if(item.box.x == x && item.box.y == y && item.box.z == z){
+            return true;
+        }
     }
-}
-
-function isSlotOccupied(x, y, z){
-    return appState.occupiedSlots.has(slotKey(x, y, z));
+    return false;
 }
 
 function setBoxBasePosition(box){
@@ -1014,14 +1648,18 @@ function setBoxBasePosition(box){
 
 function applyBoxLayout(item){
     const baseHeight = item.box.metadata?.baseHeight || 0.5;
-    if(appState.showFixedHeight){
+    if(appState.heightMode === "fixed"){
         item.box.scaling.y = 1;
         item.box.position.y = item.box.y + baseHeight/2;
     }else{
-        item.box.scaling.y = item.出荷数*ITEM_HEIGHT_SCALE;
+        item.box.scaling.y = getItemHeightValue(item) * ITEM_HEIGHT_SCALE;
         item.box.position.y = item.box.y + (baseHeight * item.box.scaling.y)/2;
     }
     setBoxBasePosition(item.box);
+}
+
+function getItemHeightValue(item){
+    return appState.heightMode === "stock" ? item.在庫数 : item.出荷数;
 }
 
 function getBoxVisualHeight(item){
@@ -1030,40 +1668,46 @@ function getBoxVisualHeight(item){
 }
 
 function updateColumnLayout(x,z){
-    var columnItems = niData
+    const columnItems = niData
         .filter(el => el.box.metadata && el.box.metadata.isPlaced && el.box.x == x && el.box.z == z)
         .sort((a, b) => a.box.y - b.box.y);
 
     for (let i=0; i<columnItems.length; i++){
         applyBoxLayout(columnItems[i]);
-        if(!appState.showFixedHeight && i > 0){
-            var prev = columnItems[i - 1];
+        if(appState.heightMode !== "fixed" && i > 0){
+            const prev = columnItems[i - 1];
             columnItems[i].box.position.y = prev.box.position.y + getBoxVisualHeight(prev)/2;
             columnItems[i].box.position.y = columnItems[i].box.position.y + getBoxVisualHeight(columnItems[i])/2;
         }
     }
 }
 
-//BOXを表示する高さを切り替える（固定サイズor高さを可変にする）
-function niBoxScaleReSet(){
-    appState.showFixedHeight = !appState.showFixedHeight;
-    var updatedColumns = new Set();
+//BOXを表示する高さを更新する（固定サイズ・出荷数・在庫数）
+function updateAllBoxHeights(){
+    const updatedColumns = new Set();
     for (let i=0; i<niData.length;i++){
         if(!niData[i].box.metadata || !niData[i].box.metadata.isPlaced){
             continue;
         }
-        var key = `${niData[i].box.x}:${niData[i].box.z}`;
+        const key = `${niData[i].box.x}:${niData[i].box.z}`;
         if(!updatedColumns.has(key)){
             updateColumnLayout(niData[i].box.x, niData[i].box.z);
             updatedColumns.add(key);
         }
     }
-    buildOccupiedSlots();
+    updateItemLocationMarker();
+}
+
+function cycleHeightMode(){
+    const modes = ["fixed", "shipping", "stock"];
+    const currentIndex = modes.indexOf(appState.heightMode);
+    appState.heightMode = modes[(currentIndex + 1) % modes.length];
+    updateAllBoxHeights();
 }
 
 function niBoxScaleSet(x,z){
     updateColumnLayout(x,z);
-    buildOccupiedSlots();
+    updateItemLocationMarker();
 }
 
 //BOXの色を数量から作成する。少：緑　→　多：赤
