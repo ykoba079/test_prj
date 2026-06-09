@@ -37,6 +37,7 @@
                 flex: 1 1 auto;
                 min-width: 0;
                 height: 100%;
+                position: relative;
             }
             #renderCanvas {
                 width: 100%;
@@ -44,6 +45,39 @@
                 touch-action: none;
                 display: block;
                 border-right: 1px solid #51564d;
+            }
+            #renderStatsOverlay {
+                position: absolute;
+                top: 8px;
+                left: 8px;
+                z-index: 3;
+                min-width: 154px;
+                padding: 7px 9px;
+                border: 1px solid rgba(20, 24, 20, 0.28);
+                border-radius: 6px;
+                background: rgba(247, 248, 245, 0.86);
+                color: #1f261f;
+                font-size: 12px;
+                line-height: 1.45;
+                pointer-events: none;
+                box-shadow: 0 4px 14px rgba(20, 24, 20, 0.12);
+                backdrop-filter: blur(3px);
+            }
+            #renderStatsOverlay .statsTitle {
+                display: block;
+                margin-bottom: 3px;
+                font-size: 11px;
+                font-weight: 700;
+                color: #526052;
+            }
+            #renderStatsOverlay div {
+                display: flex;
+                justify-content: space-between;
+                gap: 14px;
+            }
+            #renderStatsOverlay span {
+                font-variant-numeric: tabular-nums;
+                font-weight: 700;
             }
             #productPanel {
                 flex: 0 0 420px;
@@ -132,6 +166,24 @@
                 border-color: #a46be8;
                 color: #35135c;
             }
+            .inventoryProgress {
+                margin-top: 8px;
+                font-size: 12px;
+                color: #526052;
+            }
+            .inventoryProgressBar {
+                height: 6px;
+                margin-top: 5px;
+                overflow: hidden;
+                border-radius: 3px;
+                background: #d9dfd5;
+            }
+            .inventoryProgressBarFill {
+                width: 0%;
+                height: 100%;
+                background: #22a6b3;
+                transition: width 0.2s ease;
+            }
             #productList {
                 flex: 1 1 auto;
                 overflow: auto;
@@ -146,13 +198,14 @@
                 position: sticky;
                 top: 0;
                 z-index: 1;
-                padding: 6px 6px;
+                padding: 6px 10px 6px 6px;
                 background: #dfe7dc;
                 border-bottom: 1px solid #c7d0c3;
                 text-align: left;
                 font-weight: 700;
                 cursor: pointer;
                 user-select: none;
+                overflow: visible;
             }
             .productTable th:hover {
                 background: #d2decf;
@@ -188,6 +241,28 @@
                 width: 54px;
                 text-align: right;
             }
+            .columnResizeHandle {
+                position: absolute;
+                top: 0;
+                right: -3px;
+                width: 7px;
+                height: 100%;
+                cursor: col-resize;
+                z-index: 2;
+            }
+            .columnResizeHandle::after {
+                content: "";
+                position: absolute;
+                top: 6px;
+                bottom: 6px;
+                left: 3px;
+                width: 1px;
+                background: #aeb9a8;
+            }
+            body.is-resizing-column {
+                cursor: col-resize;
+                user-select: none;
+            }
         </style>
 
         <script src="https://cdn.babylonjs.com/babylon.js"></script>
@@ -201,14 +276,31 @@
      <div id="appShell">
         <div id="canvasPane">
             <canvas id="renderCanvas"></canvas>
+            <div id="renderStatsOverlay">
+                <div class="statsTitle">Babylon stats</div>
+                <div>Draw calls/frame <span id="drawCallCount">-</span></div>
+                <div>FPS <span id="fpsCount">-</span></div>
+                <div>Active meshes <span id="activeMeshCount">-</span></div>
+                <div>Total meshes <span id="totalMeshCount">-</span></div>
+                <div>Instances <span id="instanceCount">-</span></div>
+            </div>
         </div>
         <aside id="productPanel">
             <div class="panelSection">
                 <div class="toolbarGrid">
-                    <button id="heightToggleButton" class="panelButton" type="button">高さ: 出荷数</button>
+                    <button id="heightToggleButton" class="panelButton" type="button">高さ: 固定</button>
                     <button id="clearSelectionButton" class="panelButton" type="button">商品選択解除</button>
                     <button id="resetCameraButton" class="panelButton" type="button">視点リセット</button>
                     <button id="focusSelectionButton" class="panelButton" type="button">選択中の商品へ移動</button>
+                    <button id="inventoryModeButton" class="panelButton" type="button">棚卸表示OFF</button>
+                    <button id="droneToggleButton" class="panelButton" type="button">棚卸ドローン開始</button>
+                    <button id="droneResetButton" class="panelButton" type="button">ドローンリセット</button>
+                </div>
+                <div class="inventoryProgress">
+                    <div id="inventoryProgressText">棚卸済 0 / 0 0%</div>
+                    <div class="inventoryProgressBar">
+                        <div id="inventoryProgressBarFill" class="inventoryProgressBarFill"></div>
+                    </div>
                 </div>
             </div>
             <div class="panelSection">
@@ -243,7 +335,8 @@
     let niData = [];
     let mkData = [];
     const appState = {
-        heightMode: "shipping",
+        heightMode: "fixed",
+        inventoryMode: false,
         pendingHoverPick: false,
         lastHoverMesh: null,
         markerMeshes: [],
@@ -252,10 +345,34 @@
         productRows: new Map(),
         productSort: { key: "出荷数", direction: "desc" },
         productSearch: "",
+        productColumnWidths: {
+            shelfId: 72,
+            id: 54,
+            name: 180,
+            出荷数: 54,
+            在庫数: 54
+        },
         camera: null,
         itemLocationMarker: null,
         itemHeightGuide: null,
-        itemLevelMarker: null
+        itemLevelMarker: null,
+        itemMaterialCache: null,
+        inventoryMaterials: null,
+        renderStats: {
+            drawCallsThisFrame: 0,
+            drawCallCounterInstalled: false
+        },
+        drone: {
+            root: null,
+            rotors: [],
+            routeLine: null,
+            waypoints: [],
+            targetIndex: 1,
+            speed: 5.5,
+            isRunning: false,
+            scanRange: 1.3,
+            scannedItemIds: new Set()
+        }
     };
     function createDensePickRackRows(){
         const rowCodes = [
@@ -385,9 +502,11 @@
         niData = getNiData();
 
         const itemMaterialCache = createItemMaterialCache(scene);
+        appState.itemMaterialCache = itemMaterialCache;
+        appState.inventoryMaterials = createInventoryMaterials(scene);
         for (let i=0; i<niData.length;i++){
             const item = niData[i];
-            const myMaterial = getSharedItemMaterial(itemMaterialCache, niData[i].出荷数);
+            const myMaterial = getSharedItemMaterial(itemMaterialCache, niData[i].出荷数, appState.heightMode !== "fixed");
             const itemSize = niData[i].size === "large"
                 ? {width: 1, height: 0.7, depth: 0.75}
                 : {width: 0.5, height: 0.5, depth: 0.5};
@@ -395,7 +514,7 @@
             box.id = niData[i].id;
             box.name = niData[i].name;
             box.position.x = niData[i].x;
-            box.position.y = niData[i].y+ (niData[i].出荷数*ITEM_HEIGHT_SCALE)/4;
+            box.position.y = niData[i].y + itemSize.height / 2;
             box.position.z = niData[i].z;
             box.material = myMaterial;
             box.x = niData[i].x;
@@ -520,6 +639,7 @@
             box.setEnabled(false);
         }
         createWarehouseRacks(scene);
+        createInventoryDrone(scene);
 
         scene.onPointerMove = function castRay(){
             if (appState.pendingHoverPick) {
@@ -558,13 +678,58 @@
     const scene = createScene();
     initPanelControls();
     updateHoverDetails(null);
+    installDrawCallCounter(engine);
     engine.runRenderLoop(function () {
+            updateInventoryDrone(engine.getDeltaTime() / 1000);
+            appState.renderStats.drawCallsThisFrame = 0;
             scene.render();
+            updateRenderStats(scene);
     });
 
     window.addEventListener("resize", function () {
             engine.resize();
     });
+
+    function installDrawCallCounter(engine){
+        if(appState.renderStats.drawCallCounterInstalled || typeof engine._reportDrawCall !== "function"){
+            return;
+        }
+        const reportDrawCall = engine._reportDrawCall.bind(engine);
+        engine._reportDrawCall = function(numDrawCalls){
+            appState.renderStats.drawCallsThisFrame += Number.isFinite(numDrawCalls) ? numDrawCalls : 1;
+            return reportDrawCall(numDrawCalls);
+        };
+        appState.renderStats.drawCallCounterInstalled = true;
+    }
+
+    function updateRenderStats(scene){
+        const drawCallCount = document.getElementById("drawCallCount");
+        const fpsCount = document.getElementById("fpsCount");
+        const activeMeshCount = document.getElementById("activeMeshCount");
+        const totalMeshCount = document.getElementById("totalMeshCount");
+        const instanceCount = document.getElementById("instanceCount");
+        if(!drawCallCount || !fpsCount || !activeMeshCount || !totalMeshCount || !instanceCount){
+            return;
+        }
+
+        const sceneEngine = scene.getEngine();
+        const measuredDrawCalls = appState.renderStats.drawCallCounterInstalled
+            ? appState.renderStats.drawCallsThisFrame
+            : sceneEngine._drawCalls?.current;
+        const drawCalls = Number.isFinite(measuredDrawCalls) ? measuredDrawCalls : null;
+        const activeMeshes = scene.getActiveMeshes ? scene.getActiveMeshes().length : scene.meshes.length;
+        const instances = scene.meshes.reduce((total, mesh) => {
+            const regularInstances = mesh.instances ? mesh.instances.length : 0;
+            const thinInstances = Number.isFinite(mesh.thinInstanceCount) ? mesh.thinInstanceCount : 0;
+            return total + regularInstances + thinInstances;
+        }, 0);
+
+        drawCallCount.textContent = drawCalls === null ? "N/A" : drawCalls.toLocaleString();
+        fpsCount.textContent = Math.round(sceneEngine.getFps()).toLocaleString();
+        activeMeshCount.textContent = activeMeshes.toLocaleString();
+        totalMeshCount.textContent = scene.meshes.length.toLocaleString();
+        instanceCount.textContent = instances.toLocaleString();
+    }
 
     function updateHoverDetailsFromMesh(pickedMesh){
         const item = appState.itemById.get(String(pickedMesh.id));
@@ -643,6 +808,28 @@ function initPanelControls(){
         focusButton.addEventListener("click", () => focusActiveItem());
     }
 
+    const inventoryModeButton = document.getElementById("inventoryModeButton");
+    if(inventoryModeButton){
+        inventoryModeButton.addEventListener("click", () => toggleInventoryMode());
+    }
+
+    const droneToggleButton = document.getElementById("droneToggleButton");
+    if(droneToggleButton){
+        droneToggleButton.addEventListener("click", () => {
+            if(appState.drone.isRunning){
+                appState.drone.isRunning = false;
+            }else{
+                startInventoryDrone();
+            }
+            updatePanelButtons();
+        });
+    }
+
+    const droneResetButton = document.getElementById("droneResetButton");
+    if(droneResetButton){
+        droneResetButton.addEventListener("click", () => resetInventoryDrone());
+    }
+
     updatePanelButtons();
 }
 
@@ -657,6 +844,35 @@ function updatePanelButtons(){
         heightButton.textContent = labels[appState.heightMode] || labels.shipping;
         heightButton.classList.toggle("is-active", appState.heightMode !== "fixed");
     }
+    const inventoryModeButton = document.getElementById("inventoryModeButton");
+    if(inventoryModeButton){
+        inventoryModeButton.textContent = appState.inventoryMode ? "棚卸表示ON" : "棚卸表示OFF";
+        inventoryModeButton.classList.toggle("is-active", appState.inventoryMode);
+    }
+    const droneToggleButton = document.getElementById("droneToggleButton");
+    if(droneToggleButton){
+        droneToggleButton.textContent = appState.drone.isRunning ? "棚卸ドローン停止" : "棚卸ドローン開始";
+        droneToggleButton.classList.toggle("is-active", appState.drone.isRunning);
+    }
+    updateInventoryProgress();
+}
+
+function toggleInventoryMode(){
+    appState.inventoryMode = !appState.inventoryMode;
+    if(appState.inventoryMode){
+        appState.drone.scannedItemIds.clear();
+    }
+    updateAllBoxMaterials();
+    updateInventoryProgress();
+    updatePanelButtons();
+}
+
+function startInventoryDrone(){
+    appState.inventoryMode = true;
+    appState.drone.isRunning = true;
+    appState.drone.scannedItemIds.clear();
+    updateAllBoxMaterials();
+    updateInventoryProgress();
 }
 
 function resetCameraView(){
@@ -679,6 +895,228 @@ function focusActiveItem(){
     const y = Math.max(1.5, item.box.position.y);
     appState.camera.setTarget(new BABYLON.Vector3(x, y, z));
     appState.camera.radius = 18;
+}
+
+function createInventoryDrone(scene){
+    const drone = appState.drone;
+    drone.waypoints = createDroneRoute();
+    drone.targetIndex = 1;
+    drone.scannedItemIds.clear();
+
+    const root = new BABYLON.TransformNode("inventoryDrone", scene);
+    const bodyMat = new BABYLON.StandardMaterial("droneBodyMat", scene);
+    bodyMat.diffuseColor = new BABYLON.Color3(0.12, 0.15, 0.18);
+    bodyMat.specularColor = new BABYLON.Color3(0.3, 0.34, 0.38);
+    const accentMat = new BABYLON.StandardMaterial("droneAccentMat", scene);
+    accentMat.diffuseColor = new BABYLON.Color3(0.1, 0.85, 1);
+    accentMat.emissiveColor = new BABYLON.Color3(0.02, 0.25, 0.35);
+    const cameraMat = new BABYLON.StandardMaterial("droneCameraMat", scene);
+    cameraMat.diffuseColor = new BABYLON.Color3(0.02, 0.02, 0.025);
+    const scanMat = new BABYLON.StandardMaterial("droneScanConeMat", scene);
+    scanMat.diffuseColor = new BABYLON.Color3(0.2, 0.75, 1);
+    scanMat.emissiveColor = new BABYLON.Color3(0.02, 0.16, 0.24);
+    scanMat.alpha = 0.22;
+
+    const body = BABYLON.MeshBuilder.CreateBox("droneBody", {width: 0.72, height: 0.18, depth: 0.48}, scene);
+    body.parent = root;
+    body.material = bodyMat;
+    body.isPickable = false;
+
+    const camera = BABYLON.MeshBuilder.CreateBox("droneCamera", {width: 0.22, height: 0.16, depth: 0.18}, scene);
+    camera.parent = root;
+    camera.position.z = 0.38;
+    camera.position.y = -0.06;
+    camera.material = cameraMat;
+    camera.isPickable = false;
+
+    const armPositions = [
+        { x: -0.55, z: -0.38 },
+        { x: 0.55, z: -0.38 },
+        { x: -0.55, z: 0.38 },
+        { x: 0.55, z: 0.38 }
+    ];
+    drone.rotors = [];
+    armPositions.forEach((pos, index) => {
+        const arm = BABYLON.MeshBuilder.CreateBox("droneArm", {width: 0.92, height: 0.04, depth: 0.04}, scene);
+        arm.parent = root;
+        arm.position.set(pos.x / 2, 0, pos.z / 2);
+        arm.rotation.y = pos.x * pos.z > 0 ? Math.PI / 5 : -Math.PI / 5;
+        arm.material = bodyMat;
+        arm.isPickable = false;
+
+        const rotor = BABYLON.MeshBuilder.CreateCylinder("droneRotor", {
+            height: 0.025,
+            diameter: 0.5,
+            tessellation: 32
+        }, scene);
+        rotor.parent = root;
+        rotor.position.set(pos.x, 0.08, pos.z);
+        rotor.material = accentMat;
+        rotor.isPickable = false;
+        drone.rotors.push({ mesh: rotor, direction: index % 2 === 0 ? 1 : -1 });
+    });
+
+    const scanPyramid = createDroneCameraFrustum(scene, scanMat);
+    scanPyramid.parent = root;
+
+    const start = drone.waypoints[0];
+    root.position.copyFrom(start);
+    drone.root = root;
+
+    drone.routeLine = BABYLON.MeshBuilder.CreateLines("droneRouteLine", {
+        points: [...drone.waypoints, drone.waypoints[0]]
+    }, scene);
+    drone.routeLine.color = new BABYLON.Color3(0.1, 0.6, 1);
+    drone.routeLine.isPickable = false;
+}
+
+function createDroneCameraFrustum(scene, material){
+    const root = new BABYLON.TransformNode("droneCameraFrustumRoot", scene);
+    const vertexData = new BABYLON.VertexData();
+    const positions = [
+        0, -0.05, 0.48,
+        -0.8, -0.55, 2.65,
+        0.8, -0.55, 2.65,
+        0.8, 0.55, 2.65,
+        -0.8, 0.55, 2.65
+    ];
+    const indices = [
+        0, 1, 2,
+        0, 2, 3,
+        0, 3, 4,
+        0, 4, 1,
+        1, 4, 3,
+        1, 3, 2
+    ];
+    const normals = [];
+    BABYLON.VertexData.ComputeNormals(positions, indices, normals);
+    vertexData.positions = positions;
+    vertexData.indices = indices;
+    vertexData.normals = normals;
+    const frustum = new BABYLON.Mesh("droneCameraFrustum", scene);
+    vertexData.applyToMesh(frustum);
+    frustum.parent = root;
+    frustum.material = material;
+    frustum.isPickable = false;
+
+    const corners = [
+        new BABYLON.Vector3(0, -0.05, 0.48),
+        new BABYLON.Vector3(-0.8, -0.55, 2.65),
+        new BABYLON.Vector3(0.8, -0.55, 2.65),
+        new BABYLON.Vector3(0.8, 0.55, 2.65),
+        new BABYLON.Vector3(-0.8, 0.55, 2.65)
+    ];
+    const line = BABYLON.MeshBuilder.CreateLines("droneCameraFrustumLine", {
+        points: [
+            corners[0], corners[1], corners[2], corners[0], corners[3], corners[4], corners[0],
+            corners[1], corners[4], corners[3], corners[2], corners[1]
+        ]
+    }, scene);
+    line.color = new BABYLON.Color3(0.1, 0.85, 1);
+    line.parent = root;
+    line.isPickable = false;
+    return root;
+}
+
+function createDroneRoute(){
+    const y = 3.15;
+    return [
+        new BABYLON.Vector3(3.2, y, 36),
+        new BABYLON.Vector3(3.2, y, 6),
+        new BABYLON.Vector3(15.8, y, 6),
+        new BABYLON.Vector3(15.8, y, 36),
+        new BABYLON.Vector3(30.2, y, 36),
+        new BABYLON.Vector3(30.2, y, 6),
+        new BABYLON.Vector3(45.2, y, 6),
+        new BABYLON.Vector3(45.2, y, 36),
+        new BABYLON.Vector3(61.8, y, 36),
+        new BABYLON.Vector3(61.8, y, 6),
+        new BABYLON.Vector3(82, y, 6),
+        new BABYLON.Vector3(82, y, -20),
+        new BABYLON.Vector3(58, y, -20),
+        new BABYLON.Vector3(58, y, -2),
+        new BABYLON.Vector3(82, y, -2),
+        new BABYLON.Vector3(82, y, 36)
+    ];
+}
+
+function updateInventoryDrone(deltaSeconds){
+    const drone = appState.drone;
+    if(!drone.root){
+        return;
+    }
+    drone.rotors.forEach(rotor => {
+        rotor.mesh.rotation.y += rotor.direction * deltaSeconds * 42;
+    });
+    if(!drone.isRunning || drone.waypoints.length < 2){
+        return;
+    }
+
+    const target = drone.waypoints[drone.targetIndex];
+    const current = drone.root.position;
+    const toTarget = target.subtract(current);
+    const distance = toTarget.length();
+    const step = drone.speed * deltaSeconds;
+    if(distance <= step){
+        current.copyFrom(target);
+        drone.targetIndex = (drone.targetIndex + 1) % drone.waypoints.length;
+    }else{
+        const direction = toTarget.scale(1 / distance);
+        current.addInPlace(direction.scale(step));
+        drone.root.rotation.y = Math.atan2(direction.x, direction.z);
+    }
+    scanItemsNearDrone();
+}
+
+function scanItemsNearDrone(){
+    const drone = appState.drone;
+    if(!appState.inventoryMode || !drone.root){
+        return;
+    }
+    for (let i=0; i<niData.length; i++){
+        const item = niData[i];
+        if(!item.box?.metadata?.isPlaced || drone.scannedItemIds.has(String(item.id))){
+            continue;
+        }
+        const dx = item.box.position.x - drone.root.position.x;
+        const dz = item.box.position.z - drone.root.position.z;
+        const dy = Math.abs(item.box.position.y - drone.root.position.y);
+        if(Math.hypot(dx, dz) <= drone.scanRange && dy < 3.2){
+            drone.scannedItemIds.add(String(item.id));
+            updateBoxMaterial(item);
+            updateInventoryProgress();
+            flashScannedItem(item);
+        }
+    }
+}
+
+function flashScannedItem(item){
+    if(!item.box){
+        return;
+    }
+    const previousOutline = item.box.renderOutline;
+    const previousColor = item.box.outlineColor;
+    item.box.renderOutline = true;
+    item.box.outlineColor = new BABYLON.Color3(0.1, 0.95, 1);
+    window.setTimeout(() => {
+        item.box.outlineColor = previousColor;
+        item.box.renderOutline = previousOutline || String(item.id) === String(appState.activeItemId);
+    }, 450);
+}
+
+function resetInventoryDrone(){
+    const drone = appState.drone;
+    if(!drone.root || drone.waypoints.length === 0){
+        return;
+    }
+    drone.isRunning = false;
+    drone.targetIndex = 1;
+    drone.scannedItemIds.clear();
+    drone.root.position.copyFrom(drone.waypoints[0]);
+    drone.root.rotation.y = 0;
+    updateAllBoxMaterials();
+    updateInventoryProgress();
+    updatePanelButtons();
 }
 
 function updateProductRow(itemId){
@@ -864,6 +1302,13 @@ function renderProductList(){
     const table = document.createElement("table");
     table.className = "productTable";
     table.innerHTML = `
+        <colgroup>
+            <col data-col-key="shelfId" style="width:${appState.productColumnWidths.shelfId}px">
+            <col data-col-key="id" style="width:${appState.productColumnWidths.id}px">
+            <col data-col-key="name" style="width:${appState.productColumnWidths.name}px">
+            <col data-col-key="出荷数" style="width:${appState.productColumnWidths.出荷数}px">
+            <col data-col-key="在庫数" style="width:${appState.productColumnWidths.在庫数}px">
+        </colgroup>
         <thead>
             <tr>
                 <th class="col-shelf" data-sort-key="shelfId">棚ID</th>
@@ -882,6 +1327,11 @@ function renderProductList(){
             setProductSort(key);
             renderProductList();
         });
+        const resizeHandle = document.createElement("span");
+        resizeHandle.className = "columnResizeHandle";
+        resizeHandle.addEventListener("click", event => event.stopPropagation());
+        resizeHandle.addEventListener("pointerdown", event => startProductColumnResize(event, key));
+        header.appendChild(resizeHandle);
     });
     const tbody = table.querySelector("tbody");
     visibleItems.forEach(item => {
@@ -917,6 +1367,32 @@ function matchesProductSearch(item){
         item.name,
         getItemShelfText(item)
     ].some(value => String(value).toLowerCase().includes(query));
+}
+
+function startProductColumnResize(event, key){
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const startWidth = appState.productColumnWidths[key] || event.currentTarget.parentElement.offsetWidth;
+    const minWidth = key === "name" ? 96 : 44;
+    document.body.classList.add("is-resizing-column");
+
+    const onPointerMove = moveEvent => {
+        const nextWidth = Math.max(minWidth, startWidth + moveEvent.clientX - startX);
+        appState.productColumnWidths[key] = Math.round(nextWidth);
+        const col = document.querySelector(`.productTable col[data-col-key='${key}']`);
+        if(col){
+            col.style.width = `${appState.productColumnWidths[key]}px`;
+        }
+    };
+    const onPointerUp = () => {
+        document.body.classList.remove("is-resizing-column");
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
 }
 
 function getSortValue(item, key){
@@ -975,19 +1451,73 @@ function createItemMaterialCache(scene){
     };
 }
 
-function getSharedItemMaterial(cache, quantity){
+function getSharedItemMaterial(cache, quantity, isTransparent = false){
     const safeQuantity = Number.isFinite(quantity) ? quantity : 0;
     const bucket = Math.max(0, Math.min(cache.bucketCount - 1, Math.floor((safeQuantity / cache.maxQuantity) * cache.bucketCount)));
-    if(!cache.materials.has(bucket)){
-        const material = new BABYLON.StandardMaterial("itemMaterial_" + bucket, cache.scene);
+    const materialKey = `${bucket}:${isTransparent ? "transparent" : "opaque"}`;
+    if(!cache.materials.has(materialKey)){
+        const material = new BABYLON.StandardMaterial("itemMaterial_" + materialKey, cache.scene);
         const color = createNiColor((bucket + 0.5) * cache.maxQuantity / cache.bucketCount, cache.maxQuantity);
         material.diffuseColor = color;
         material.emissiveColor = color;
-        material.alpha = 0.7;
+        material.alpha = isTransparent ? 0.7 : 1;
         material.freeze();
-        cache.materials.set(bucket, material);
+        cache.materials.set(materialKey, material);
     }
-    return cache.materials.get(bucket);
+    return cache.materials.get(materialKey);
+}
+
+function createInventoryMaterials(scene){
+    const unscanned = new BABYLON.StandardMaterial("inventoryUnscannedMaterial", scene);
+    unscanned.diffuseColor = new BABYLON.Color3(0.56, 0.6, 0.64);
+    unscanned.emissiveColor = new BABYLON.Color3(0.08, 0.09, 0.1);
+    unscanned.alpha = 1;
+    unscanned.freeze();
+
+    const scanned = new BABYLON.StandardMaterial("inventoryScannedMaterial", scene);
+    scanned.diffuseColor = new BABYLON.Color3(0.08, 0.78, 0.62);
+    scanned.emissiveColor = new BABYLON.Color3(0.02, 0.22, 0.16);
+    scanned.alpha = 1;
+    scanned.freeze();
+
+    return { unscanned, scanned };
+}
+
+function isInventoryScanned(item){
+    return appState.drone.scannedItemIds.has(String(item.id));
+}
+
+function updateInventoryProgress(){
+    const text = document.getElementById("inventoryProgressText");
+    const fill = document.getElementById("inventoryProgressBarFill");
+    const total = niData.length;
+    const scanned = appState.inventoryMode ? appState.drone.scannedItemIds.size : 0;
+    const percent = total === 0 ? 0 : Math.round((scanned / total) * 100);
+    if(text){
+        text.textContent = appState.inventoryMode
+            ? `棚卸済 ${scanned} / ${total} ${percent}%`
+            : `棚卸表示OFF ${scanned} / ${total} ${percent}%`;
+    }
+    if(fill){
+        fill.style.width = `${percent}%`;
+    }
+}
+
+function updateBoxMaterial(item){
+    if(!item?.box){
+        return;
+    }
+    if(appState.inventoryMode && appState.inventoryMaterials){
+        item.box.material = isInventoryScanned(item)
+            ? appState.inventoryMaterials.scanned
+            : appState.inventoryMaterials.unscanned;
+        return;
+    }
+    item.box.material = getSharedItemMaterial(
+        appState.itemMaterialCache,
+        item.出荷数,
+        appState.heightMode !== "fixed"
+    );
 }
 
 function setMarkersVisible(isVisible){
@@ -1042,7 +1572,48 @@ function createAsphaltTexture(scene){
     return texture;
 }
 
+function createStaticMeshMergeCollector(scene, prefix){
+    const groups = new Map();
+    return {
+        add(mesh){
+            if(!mesh || !mesh.material){
+                return mesh;
+            }
+            mesh.computeWorldMatrix(true);
+            const key = mesh.material.uniqueId;
+            if(!groups.has(key)){
+                groups.set(key, {
+                    material: mesh.material,
+                    meshes: []
+                });
+            }
+            groups.get(key).meshes.push(mesh);
+            return mesh;
+        },
+        merge(){
+            groups.forEach((group) => {
+                if(group.meshes.length === 0){
+                    return;
+                }
+                if(group.meshes.length === 1){
+                    group.meshes[0].isPickable = false;
+                    group.meshes[0].freezeWorldMatrix();
+                    return;
+                }
+                const merged = BABYLON.Mesh.MergeMeshes(group.meshes, true, true, undefined, false, false);
+                if(merged){
+                    merged.name = `${prefix}_${group.material.name}`;
+                    merged.material = group.material;
+                    merged.isPickable = false;
+                    merged.freezeWorldMatrix();
+                }
+            });
+        }
+    };
+}
+
 function createWarehouseShell(scene){
+    const shellMerger = createStaticMeshMergeCollector(scene, "warehouseShellMerged");
     const width = WAREHOUSE.maxX - WAREHOUSE.minX;
     const depth = WAREHOUSE.maxZ - WAREHOUSE.minZ;
     const centerX = (WAREHOUSE.minX + WAREHOUSE.maxX) / 2;
@@ -1082,7 +1653,7 @@ function createWarehouseShell(scene){
     foundation.position.set(centerX, -0.48, centerZ);
     foundation.material = dockSlopeMat;
     foundation.isPickable = false;
-    foundation.freezeWorldMatrix();
+    shellMerger.add(foundation);
 
     const floor = BABYLON.MeshBuilder.CreateGround("ground", {width, height: depth}, scene);
     floor.position.set(centerX, 0.01, centerZ);
@@ -1094,14 +1665,14 @@ function createWarehouseShell(scene){
     dockApron.rotation.x = -0.16;
     dockApron.material = dockSlopeMat;
     dockApron.isPickable = false;
-    dockApron.freezeWorldMatrix();
+    shellMerger.add(dockApron);
 
     [5.5, 10.5, 15.5].forEach(x => {
         const parkingLane = BABYLON.MeshBuilder.CreateBox("truckParkingLane", {width: 3.7, height: 0.025, depth: 14}, scene);
         parkingLane.position.set(x, -0.88, -32);
         parkingLane.material = lineMat;
         parkingLane.isPickable = false;
-        parkingLane.freezeWorldMatrix();
+        shellMerger.add(parkingLane);
     });
 
     const wallY = WAREHOUSE.wallHeight / 2;
@@ -1149,7 +1720,7 @@ function createWarehouseShell(scene){
     wallMeshes.forEach(wall => {
         wall.material = wallMat;
         wall.isPickable = false;
-        wall.freezeWorldMatrix();
+        shellMerger.add(wall);
     });
 
     WAREHOUSE.columns.forEach(pos => {
@@ -1157,13 +1728,13 @@ function createWarehouseShell(scene){
         columnBase.position.set(pos.x, 0.04, pos.z);
         columnBase.material = columnMat;
         columnBase.isPickable = false;
-        columnBase.freezeWorldMatrix();
+        shellMerger.add(columnBase);
 
         const column = BABYLON.MeshBuilder.CreateBox("column", {width: 0.48, height: WAREHOUSE.columnHeight, depth: 0.48}, scene);
         column.position.set(pos.x, WAREHOUSE.columnHeight / 2, pos.z);
         column.material = columnMat;
         column.isPickable = false;
-        column.freezeWorldMatrix();
+        shellMerger.add(column);
     });
 
     for (let i=0; i<4; i++){
@@ -1172,11 +1743,13 @@ function createWarehouseShell(scene){
         dockLine.rotation.y = Math.PI / 2;
         dockLine.material = lineMat;
         dockLine.isPickable = false;
-        dockLine.freezeWorldMatrix();
+        shellMerger.add(dockLine);
     }
+    shellMerger.merge();
 }
 
 function createWarehouseFixtures(scene){
+    const fixtureMerger = createStaticMeshMergeCollector(scene, "warehouseFixtureMerged");
     const matCache = {};
     const mat = (name, color) => {
         if(!matCache[name]){
@@ -1192,8 +1765,7 @@ function createWarehouseFixtures(scene){
         mesh.rotation.y = rotationY;
         mesh.material = material;
         mesh.isPickable = false;
-        mesh.freezeWorldMatrix();
-        return mesh;
+        return fixtureMerger.add(mesh);
     };
     const makeSupportLeg = (name, x, z, height, material) => {
         makeBox(name, {width: 0.12, height, depth: 0.12}, {x, y: height / 2, z}, material);
@@ -1250,7 +1822,7 @@ function createWarehouseFixtures(scene){
         palletMat,
         bulkMat,
         stagingMat
-    });
+    }, mesh => fixtureMerger.add(mesh));
 
     // 下側外壁に接した受付兼事務室。外部ドライバー受付と倉庫内動線の両方に近い位置。
     makeBox("officeFloor", {width: 14, height: 0.04, depth: 7}, {x: 38, y: 0.04, z: -20.5}, officeFloorMat);
@@ -1337,9 +1909,10 @@ function createWarehouseFixtures(scene){
         makeBox("bulkPallet", {width: 1.15, height: 0.18, depth: 0.95}, {x, y: 0.25, z}, palletMat);
         makeBox("bulkItem", {width: 0.95, height: 0.65, depth: 0.8}, {x, y: 0.68, z}, bulkMat);
     }
+    fixtureMerger.merge();
 }
 
-function createLoadingTruck(scene, makeBox, materials){
+function createLoadingTruck(scene, makeBox, materials, registerStaticMesh = mesh => mesh){
     const dockX = 10.5;
     const truckWidth = 3.4;
     const trailerDepth = 7.2;
@@ -1370,7 +1943,7 @@ function createLoadingTruck(scene, makeBox, materials){
         wheel.rotation.z = Math.PI / 2;
         wheel.material = materials.tireMat;
         wheel.isPickable = false;
-        wheel.freezeWorldMatrix();
+        registerStaticMesh(wheel);
     });
 
     [
@@ -1385,6 +1958,8 @@ function createLoadingTruck(scene, makeBox, materials){
 }
 
 function createWarehouseRacks(scene){
+    const rackMerger = createStaticMeshMergeCollector(scene, "rackMerged");
+    const rackRoots = [];
     const rackMat = new BABYLON.StandardMaterial("rackFrameMat", scene);
     rackMat.diffuseColor = new BABYLON.Color3(0.34, 0.4, 0.45);
     rackMat.specularColor = new BABYLON.Color3(0.04, 0.045, 0.05);
@@ -1398,6 +1973,7 @@ function createWarehouseRacks(scene){
         root.position.set(rack.x, rack.y, rack.z);
         root.rotation.y = rack.rx;
         root.computeWorldMatrix(true);
+        rackRoots.push(root);
 
         const length = rack.length || WAREHOUSE.rack.bayWidth;
         const depth = rack.depth || WAREHOUSE.rack.depth;
@@ -1409,7 +1985,6 @@ function createWarehouseRacks(scene){
         }
         xPositions.push(length / 2);
         const zPositions = [-depth / 2, depth / 2];
-        const rackParts = [];
 
         shelfLevels.forEach((levelY) => {
             const shelf = BABYLON.MeshBuilder.CreateBox("rackShelf", {
@@ -1421,7 +1996,7 @@ function createWarehouseRacks(scene){
             shelf.position.y = levelY;
             shelf.material = shelfMat;
             shelf.isPickable = false;
-            rackParts.push(shelf);
+            rackMerger.add(shelf);
         });
 
         xPositions.forEach(x => {
@@ -1435,18 +2010,13 @@ function createWarehouseRacks(scene){
                 post.position.set(x, WAREHOUSE.rack.height / 2, z);
                 post.material = rackMat;
                 post.isPickable = false;
-                rackParts.push(post);
+                rackMerger.add(post);
             });
         });
 
-        const mergedRack = BABYLON.Mesh.MergeMeshes(rackParts, true, true, undefined, false, true);
-        if(mergedRack){
-            mergedRack.name = "rackMerged_" + index;
-            mergedRack.isPickable = false;
-            mergedRack.freezeWorldMatrix();
-        }
-        root.dispose();
     });
+    rackMerger.merge();
+    rackRoots.forEach(root => root.dispose());
 }
 
 function createWarehouseLayout(){
@@ -1696,11 +2266,21 @@ function updateAllBoxHeights(){
     updateItemLocationMarker();
 }
 
+function updateAllBoxMaterials(){
+    if(!appState.itemMaterialCache){
+        return;
+    }
+    for (let i=0; i<niData.length; i++){
+        updateBoxMaterial(niData[i]);
+    }
+}
+
 function cycleHeightMode(){
     const modes = ["fixed", "shipping", "stock"];
     const currentIndex = modes.indexOf(appState.heightMode);
     appState.heightMode = modes[(currentIndex + 1) % modes.length];
     updateAllBoxHeights();
+    updateAllBoxMaterials();
 }
 
 function niBoxScaleSet(x,z){

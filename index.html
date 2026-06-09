@@ -1,49 +1,146 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-    <meta charset="utf-8" />
-    <title></title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Babylon.js demo samples</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #1f261f;
+            --muted: #5a6658;
+            --line: #cbd5c7;
+            --panel: #f7f8f5;
+            --accent: #22a6b3;
+            --accent-dark: #14727c;
+            --page: #eef2ec;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif;
+            color: var(--ink);
+            background: var(--page);
+        }
+        main {
+            width: min(960px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 32px 0;
+        }
+        .intro {
+            padding: 22px 0 18px;
+            border-bottom: 1px solid var(--line);
+        }
+        h1 {
+            margin: 0;
+            font-size: clamp(28px, 5vw, 46px);
+            line-height: 1.1;
+            letter-spacing: 0;
+        }
+        .lead {
+            max-width: 680px;
+            margin: 12px 0 0;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+        .primaryDemo {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 18px;
+            align-items: center;
+            margin: 24px 0;
+            padding: 18px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--panel);
+        }
+        .primaryDemo h2 {
+            margin: 0;
+            font-size: 20px;
+            line-height: 1.3;
+            letter-spacing: 0;
+        }
+        .primaryDemo p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .demoButton {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 42px;
+            padding: 0 18px;
+            border-radius: 6px;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 700;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .demoButton:hover {
+            background: var(--accent-dark);
+        }
+        .sampleList {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .sampleList a {
+            display: block;
+            min-height: 44px;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #fff;
+            color: var(--ink);
+            text-decoration: none;
+        }
+        .sampleList a:hover {
+            border-color: var(--accent);
+            color: var(--accent-dark);
+        }
+        @media (max-width: 640px) {
+            .primaryDemo {
+                grid-template-columns: 1fr;
+            }
+            .demoButton {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-    JSのサンプル
+    <main>
+        <section class="intro">
+            <h1>Babylon.js demo samples</h1>
+            <p class="lead">GitHub Pagesで公開するJavaScriptデモ集です。現在のメインデモは、倉庫内の商品配置・棚卸ドローン・商品検索を確認できるBabylon.jsサンプルです。</p>
+        </section>
 
-    <div>
-        <a href="./satellite/index.html">JSサンプル１　JSで地球を描画しまわす。</a></br>
-    </div>
-    <div>
-        <a href="./webXRmoon_VR.html">JSサンプル２　JSで日食の表現</a></br>
-    </div>
-    <div>
-        <a href="./stockdemo2022.html">JSサンプル３　JSで情報を俯瞰してみる</a></br>
-        <a href="./babyWarehouseSample.html">JSサンプル３　JSで情報を俯瞰してみる(babylon)</a></br>
-    </div>
-    <div>
-        <a href="./gis_test.html">JSサンプル４　名古屋駅のGIS</a></br>
-        <a href="./gis_test_shin.html">JSサンプル４　新宿のGIS</a>
-    </div>
-    <div>
-        <a href="./babyOfficeSample.html">JSサンプル5　オフィスの資産管理的な？</a></br>
-    </div>
-    <div>
-        <a href="./detectsample_camera.html">Webカメラの物体検出</a></br>
-    </div>
+        <section class="primaryDemo" aria-labelledby="warehouseTitle">
+            <div>
+                <h2 id="warehouseTitle">3D倉庫デモ</h2>
+                <p>商品を選択し、棚IDや商品名で検索しながら、倉庫レイアウトと棚卸状態を3Dで確認できます。</p>
+            </div>
+            <a class="demoButton" href="./babyWarehouseSample.html">デモを開く</a>
+        </section>
 
-
-    </br>
-    </br>
-
-    <div>
-        <a href="./baby3DGSTrim.html">ガウシアンスプラットを一部透明にする＿寺</a></br>
-    </div>
-    <div>
-        <a href="./baby3DGSTrim2.html">ガウシアンスプラットを一部透明にする＿長浜城</a></br>
-    </div>
-
-    <div>
-        <a href="./baby3DGSTrim4.html">ガウシアンスプラットをもふもふに</a></br>
-    </div>
-    <div>
-        <a href="https://www.babylonjs-playground.com/#2P4O1T#3">ガウシアンスプラットを一部透明にするPlayGround</a></br>
-    </div>
+        <nav class="sampleList" aria-label="その他のサンプル">
+            <a href="./webXRmoon_VR.html">WebXR moon VR</a>
+            <a href="./babyOfficeSample.html">オフィス資産管理サンプル</a>
+            <a href="./detectsample_camera.html">Webカメラ物体検出</a>
+            <a href="./detectsample_image.html">画像物体検出</a>
+            <a href="./gis_test.html">GISサンプル</a>
+            <a href="./baby3DGSTrim.html">Gaussian Splatting trim</a>
+            <a href="./baby3DGSTrim2.html">Gaussian Splatting trim 2</a>
+            <a href="./baby3DGSTrim4.html">Gaussian Splatting trim 4</a>
+        </nav>
+    </main>
 </body>
 </html>
