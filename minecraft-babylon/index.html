@@ -1,0 +1,849 @@
+﻿<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Babylon Block World</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --panel: rgba(14, 18, 21, 0.76);
+      --panel-strong: rgba(14, 18, 21, 0.92);
+      --line: rgba(255, 255, 255, 0.18);
+      --text: #f4f7f2;
+      --muted: #b8c3b1;
+      --accent: #6ac46e;
+      --soil: #8f6946;
+      --stone: #8d9290;
+      --wood: #9f6a3a;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #0f1514;
+      color: var(--text);
+      font-family: "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+    }
+
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      outline: none;
+      touch-action: none;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 14px auto auto 14px;
+      width: min(340px, calc(100vw - 28px));
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+
+    .hud h1 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .hud p {
+      margin: 4px 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .stat {
+      min-width: 0;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .stat b {
+      display: block;
+      font-size: 16px;
+      line-height: 1.1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      display: grid;
+      grid-template-columns: repeat(5, 54px);
+      gap: 8px;
+      transform: translateX(-50%);
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-strong);
+      box-sizing: border-box;
+    }
+
+    .slot {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.07);
+      box-sizing: border-box;
+      color: var(--text);
+      font-size: 10px;
+      line-height: 1.1;
+      text-align: center;
+      user-select: none;
+    }
+
+    .slot::before {
+      content: "";
+      width: 24px;
+      height: 24px;
+      display: block;
+      margin-bottom: 2px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.13);
+    }
+
+    .slot[data-block="grass"]::before { background: linear-gradient(#5fb85c 0 35%, #8a653f 36%); }
+    .slot[data-block="dirt"]::before { background: #8a653f; }
+    .slot[data-block="stone"]::before { background: #8d9290; }
+    .slot[data-block="wood"]::before { background: #9f6a3a; }
+    .slot[data-block="leaf"]::before { background: #3f8d4a; }
+
+    .slot.active {
+      border-color: var(--accent);
+      background: rgba(106, 196, 110, 0.22);
+    }
+
+    .crosshair {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: 18px;
+      height: 18px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .crosshair::before,
+    .crosshair::after {
+      content: "";
+      position: absolute;
+      background: rgba(255, 255, 255, 0.82);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.42);
+    }
+
+    .crosshair::before {
+      left: 8px;
+      top: 0;
+      width: 2px;
+      height: 18px;
+    }
+
+    .crosshair::after {
+      left: 0;
+      top: 8px;
+      width: 18px;
+      height: 2px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 14px;
+      top: 14px;
+      max-width: min(320px, calc(100vw - 28px));
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 640px) {
+      .hud {
+        inset: 10px 10px auto 10px;
+        width: auto;
+      }
+
+      .toolbar {
+        grid-template-columns: repeat(5, 44px);
+        gap: 6px;
+        bottom: 10px;
+      }
+
+      .slot {
+        width: 44px;
+        height: 48px;
+        font-size: 9px;
+      }
+
+      .slot::before {
+        width: 20px;
+        height: 20px;
+      }
+
+      .toast {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>
+
+  <section class="hud" aria-label="操作情報">
+    <h1>Babylon Block World</h1>
+    <p>クリックで視点固定。WASDで移動、Spaceでジャンプ、左クリックで削除、右クリックで設置。石と木は数回で壊れます。</p>
+    <p>1から5でブロック切替。Rで世界を作り直し。</p>
+    <div class="stats" aria-label="統計">
+      <div class="stat"><b id="fps">--</b><span>FPS</span></div>
+      <div class="stat"><b id="blocks">--</b><span>Blocks</span></div>
+      <div class="stat"><b id="picked">--</b><span>Target</span></div>
+    </div>
+  </section>
+
+  <div class="toast">最初に画面をクリックすると、マウスで見回せます。Escで解除。</div>
+  <div class="crosshair" aria-hidden="true"></div>
+  <nav class="toolbar" aria-label="ブロック選択">
+    <div class="slot active" data-block="grass">1<br>Grass</div>
+    <div class="slot" data-block="dirt">2<br>Dirt</div>
+    <div class="slot" data-block="stone">3<br>Stone</div>
+    <div class="slot" data-block="wood">4<br>Wood</div>
+    <div class="slot" data-block="leaf">5<br>Leaf</div>
+  </nav>
+
+  <script>
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+    const slots = Array.from(document.querySelectorAll(".slot"));
+    const fpsNode = document.getElementById("fps");
+    const blocksNode = document.getElementById("blocks");
+    const pickedNode = document.getElementById("picked");
+
+    const WORLD_SIZE = 48;
+    const CHUNK_SIZE = 16;
+    const HALF = WORLD_SIZE / 2;
+    const blockMap = new Map();
+    const columnBlocksMap = new Map();
+    const damageMap = new Map();
+    const chunkMeshes = new Map();
+    const materials = {};
+    const tileMap = {};
+    let selectedBlock = "grass";
+    let scene;
+    let camera;
+    let previewBox;
+    let crackBox;
+    const crackMaterials = [];
+    let selectedBlockInfo = null;
+    let jumpReady = true;
+    let verticalVelocity = 0;
+    let lastSafeX = 0;
+    let lastSafeZ = 0;
+
+    function keyFor(x, y, z) {
+      return `${x},${y},${z}`;
+    }
+
+    function columnKeyFor(x, z) {
+      return `${x},${z}`;
+    }
+
+    function chunkKeyFor(x, z) {
+      return `${Math.floor((x + HALF) / CHUNK_SIZE)},${Math.floor((z + HALF) / CHUNK_SIZE)}`;
+    }
+
+    function createPixelMaterial(name, top, side, fleck) {
+      const texture = new BABYLON.DynamicTexture(`${name}Texture`, 64, scene, false);
+      texture.hasAlpha = false;
+      texture.updateSamplingMode(BABYLON.Texture.NEAREST_NEAREST);
+      const ctx = texture.getContext();
+      ctx.fillStyle = side;
+      ctx.fillRect(0, 0, 64, 64);
+      ctx.fillStyle = top;
+      ctx.fillRect(0, 0, 64, 19);
+      ctx.fillStyle = fleck;
+      for (let i = 0; i < 38; i += 1) {
+        const x = Math.floor(Math.random() * 64);
+        const y = Math.floor(Math.random() * 64);
+        const s = 2 + Math.floor(Math.random() * 5);
+        ctx.globalAlpha = 0.22 + Math.random() * 0.26;
+        ctx.fillRect(x, y, s, s);
+      }
+      ctx.globalAlpha = 1;
+      texture.update();
+
+      const mat = new BABYLON.StandardMaterial(name, scene);
+      mat.diffuseTexture = texture;
+      mat.specularColor = new BABYLON.Color3(0.04, 0.04, 0.04);
+      return mat;
+    }
+
+    function createChunkAtlas() {
+      const tileSize = 32;
+      const tiles = [
+        { id: "grassTop", base: "#62b958", fleck: "#2f6d35", light: "#a1dd72" },
+        { id: "grassSide", base: "#8a653f", fleck: "#4f3828", light: "#5fb85c", topBand: true },
+        { id: "dirt", base: "#8a653f", fleck: "#4f3828", light: "#b28252" },
+        { id: "stone", base: "#8e9693", fleck: "#5e6664", light: "#bec5c0" },
+        { id: "wood", base: "#9f6334", fleck: "#5f371e", light: "#c78a4f", stripes: true },
+        { id: "leaf", base: "#438f4d", fleck: "#266232", light: "#8fca68" },
+        { id: "sand", base: "#d8c783", fleck: "#ae9c60", light: "#efe1a6" },
+        { id: "water", base: "#378fc6", fleck: "#1e668e", light: "#9bdaf7" }
+      ];
+
+      const texture = new BABYLON.DynamicTexture("chunkAtlas", { width: tileSize * tiles.length, height: tileSize }, scene, false);
+      texture.updateSamplingMode(BABYLON.Texture.NEAREST_NEAREST);
+      const ctx = texture.getContext();
+
+      tiles.forEach((tile, index) => {
+        const ox = index * tileSize;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = tile.base;
+        ctx.fillRect(ox, 0, tileSize, tileSize);
+
+        if (tile.topBand) {
+          ctx.fillStyle = tile.light;
+          ctx.fillRect(ox, 0, tileSize, 8);
+        }
+
+        if (tile.stripes) {
+          ctx.fillStyle = tile.fleck;
+          for (let x = 3; x < tileSize; x += 8) ctx.fillRect(ox + x, 0, 2, tileSize);
+        }
+
+        for (let i = 0; i < 26; i += 1) {
+          const x = (index * 17 + i * 11) % tileSize;
+          const y = (index * 23 + i * 7) % tileSize;
+          const size = 2 + ((index + i) % 3);
+          ctx.globalAlpha = 0.35;
+          ctx.fillStyle = i % 2 ? tile.fleck : tile.light;
+          ctx.fillRect(ox + x, y, size, size);
+        }
+
+        tileMap[tile.id] = {
+          u0: ox / (tileSize * tiles.length),
+          u1: (ox + tileSize) / (tileSize * tiles.length),
+          v0: 0,
+          v1: 1
+        };
+      });
+
+      ctx.globalAlpha = 1;
+      texture.update();
+      return texture;
+    }
+
+    function createCrackMaterial(level) {
+      const texture = new BABYLON.DynamicTexture(`crackTexture${level}`, 64, scene, false);
+      texture.hasAlpha = true;
+      texture.updateSamplingMode(BABYLON.Texture.NEAREST_NEAREST);
+      const ctx = texture.getContext();
+      ctx.clearRect(0, 0, 64, 64);
+      ctx.strokeStyle = `rgba(10, 10, 10, ${0.42 + level * 0.12})`;
+      ctx.lineWidth = 2 + level;
+      ctx.lineCap = "square";
+
+      const cracks = 4 + level * 4;
+      for (let i = 0; i < cracks; i += 1) {
+        const startX = (level * 13 + i * 17) % 64;
+        const startY = (level * 19 + i * 11) % 64;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo((startX + 12 + i * 3) % 64, (startY + 8 + level * 5) % 64);
+        ctx.lineTo((startX + 22 + i * 5) % 64, (startY + 18 + level * 7) % 64);
+        ctx.stroke();
+      }
+      texture.update();
+
+      const mat = new BABYLON.StandardMaterial(`crackMaterial${level}`, scene);
+      mat.diffuseTexture = texture;
+      mat.opacityTexture = texture;
+      mat.diffuseTexture.hasAlpha = true;
+      mat.opacityTexture.hasAlpha = true;
+      mat.useAlphaFromDiffuseTexture = true;
+      mat.disableLighting = true;
+      mat.backFaceCulling = false;
+      mat.alpha = 1;
+      return mat;
+    }
+
+    function makeMaterials() {
+      materials.grass = createPixelMaterial("grass", "#5fb85c", "#8a653f", "#315e31");
+      materials.dirt = createPixelMaterial("dirt", "#8a653f", "#795737", "#4f3828");
+      materials.stone = createPixelMaterial("stone", "#969c9a", "#7c8582", "#c0c4c0");
+      materials.wood = createPixelMaterial("wood", "#a86e3b", "#875126", "#c38a52");
+      materials.leaf = createPixelMaterial("leaf", "#4d9c58", "#367b42", "#9bd47a");
+      materials.water = createPixelMaterial("water", "#3e9dd5", "#236f9f", "#b7e7ff");
+      materials.sand = createPixelMaterial("sand", "#d7c489", "#bba66b", "#eee1ad");
+
+      materials.chunk = new BABYLON.StandardMaterial("chunkMaterial", scene);
+      materials.chunk.diffuseTexture = createChunkAtlas();
+      materials.chunk.diffuseColor = new BABYLON.Color3(1, 1, 1);
+      materials.chunk.specularColor = new BABYLON.Color3(0.03, 0.03, 0.03);
+
+      for (let level = 1; level <= 4; level += 1) {
+        crackMaterials[level] = createCrackMaterial(level);
+      }
+    }
+
+    function heightAt(x, z) {
+      const ridge = Math.sin(x * 0.42) * 1.35 + Math.cos(z * 0.38) * 1.1;
+      const hill = Math.sin((x + z) * 0.18) * 1.25;
+      return Math.max(1, Math.round(3 + ridge + hill));
+    }
+
+    function supportBlockYAt(x, z, cameraY) {
+      const ys = columnBlocksMap.get(columnKeyFor(x, z));
+      if (!ys) return -Infinity;
+      const maxFloorY = cameraY - 1.05;
+      let supportY = -Infinity;
+      for (const y of ys) {
+        if (y <= maxFloorY && y > supportY) supportY = y;
+      }
+      return supportY;
+    }
+
+    function hasBodyCollisionAt(x, y, z) {
+      const radius = 0.32;
+      const samples = [
+        [x + radius, z + radius],
+        [x + radius, z - radius],
+        [x - radius, z + radius],
+        [x - radius, z - radius],
+        [x, z]
+      ];
+      const footY = y - 1.45;
+      const ySamples = [y - 0.2, y + 0.35];
+
+      for (const [sx, sz] of samples) {
+        const bx = Math.round(sx);
+        const bz = Math.round(sz);
+        for (const sy of ySamples) {
+          const by = Math.round(sy);
+          if (by <= footY + 0.35) continue;
+          if (blockMap.has(keyFor(bx, by, bz))) return true;
+        }
+      }
+      return false;
+    }
+
+    function resolveHorizontalCollision() {
+      const nextX = camera.position.x;
+      const nextZ = camera.position.z;
+
+      if (hasBodyCollisionAt(nextX, camera.position.y, nextZ)) {
+        if (!hasBodyCollisionAt(lastSafeX, camera.position.y, nextZ)) {
+          camera.position.x = lastSafeX;
+        } else if (!hasBodyCollisionAt(nextX, camera.position.y, lastSafeZ)) {
+          camera.position.z = lastSafeZ;
+        } else {
+          camera.position.x = lastSafeX;
+          camera.position.z = lastSafeZ;
+        }
+      }
+
+      if (!hasBodyCollisionAt(camera.position.x, camera.position.y, camera.position.z)) {
+        lastSafeX = camera.position.x;
+        lastSafeZ = camera.position.z;
+      }
+    }
+
+    function addColumnBlock(x, y, z) {
+      const key = columnKeyFor(x, z);
+      if (!columnBlocksMap.has(key)) columnBlocksMap.set(key, new Set());
+      columnBlocksMap.get(key).add(y);
+    }
+
+    function removeColumnBlock(x, y, z) {
+      const key = columnKeyFor(x, z);
+      const ys = columnBlocksMap.get(key);
+      if (!ys) return;
+      ys.delete(y);
+      if (!ys.size) columnBlocksMap.delete(key);
+    }
+
+    function addBlock(x, y, z, type, silent = false) {
+      const key = keyFor(x, y, z);
+      if (blockMap.has(key)) return null;
+
+      const block = { x, y, z, type };
+      blockMap.set(key, block);
+      addColumnBlock(x, y, z);
+      if (!silent) {
+        rebuildNearbyChunks(x, y, z);
+        updateStats();
+      }
+      return block;
+    }
+
+    function removeBlock(block) {
+      if (!block) return;
+      const { x, y, z } = block;
+      if (y <= 0) return;
+      const key = keyFor(x, y, z);
+      blockMap.delete(key);
+      removeColumnBlock(x, y, z);
+      damageMap.delete(key);
+      hideCracks();
+      rebuildNearbyChunks(x, y, z);
+      updateStats();
+    }
+
+    function hitsRequiredFor(type) {
+      if (type === "stone") return 4;
+      if (type === "wood") return 3;
+      return 1;
+    }
+
+    function showCracks(block, damage, required) {
+      const level = Math.min(4, Math.max(1, Math.ceil((damage / required) * 4)));
+      crackBox.material = crackMaterials[level];
+      crackBox.position.set(block.x, block.y, block.z);
+      crackBox.setEnabled(true);
+    }
+
+    function hideCracks() {
+      if (crackBox) crackBox.setEnabled(false);
+    }
+
+    function damageOrRemoveBlock(block) {
+      if (!block) return;
+      const required = hitsRequiredFor(block.type);
+      if (required <= 1) {
+        removeBlock(block);
+        return;
+      }
+
+      const key = keyFor(block.x, block.y, block.z);
+      const damage = (damageMap.get(key) || 0) + 1;
+      if (damage >= required) {
+        removeBlock(block);
+        return;
+      }
+
+      damageMap.set(key, damage);
+      showCracks(block, damage, required);
+    }
+
+    const faces = [
+      { n: [1, 0, 0], c: [[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]], shade: 0.82 },
+      { n: [-1, 0, 0], c: [[-0.5, -0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, 0.5, -0.5], [-0.5, -0.5, -0.5]], shade: 0.72 },
+      { n: [0, 1, 0], c: [[-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [0.5, 0.5, -0.5]], shade: 1 },
+      { n: [0, -1, 0], c: [[-0.5, -0.5, 0.5], [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5], [0.5, -0.5, 0.5]], shade: 0.55 },
+      { n: [0, 0, 1], c: [[0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, -0.5, 0.5]], shade: 0.86 },
+      { n: [0, 0, -1], c: [[-0.5, -0.5, -0.5], [-0.5, 0.5, -0.5], [0.5, 0.5, -0.5], [0.5, -0.5, -0.5]], shade: 0.68 }
+    ];
+
+    function tileFor(type, normalY) {
+      if (type === "grass") return normalY > 0 ? tileMap.grassTop : tileMap.grassSide;
+      return tileMap[type] || tileMap.grassTop;
+    }
+
+    function rebuildNearbyChunks(x, y, z) {
+      const keys = new Set();
+      [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dz]) => {
+        keys.add(chunkKeyFor(x + dx, z + dz));
+      });
+      keys.forEach(rebuildChunk);
+    }
+
+    function rebuildAllChunks() {
+      for (const mesh of chunkMeshes.values()) mesh.dispose();
+      chunkMeshes.clear();
+      const keys = new Set();
+      for (const block of blockMap.values()) {
+        keys.add(chunkKeyFor(block.x, block.z));
+      }
+      keys.forEach(rebuildChunk);
+    }
+
+    function rebuildChunk(chunkKey) {
+      const oldMesh = chunkMeshes.get(chunkKey);
+      if (oldMesh) oldMesh.dispose();
+      chunkMeshes.delete(chunkKey);
+
+      const [cx, cz] = chunkKey.split(",").map(Number);
+      const minX = cx * CHUNK_SIZE - HALF;
+      const maxX = minX + CHUNK_SIZE;
+      const minZ = cz * CHUNK_SIZE - HALF;
+      const maxZ = minZ + CHUNK_SIZE;
+      const positions = [];
+      const indices = [];
+      const normals = [];
+      const uvs = [];
+      const faceBlocks = [];
+
+      for (const block of blockMap.values()) {
+        const { x, y, z, type } = block;
+        if (x < minX || x >= maxX || z < minZ || z >= maxZ) continue;
+
+        for (const face of faces) {
+          const [nx, ny, nz] = face.n;
+          if (blockMap.has(keyFor(x + nx, y + ny, z + nz))) continue;
+
+          const vertexIndex = positions.length / 3;
+          const tile = tileFor(type, ny);
+          const faceUvs = ny === 0
+            ? [[tile.u0, tile.v0], [tile.u0, tile.v1], [tile.u1, tile.v1], [tile.u1, tile.v0]]
+            : [[tile.u0, tile.v1], [tile.u0, tile.v0], [tile.u1, tile.v0], [tile.u1, tile.v1]];
+          for (const corner of face.c) {
+            positions.push(x + corner[0], y + corner[1], z + corner[2]);
+            normals.push(nx, ny, nz);
+          }
+          faceUvs.forEach(([u, v]) => uvs.push(u, v));
+          indices.push(vertexIndex, vertexIndex + 2, vertexIndex + 1, vertexIndex, vertexIndex + 3, vertexIndex + 2);
+          faceBlocks.push({ x, y, z, type, nx, ny, nz });
+        }
+      }
+
+      if (!positions.length) return;
+
+      const mesh = new BABYLON.Mesh(`chunk-${chunkKey}`, scene);
+      const vertexData = new BABYLON.VertexData();
+      vertexData.positions = positions;
+      vertexData.indices = indices;
+      vertexData.normals = normals;
+      vertexData.uvs = uvs;
+      vertexData.applyToMesh(mesh, true);
+      mesh.material = materials.chunk;
+      mesh.checkCollisions = false;
+      mesh.metadata = { chunkKey, faceBlocks };
+      chunkMeshes.set(chunkKey, mesh);
+    }
+
+    function makeTree(x, groundY, z) {
+      for (let y = groundY + 1; y <= groundY + 4; y += 1) {
+        addBlock(x, y, z, "wood", true);
+      }
+      for (let lx = -2; lx <= 2; lx += 1) {
+        for (let lz = -2; lz <= 2; lz += 1) {
+          for (let ly = 3; ly <= 5; ly += 1) {
+            const edge = Math.abs(lx) + Math.abs(lz) + Math.max(0, ly - 4);
+            if (edge < 5) addBlock(x + lx, groundY + ly, z + lz, "leaf", true);
+          }
+        }
+      }
+    }
+
+    function buildWorld() {
+      for (const mesh of chunkMeshes.values()) mesh.dispose();
+      chunkMeshes.clear();
+      blockMap.clear();
+      columnBlocksMap.clear();
+      damageMap.clear();
+      hideCracks();
+
+      for (let x = -HALF; x < HALF; x += 1) {
+        for (let z = -HALF; z < HALF; z += 1) {
+          const h = heightAt(x, z);
+          for (let y = 0; y <= h; y += 1) {
+            let type = "stone";
+            if (y === h) type = h <= 2 ? "sand" : "grass";
+            else if (y > h - 3) type = "dirt";
+            addBlock(x, y, z, type, true);
+          }
+          if ((x * 17 + z * 31) % 47 === 0 && h > 3) makeTree(x, h, z);
+        }
+      }
+
+      rebuildAllChunks();
+      updateStats();
+    }
+
+    function updateStats() {
+      fpsNode.textContent = Math.round(engine.getFps()).toString();
+      blocksNode.textContent = blockMap.size.toString();
+      pickedNode.textContent = selectedBlockInfo?.type ?? "--";
+    }
+
+    function setSelectedBlock(type) {
+      selectedBlock = type;
+      slots.forEach((slot) => slot.classList.toggle("active", slot.dataset.block === type));
+    }
+
+    function getPlacementPosition(pick) {
+      const normal = pick.getNormal(true);
+      const base = getPickedBlockInfo(pick);
+      if (!normal || !base) return null;
+      return {
+        x: base.x + Math.round(normal.x),
+        y: base.y + Math.round(normal.y),
+        z: base.z + Math.round(normal.z)
+      };
+    }
+
+    function getPickedBlockInfo(pick) {
+      if (!pick?.hit || !pick.pickedMesh?.metadata?.faceBlocks) return null;
+      return pick.pickedMesh.metadata.faceBlocks[Math.floor(pick.faceId / 2)] || null;
+    }
+
+    function updateTarget() {
+      const ray = camera.getForwardRay(8);
+      const pick = scene.pickWithRay(ray, (mesh) => mesh.metadata?.faceBlocks);
+      selectedBlockInfo = getPickedBlockInfo(pick);
+      previewBox.setEnabled(Boolean(selectedBlockInfo));
+      if (selectedBlockInfo) previewBox.position.set(selectedBlockInfo.x, selectedBlockInfo.y, selectedBlockInfo.z);
+      updateStats();
+      return pick;
+    }
+
+    function createScene() {
+      scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0.58, 0.78, 0.95, 1);
+      scene.collisionsEnabled = true;
+      scene.gravity = new BABYLON.Vector3(0, -0.24, 0);
+
+      makeMaterials();
+
+      const sky = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 900 }, scene);
+      const skyMat = new BABYLON.StandardMaterial("skyMat", scene);
+      skyMat.backFaceCulling = false;
+      skyMat.disableLighting = true;
+      skyMat.diffuseColor = new BABYLON.Color3(0.58, 0.78, 0.95);
+      sky.material = skyMat;
+      sky.infiniteDistance = true;
+
+      const light = new BABYLON.HemisphericLight("skyLight", new BABYLON.Vector3(0.2, 1, 0.35), scene);
+      light.intensity = 0.82;
+      const sun = new BABYLON.DirectionalLight("sun", new BABYLON.Vector3(-0.45, -1, -0.25), scene);
+      sun.position.set(30, 48, 20);
+      sun.intensity = 0.62;
+
+      camera = new BABYLON.UniversalCamera("playerCamera", new BABYLON.Vector3(0, 10, -9), scene);
+      camera.attachControl(canvas, true);
+      camera.minZ = 0.06;
+      camera.speed = 0.34;
+      camera.angularSensibility = 2600;
+      camera.applyGravity = false;
+      camera.checkCollisions = false;
+      camera.ellipsoid = new BABYLON.Vector3(0.38, 0.9, 0.38);
+      camera.keysUp = [87];
+      camera.keysDown = [83];
+      camera.keysLeft = [65];
+      camera.keysRight = [68];
+
+      previewBox = BABYLON.MeshBuilder.CreateBox("previewBox", { size: 1.035 }, scene);
+      const previewMat = new BABYLON.StandardMaterial("previewMat", scene);
+      previewMat.diffuseColor = new BABYLON.Color3(1, 1, 1);
+      previewMat.emissiveColor = new BABYLON.Color3(0.6, 0.9, 0.6);
+      previewMat.alpha = 0.18;
+      previewBox.material = previewMat;
+      previewBox.renderingGroupId = 1;
+      previewBox.enableEdgesRendering();
+      previewBox.edgesWidth = 3;
+      previewBox.edgesColor = new BABYLON.Color4(0.1, 1, 0.15, 1);
+      previewBox.setEnabled(false);
+
+      crackBox = BABYLON.MeshBuilder.CreateBox("crackBox", { size: 1.045 }, scene);
+      crackBox.isPickable = false;
+      crackBox.renderingGroupId = 2;
+      crackBox.setEnabled(false);
+
+      buildWorld();
+      lastSafeX = camera.position.x;
+      lastSafeZ = camera.position.z;
+
+      scene.onBeforeRenderObservable.add(() => {
+        updateTarget();
+        resolveHorizontalCollision();
+        const frameScale = Math.min(2, engine.getDeltaTime() / 16.666);
+        camera.position.y += verticalVelocity * frameScale;
+        verticalVelocity -= 0.028 * frameScale;
+        if (camera.position.y < -12) {
+          camera.position.set(0, 12, -9);
+          lastSafeX = camera.position.x;
+          lastSafeZ = camera.position.z;
+          verticalVelocity = 0;
+        }
+        const footX = Math.round(camera.position.x);
+        const footZ = Math.round(camera.position.z);
+        const topY = supportBlockYAt(footX, footZ, camera.position.y);
+        const minCameraY = topY + 1.45;
+        if (Number.isFinite(topY) && camera.position.y < minCameraY) {
+          camera.position.y = minCameraY;
+          verticalVelocity = 0;
+        }
+        const grounded = Number.isFinite(topY) && camera.position.y <= minCameraY + 0.08;
+        if (grounded) jumpReady = true;
+      });
+
+      return scene;
+    }
+
+    createScene();
+    engine.runRenderLoop(() => scene.render());
+    window.addEventListener("resize", () => engine.resize());
+
+    canvas.addEventListener("click", () => {
+      if (!document.pointerLockElement) canvas.requestPointerLock?.();
+    });
+
+    canvas.addEventListener("pointerdown", (event) => {
+      const pick = updateTarget();
+      if (!pick?.hit) return;
+      const pickedBlock = getPickedBlockInfo(pick);
+      if (event.button === 0) damageOrRemoveBlock(pickedBlock);
+      if (event.button === 2) {
+        const pos = getPlacementPosition(pick);
+        if (pos) {
+          hideCracks();
+          addBlock(pos.x, pos.y, pos.z, selectedBlock);
+        }
+      }
+    });
+
+    canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+
+    window.addEventListener("keydown", (event) => {
+      const index = Number(event.key) - 1;
+      if (index >= 0 && index < slots.length) setSelectedBlock(slots[index].dataset.block);
+      if (event.code === "KeyR") buildWorld();
+      if (event.code === "Space" && jumpReady) {
+        verticalVelocity = 0.42;
+        jumpReady = false;
+        event.preventDefault();
+      }
+    });
+
+    slots.forEach((slot) => {
+      slot.addEventListener("pointerdown", () => setSelectedBlock(slot.dataset.block));
+    });
+  </script>
+</body>
+</html>
