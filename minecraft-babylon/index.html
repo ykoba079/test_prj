@@ -73,6 +73,37 @@
       margin-top: 10px;
     }
 
+    .settings {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      pointer-events: auto;
+    }
+
+    .settings span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .toggle {
+      min-width: 72px;
+      height: 28px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      font: inherit;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .toggle.active {
+      border-color: var(--accent);
+      background: rgba(106, 196, 110, 0.24);
+    }
+
     .stat {
       min-width: 0;
       padding: 8px;
@@ -229,11 +260,15 @@
   <section class="hud" aria-label="操作情報">
     <h1>Babylon Block World</h1>
     <p>クリックで視点固定。WASDで移動、Spaceでジャンプ、左クリックで削除、右クリックで設置。石と木は数回で壊れます。</p>
-    <p>1から5でブロック切替。Rで世界を作り直し。</p>
+    <p>1から5でブロック切替。Rで世界を作り直し。Yでマウス上下反転。</p>
     <div class="stats" aria-label="統計">
       <div class="stat"><b id="fps">--</b><span>FPS</span></div>
       <div class="stat"><b id="blocks">--</b><span>Blocks</span></div>
       <div class="stat"><b id="picked">--</b><span>Target</span></div>
+    </div>
+    <div class="settings">
+      <span>Mouse Y</span>
+      <button class="toggle" id="invertYToggle" type="button">Normal</button>
     </div>
   </section>
 
@@ -254,6 +289,7 @@
     const fpsNode = document.getElementById("fps");
     const blocksNode = document.getElementById("blocks");
     const pickedNode = document.getElementById("picked");
+    const invertYToggle = document.getElementById("invertYToggle");
 
     const WORLD_SIZE = 48;
     const CHUNK_SIZE = 16;
@@ -267,14 +303,26 @@
     let selectedBlock = "grass";
     let scene;
     let camera;
+    let playerRoot;
+    let playerPosition;
+    let playerLeftArm;
+    let playerRightArm;
+    let playerLeftLeg;
+    let playerRightLeg;
     let previewBox;
     let crackBox;
     const crackMaterials = [];
+    const inputKeys = {};
     let selectedBlockInfo = null;
     let jumpReady = true;
     let verticalVelocity = 0;
     let lastSafeX = 0;
     let lastSafeZ = 0;
+    let playerYaw = 0;
+    let cameraPitch = 0.2;
+    let walkTime = 0;
+    let armSwingTime = 0;
+    let invertMouseY = localStorage.getItem("blockWorldInvertY") === "true";
 
     function keyFor(x, y, z) {
       return `${x},${y},${z}`;
@@ -431,7 +479,7 @@
     function supportBlockYAt(x, z, cameraY) {
       const ys = columnBlocksMap.get(columnKeyFor(x, z));
       if (!ys) return -Infinity;
-      const maxFloorY = cameraY - 1.05;
+      const maxFloorY = cameraY - 0.2;
       let supportY = -Infinity;
       for (const y of ys) {
         if (y <= maxFloorY && y > supportY) supportY = y;
@@ -456,7 +504,7 @@
         const bz = Math.round(sz);
         for (const sy of ySamples) {
           const by = Math.round(sy);
-          if (by <= footY + 0.35) continue;
+          if (by <= footY + 1.15) continue;
           if (blockMap.has(keyFor(bx, by, bz))) return true;
         }
       }
@@ -464,24 +512,91 @@
     }
 
     function resolveHorizontalCollision() {
-      const nextX = camera.position.x;
-      const nextZ = camera.position.z;
+      const nextX = playerPosition.x;
+      const nextZ = playerPosition.z;
 
-      if (hasBodyCollisionAt(nextX, camera.position.y, nextZ)) {
-        if (!hasBodyCollisionAt(lastSafeX, camera.position.y, nextZ)) {
-          camera.position.x = lastSafeX;
-        } else if (!hasBodyCollisionAt(nextX, camera.position.y, lastSafeZ)) {
-          camera.position.z = lastSafeZ;
+      if (hasBodyCollisionAt(nextX, playerPosition.y, nextZ)) {
+        if (!hasBodyCollisionAt(lastSafeX, playerPosition.y, nextZ)) {
+          playerPosition.x = lastSafeX;
+        } else if (!hasBodyCollisionAt(nextX, playerPosition.y, lastSafeZ)) {
+          playerPosition.z = lastSafeZ;
         } else {
-          camera.position.x = lastSafeX;
-          camera.position.z = lastSafeZ;
+          playerPosition.x = lastSafeX;
+          playerPosition.z = lastSafeZ;
         }
       }
 
-      if (!hasBodyCollisionAt(camera.position.x, camera.position.y, camera.position.z)) {
-        lastSafeX = camera.position.x;
-        lastSafeZ = camera.position.z;
+      if (!hasBodyCollisionAt(playerPosition.x, playerPosition.y, playerPosition.z)) {
+        lastSafeX = playerPosition.x;
+        lastSafeZ = playerPosition.z;
       }
+    }
+
+    function movePlayer(frameScale) {
+      const forward = new BABYLON.Vector3(Math.sin(playerYaw), 0, Math.cos(playerYaw));
+      const right = new BABYLON.Vector3(forward.z, 0, -forward.x);
+      const move = new BABYLON.Vector3(0, 0, 0);
+
+      if (inputKeys.KeyW) move.addInPlace(forward);
+      if (inputKeys.KeyS) move.subtractInPlace(forward);
+      if (inputKeys.KeyD) move.addInPlace(right);
+      if (inputKeys.KeyA) move.subtractInPlace(right);
+
+      if (move.lengthSquared() > 0) {
+        move.normalize().scaleInPlace(0.16 * frameScale);
+        playerPosition.addInPlace(move);
+        return true;
+      }
+      return false;
+    }
+
+    function updateThirdPersonCamera() {
+      const forward = new BABYLON.Vector3(Math.sin(playerYaw), 0, Math.cos(playerYaw));
+      const distance = 7.5;
+      const height = 2.4 + Math.sin(cameraPitch) * 6.2;
+      const backDistance = Math.max(2.2, distance * Math.cos(cameraPitch));
+      const lookDownAmount = Math.max(0, cameraPitch);
+      const targetHeight = 1.05 - lookDownAmount * 0.82;
+      const target = playerPosition.add(new BABYLON.Vector3(0, targetHeight, 0));
+      const desired = target.subtract(forward.scale(backDistance)).add(new BABYLON.Vector3(0, height, 0));
+
+      camera.position.copyFrom(desired);
+      camera.setTarget(target.add(forward.scale(2.2)));
+
+      if (playerRoot) {
+        playerRoot.position.copyFrom(playerPosition);
+        playerRoot.rotation.y = playerYaw;
+      }
+    }
+
+    function updatePlayerAnimation(isWalking, frameScale) {
+      if (!playerLeftLeg || !playerRightLeg || !playerLeftArm || !playerRightArm) return;
+
+      if (isWalking) walkTime += frameScale * 0.09;
+      else walkTime *= Math.pow(0.82, frameScale);
+
+      const stride = isWalking ? Math.sin(walkTime * 8) : Math.sin(walkTime * 8) * 0.25;
+      playerLeftLeg.rotation.x = stride * 0.58;
+      playerRightLeg.rotation.x = -stride * 0.58;
+      playerLeftArm.rotation.x = -stride * 0.38;
+      playerRightArm.rotation.x = stride * 0.38;
+
+      if (armSwingTime > 0) {
+        armSwingTime = Math.max(0, armSwingTime - frameScale * 0.08);
+        const progress = 1 - armSwingTime;
+        const windup = Math.sin(progress * Math.PI);
+        const throwArc = Math.sin(progress * Math.PI * 1.35);
+        playerRightArm.rotation.x = -0.35 * windup;
+        playerRightArm.rotation.y = 1.05 * throwArc;
+        playerRightArm.rotation.z = -1.05 * windup;
+      } else {
+        playerRightArm.rotation.z *= Math.pow(0.75, frameScale);
+        playerRightArm.rotation.y *= Math.pow(0.75, frameScale);
+      }
+    }
+
+    function triggerArmSwing() {
+      armSwingTime = 1;
     }
 
     function addColumnBlock(x, y, z) {
@@ -697,6 +812,12 @@
       slots.forEach((slot) => slot.classList.toggle("active", slot.dataset.block === type));
     }
 
+    function updateInvertYToggle() {
+      invertYToggle.textContent = invertMouseY ? "Reverse" : "Normal";
+      invertYToggle.classList.toggle("active", invertMouseY);
+      invertYToggle.setAttribute("aria-pressed", invertMouseY ? "true" : "false");
+    }
+
     function getPlacementPosition(pick) {
       const normal = pick.getNormal(true);
       const base = getPickedBlockInfo(pick);
@@ -713,10 +834,26 @@
       return pick.pickedMesh.metadata.faceBlocks[Math.floor(pick.faceId / 2)] || null;
     }
 
+    function isUsableTarget(block) {
+      if (!block || !playerPosition) return false;
+      const targetCenter = new BABYLON.Vector3(block.x, block.y, block.z);
+      const playerEye = playerPosition.add(new BABYLON.Vector3(0, 1.05, 0));
+      const toTarget = targetCenter.subtract(playerEye);
+      const forward = new BABYLON.Vector3(Math.sin(playerYaw), 0, Math.cos(playerYaw));
+      return BABYLON.Vector3.Dot(new BABYLON.Vector3(toTarget.x, 0, toTarget.z), forward) > -0.15;
+    }
+
     function updateTarget() {
-      const ray = camera.getForwardRay(8);
+      const ray = scene.createPickingRay(
+        engine.getRenderWidth() * 0.5,
+        engine.getRenderHeight() * 0.5,
+        BABYLON.Matrix.Identity(),
+        camera
+      );
+      ray.length = 12;
       const pick = scene.pickWithRay(ray, (mesh) => mesh.metadata?.faceBlocks);
-      selectedBlockInfo = getPickedBlockInfo(pick);
+      const target = getPickedBlockInfo(pick);
+      selectedBlockInfo = isUsableTarget(target) ? target : null;
       previewBox.setEnabled(Boolean(selectedBlockInfo));
       if (selectedBlockInfo) previewBox.position.set(selectedBlockInfo.x, selectedBlockInfo.y, selectedBlockInfo.z);
       updateStats();
@@ -725,9 +862,12 @@
 
     function createScene() {
       scene = new BABYLON.Scene(engine);
-      scene.clearColor = new BABYLON.Color4(0.58, 0.78, 0.95, 1);
+      scene.clearColor = new BABYLON.Color4(0.62, 0.82, 0.97, 1);
       scene.collisionsEnabled = true;
       scene.gravity = new BABYLON.Vector3(0, -0.24, 0);
+      scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+      scene.fogColor = new BABYLON.Color3(0.62, 0.82, 0.97);
+      scene.fogDensity = 0.012;
 
       makeMaterials();
 
@@ -735,7 +875,8 @@
       const skyMat = new BABYLON.StandardMaterial("skyMat", scene);
       skyMat.backFaceCulling = false;
       skyMat.disableLighting = true;
-      skyMat.diffuseColor = new BABYLON.Color3(0.58, 0.78, 0.95);
+      skyMat.diffuseColor = new BABYLON.Color3(0.62, 0.82, 0.97);
+      skyMat.emissiveColor = new BABYLON.Color3(0.62, 0.82, 0.97);
       sky.material = skyMat;
       sky.infiniteDistance = true;
 
@@ -745,18 +886,51 @@
       sun.position.set(30, 48, 20);
       sun.intensity = 0.62;
 
-      camera = new BABYLON.UniversalCamera("playerCamera", new BABYLON.Vector3(0, 10, -9), scene);
-      camera.attachControl(canvas, true);
+      playerPosition = new BABYLON.Vector3(0, 10, -9);
+      camera = new BABYLON.UniversalCamera("tpsCamera", new BABYLON.Vector3(0, 13, -16), scene);
       camera.minZ = 0.06;
-      camera.speed = 0.34;
-      camera.angularSensibility = 2600;
+      camera.maxZ = 260;
       camera.applyGravity = false;
       camera.checkCollisions = false;
-      camera.ellipsoid = new BABYLON.Vector3(0.38, 0.9, 0.38);
-      camera.keysUp = [87];
-      camera.keysDown = [83];
-      camera.keysLeft = [65];
-      camera.keysRight = [68];
+
+      const playerMat = new BABYLON.StandardMaterial("playerMaterial", scene);
+      playerMat.diffuseColor = new BABYLON.Color3(0.92, 0.72, 0.42);
+      playerMat.specularColor = new BABYLON.Color3(0.08, 0.08, 0.08);
+      const headMat = new BABYLON.StandardMaterial("playerHeadMaterial", scene);
+      headMat.diffuseColor = new BABYLON.Color3(0.95, 0.84, 0.62);
+      headMat.specularColor = new BABYLON.Color3(0.08, 0.08, 0.08);
+      const limbMat = new BABYLON.StandardMaterial("playerLimbMaterial", scene);
+      limbMat.diffuseColor = new BABYLON.Color3(0.55, 0.66, 0.9);
+      limbMat.specularColor = new BABYLON.Color3(0.08, 0.08, 0.08);
+      playerRoot = new BABYLON.TransformNode("playerRoot", scene);
+      const body = BABYLON.MeshBuilder.CreateBox("playerBody", { width: 0.55, height: 1.0, depth: 0.38 }, scene);
+      body.position.y = 0.25;
+      body.material = playerMat;
+      body.parent = playerRoot;
+      const head = BABYLON.MeshBuilder.CreateBox("playerHead", { width: 0.46, height: 0.46, depth: 0.46 }, scene);
+      head.position.y = 1.0;
+      head.material = headMat;
+      head.parent = playerRoot;
+      playerLeftArm = BABYLON.MeshBuilder.CreateBox("playerLeftArm", { width: 0.18, height: 0.74, depth: 0.18 }, scene);
+      playerLeftArm.position.set(-0.44, 0.34, 0);
+      playerLeftArm.setPivotPoint(new BABYLON.Vector3(0, 0.32, 0));
+      playerLeftArm.material = limbMat;
+      playerLeftArm.parent = playerRoot;
+      playerRightArm = BABYLON.MeshBuilder.CreateBox("playerRightArm", { width: 0.18, height: 0.74, depth: 0.18 }, scene);
+      playerRightArm.position.set(0.44, 0.34, 0);
+      playerRightArm.setPivotPoint(new BABYLON.Vector3(0, 0.32, 0));
+      playerRightArm.material = limbMat;
+      playerRightArm.parent = playerRoot;
+      playerLeftLeg = BABYLON.MeshBuilder.CreateBox("playerLeftLeg", { width: 0.2, height: 0.78, depth: 0.2 }, scene);
+      playerLeftLeg.position.set(-0.16, -0.58, 0);
+      playerLeftLeg.setPivotPoint(new BABYLON.Vector3(0, 0.34, 0));
+      playerLeftLeg.material = limbMat;
+      playerLeftLeg.parent = playerRoot;
+      playerRightLeg = BABYLON.MeshBuilder.CreateBox("playerRightLeg", { width: 0.2, height: 0.78, depth: 0.2 }, scene);
+      playerRightLeg.position.set(0.16, -0.58, 0);
+      playerRightLeg.setPivotPoint(new BABYLON.Vector3(0, 0.34, 0));
+      playerRightLeg.material = limbMat;
+      playerRightLeg.parent = playerRoot;
 
       previewBox = BABYLON.MeshBuilder.CreateBox("previewBox", { size: 1.035 }, scene);
       const previewMat = new BABYLON.StandardMaterial("previewMat", scene);
@@ -776,31 +950,35 @@
       crackBox.setEnabled(false);
 
       buildWorld();
-      lastSafeX = camera.position.x;
-      lastSafeZ = camera.position.z;
+      lastSafeX = playerPosition.x;
+      lastSafeZ = playerPosition.z;
+      updateThirdPersonCamera();
 
       scene.onBeforeRenderObservable.add(() => {
-        updateTarget();
-        resolveHorizontalCollision();
         const frameScale = Math.min(2, engine.getDeltaTime() / 16.666);
-        camera.position.y += verticalVelocity * frameScale;
+        const isWalking = movePlayer(frameScale);
+        resolveHorizontalCollision();
+        playerPosition.y += verticalVelocity * frameScale;
         verticalVelocity -= 0.028 * frameScale;
-        if (camera.position.y < -12) {
-          camera.position.set(0, 12, -9);
-          lastSafeX = camera.position.x;
-          lastSafeZ = camera.position.z;
+        if (playerPosition.y < -12) {
+          playerPosition.set(0, 12, -9);
+          lastSafeX = playerPosition.x;
+          lastSafeZ = playerPosition.z;
           verticalVelocity = 0;
         }
-        const footX = Math.round(camera.position.x);
-        const footZ = Math.round(camera.position.z);
-        const topY = supportBlockYAt(footX, footZ, camera.position.y);
+        const footX = Math.round(playerPosition.x);
+        const footZ = Math.round(playerPosition.z);
+        const topY = supportBlockYAt(footX, footZ, playerPosition.y);
         const minCameraY = topY + 1.45;
-        if (Number.isFinite(topY) && camera.position.y < minCameraY) {
-          camera.position.y = minCameraY;
+        if (Number.isFinite(topY) && playerPosition.y < minCameraY) {
+          playerPosition.y = minCameraY;
           verticalVelocity = 0;
         }
-        const grounded = Number.isFinite(topY) && camera.position.y <= minCameraY + 0.08;
+        const grounded = Number.isFinite(topY) && playerPosition.y <= minCameraY + 0.08;
         if (grounded) jumpReady = true;
+        updatePlayerAnimation(isWalking, frameScale);
+        updateThirdPersonCamera();
+        updateTarget();
       });
 
       return scene;
@@ -814,11 +992,32 @@
       if (!document.pointerLockElement) canvas.requestPointerLock?.();
     });
 
+    window.addEventListener("mousemove", (event) => {
+      if (document.pointerLockElement !== canvas) return;
+      playerYaw += event.movementX * 0.0032;
+      const ySign = invertMouseY ? -1 : 1;
+      cameraPitch = Math.max(-1.38, Math.min(1.38, cameraPitch + event.movementY * 0.0024 * ySign));
+    });
+
+    function toggleInvertY() {
+      invertMouseY = !invertMouseY;
+      localStorage.setItem("blockWorldInvertY", invertMouseY ? "true" : "false");
+      updateInvertYToggle();
+    }
+
+    invertYToggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleInvertY();
+    });
+
     canvas.addEventListener("pointerdown", (event) => {
       const pick = updateTarget();
-      if (!pick?.hit) return;
-      const pickedBlock = getPickedBlockInfo(pick);
-      if (event.button === 0) damageOrRemoveBlock(pickedBlock);
+      if (event.button === 0 || event.button === 2) triggerArmSwing();
+      if (!pick?.hit || !selectedBlockInfo) return;
+      const pickedBlock = selectedBlockInfo;
+      if (event.button === 0) {
+        damageOrRemoveBlock(pickedBlock);
+      }
       if (event.button === 2) {
         const pos = getPlacementPosition(pick);
         if (pos) {
@@ -831,9 +1030,11 @@
     canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 
     window.addEventListener("keydown", (event) => {
+      inputKeys[event.code] = true;
       const index = Number(event.key) - 1;
       if (index >= 0 && index < slots.length) setSelectedBlock(slots[index].dataset.block);
       if (event.code === "KeyR") buildWorld();
+      if (event.code === "KeyY") toggleInvertY();
       if (event.code === "Space" && jumpReady) {
         verticalVelocity = 0.42;
         jumpReady = false;
@@ -841,9 +1042,15 @@
       }
     });
 
+    window.addEventListener("keyup", (event) => {
+      inputKeys[event.code] = false;
+    });
+
     slots.forEach((slot) => {
       slot.addEventListener("pointerdown", () => setSelectedBlock(slot.dataset.block));
     });
+
+    updateInvertYToggle();
   </script>
 </body>
 </html>
