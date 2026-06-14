@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gradius Style Mini Shooter</title>
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #050814;
+            font-family: "Segoe UI", system-ui, sans-serif;
+        }
+
+        #renderCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            touch-action: none;
+        }
+
+        .hud {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 5;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            color: #e9fbff;
+            font-size: 15px;
+            font-weight: 700;
+            text-shadow: 0 0 12px rgba(69, 211, 255, 0.7);
+            user-select: none;
+        }
+
+        .hud span,
+        .powerBar,
+        .help {
+            border: 1px solid rgba(92, 221, 255, 0.34);
+            border-radius: 6px;
+            background: rgba(5, 12, 30, 0.7);
+            box-shadow: 0 0 20px rgba(10, 160, 255, 0.13);
+            padding: 8px 10px;
+        }
+
+        .powerBar {
+            position: fixed;
+            left: 50%;
+            bottom: 16px;
+            z-index: 5;
+            display: grid;
+            grid-template-columns: repeat(5, minmax(66px, 1fr));
+            gap: 6px;
+            width: min(520px, calc(100vw - 32px));
+            padding: 8px;
+            transform: translateX(-50%);
+            color: #d9f7ff;
+            user-select: none;
+        }
+
+        .powerSlot {
+            position: relative;
+            min-width: 0;
+            border: 1px solid rgba(130, 242, 255, 0.24);
+            border-radius: 4px;
+            padding: 7px 8px;
+            font-size: 13px;
+            font-weight: 800;
+            text-align: center;
+            background: rgba(10, 24, 52, 0.74);
+        }
+
+        .powerSlot.isActive {
+            border-color: rgba(255, 242, 92, 0.95);
+            background: rgba(255, 214, 52, 0.22);
+            color: #fff7a8;
+            box-shadow: 0 0 16px rgba(255, 228, 66, 0.5);
+        }
+
+        .powerSlot.isActive::after {
+            content: "";
+            position: absolute;
+            inset: -5px;
+            border: 2px solid #fff06a;
+            border-radius: 6px;
+            box-shadow: 0 0 18px rgba(255, 240, 106, 0.72);
+            pointer-events: none;
+        }
+
+        .powerSlot.isOwned {
+            color: #88ffcc;
+        }
+
+        .powerSlot.isDisabled {
+            border-color: rgba(130, 150, 170, 0.18);
+            background: rgba(8, 14, 24, 0.58);
+            color: rgba(190, 215, 225, 0.42);
+            box-shadow: none;
+        }
+
+        .powerSlot.isDisabled.isActive {
+            border-color: rgba(255, 242, 92, 0.82);
+            color: rgba(255, 246, 160, 0.72);
+        }
+
+        .help {
+            position: fixed;
+            right: 16px;
+            bottom: 86px;
+            z-index: 5;
+            color: #d9f7ff;
+            font-size: 14px;
+            line-height: 1.55;
+            user-select: none;
+        }
+
+        .centerMessage {
+            position: fixed;
+            inset: 0;
+            z-index: 6;
+            display: none;
+            place-items: center;
+            color: #f4fbff;
+            text-align: center;
+            pointer-events: none;
+            text-shadow: 0 0 18px rgba(89, 219, 255, 0.75);
+        }
+
+        .centerMessage.isVisible {
+            display: grid;
+        }
+
+        .centerMessage h1 {
+            margin: 0 0 14px;
+            font-size: clamp(34px, 6vw, 72px);
+        }
+
+        .centerMessage p {
+            margin: 6px 0;
+            font-size: clamp(15px, 2.2vw, 20px);
+            color: #ccf2ff;
+        }
+    </style>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <div class="hud" aria-label="game status">
+        <span id="score">SCORE 0</span>
+        <span id="lives">LIFE 3</span>
+        <span id="wave">WAVE 1</span>
+        <span id="power">READY -</span>
+        <span id="weapon">SHOT</span>
+    </div>
+    <div id="powerBar" class="powerBar" aria-label="power up bar">
+        <div class="powerSlot" data-power-index="0">SPEED</div>
+        <div class="powerSlot" data-power-index="1">MISSILE</div>
+        <div class="powerSlot" data-power-index="2">LASER</div>
+        <div class="powerSlot" data-power-index="3">OPTION</div>
+        <div class="powerSlot" data-power-index="4">SHIELD</div>
+    </div>
+    <div class="help">WASD / ARROWS: MOVE<br>Z: FIRE<br>X: POWER UP<br>R: RESTART</div>
+    <div id="message" class="centerMessage">
+        <div>
+            <h1>GAME OVER</h1>
+            <p id="finalScore">SCORE 0</p>
+            <p>PRESS R TO RESTART</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true);
+        const scoreEl = document.getElementById("score");
+        const livesEl = document.getElementById("lives");
+        const waveEl = document.getElementById("wave");
+        const powerEl = document.getElementById("power");
+        const weaponEl = document.getElementById("weapon");
+        const powerSlots = Array.from(document.querySelectorAll(".powerSlot"));
+        const messageEl = document.getElementById("message");
+        const finalScoreEl = document.getElementById("finalScore");
+
+        const powerItems = ["SPEED", "MISSILE", "LASER", "OPTION", "SHIELD"];
+
+        const world = {
+            minX: -8.6,
+            maxX: 8.6,
+            minY: -4.8,
+            maxY: 4.8
+        };
+
+        const state = {
+            score: 0,
+            lives: 3,
+            wave: 1,
+            elapsed: 0,
+            fireCooldown: 0,
+            enemyTimer: 0,
+            formationTimer: 1.6,
+            terrainTimer: 2,
+            kills: 0,
+            powerCursor: -1,
+            speedLevel: 0,
+            missileLevel: 0,
+            hasLaser: false,
+            shield: 0,
+            gameOver: false
+        };
+
+        const keys = new Set();
+        const bullets = [];
+        const enemies = [];
+        const capsules = [];
+        const options = [];
+        const terrain = [];
+        const shockwaves = [];
+        const sparks = [];
+        const playerTrail = [];
+
+        window.addEventListener("keydown", (event) => {
+            keys.add(event.code);
+            if (event.code === "KeyZ" || event.code === "KeyX") {
+                event.preventDefault();
+            }
+            if (event.code === "KeyX" && !event.repeat) {
+                activatePower();
+            }
+            if (event.code === "KeyR") {
+                resetGame();
+            }
+        });
+
+        window.addEventListener("keyup", (event) => {
+            keys.delete(event.code);
+        });
+
+        function createGlowMaterial(scene, name, color, emissiveStrength) {
+            const material = new BABYLON.StandardMaterial(name, scene);
+            material.diffuseColor = color.scale(0.35);
+            material.emissiveColor = color.scale(emissiveStrength);
+            material.specularColor = color.scale(0.25);
+            return material;
+        }
+
+        function createPlayerShip(scene, materials) {
+            const root = new BABYLON.TransformNode("playerShip", scene);
+
+            const fuselage = BABYLON.MeshBuilder.CreateBox("playerFuselage", {
+                width: 1.42,
+                height: 0.3,
+                depth: 0.24
+            }, scene);
+            fuselage.position.x = 0.02;
+            fuselage.material = materials.playerHull;
+            fuselage.parent = root;
+
+            const spine = BABYLON.MeshBuilder.CreateBox("playerSpine", {
+                width: 0.84,
+                height: 0.12,
+                depth: 0.18
+            }, scene);
+            spine.position.set(-0.04, 0.19, -0.03);
+            spine.rotation.z = -0.06;
+            spine.material = materials.playerWing;
+            spine.parent = root;
+
+            const nose = BABYLON.MeshBuilder.CreateCylinder("playerNose", {
+                diameterTop: 0,
+                diameterBottom: 0.34,
+                height: 0.72,
+                tessellation: 6
+            }, scene);
+            nose.rotation.z = -Math.PI / 2;
+            nose.position.x = 1.04;
+            nose.scaling.y = 0.72;
+            nose.material = materials.playerHull;
+            nose.parent = root;
+
+            const canopy = BABYLON.MeshBuilder.CreateSphere("playerCanopy", {
+                diameter: 0.3,
+                segments: 16
+            }, scene);
+            canopy.position.set(0.38, 0.18, -0.15);
+            canopy.scaling.set(1.3, 0.62, 0.48);
+            canopy.material = materials.playerCanopy;
+            canopy.parent = root;
+
+            const mainWing = BABYLON.MeshBuilder.CreateBox("playerMainWing", {
+                width: 0.92,
+                height: 0.16,
+                depth: 0.12
+            }, scene);
+            mainWing.position.set(-0.18, -0.25, 0.01);
+            mainWing.rotation.z = -0.42;
+            mainWing.material = materials.playerWing;
+            mainWing.parent = root;
+
+            const smallUpperWing = BABYLON.MeshBuilder.CreateBox("playerUpperWingHint", {
+                width: 0.52,
+                height: 0.09,
+                depth: 0.1
+            }, scene);
+            smallUpperWing.position.set(-0.2, 0.33, 0.03);
+            smallUpperWing.rotation.z = 0.34;
+            smallUpperWing.material = materials.playerWing;
+            smallUpperWing.parent = root;
+
+            const ventralWing = BABYLON.MeshBuilder.CreateBox("playerVentralWing", {
+                width: 0.42,
+                height: 0.1,
+                depth: 0.12
+            }, scene);
+            ventralWing.position.set(0.62, -0.28, 0.01);
+            ventralWing.rotation.z = 0.72;
+            ventralWing.material = materials.playerWing;
+            ventralWing.parent = root;
+
+            const fin = BABYLON.MeshBuilder.CreateBox("playerVerticalFin", {
+                width: 0.36,
+                height: 0.58,
+                depth: 0.11
+            }, scene);
+            fin.position.set(-0.5, 0.42, -0.08);
+            fin.rotation.z = -0.32;
+            fin.material = materials.playerWing;
+            fin.parent = root;
+
+            const tailPlane = BABYLON.MeshBuilder.CreateBox("playerTailPlane", {
+                width: 0.52,
+                height: 0.1,
+                depth: 0.1
+            }, scene);
+            tailPlane.position.set(-0.74, -0.16, 0.02);
+            tailPlane.rotation.z = 0.24;
+            tailPlane.material = materials.playerWing;
+            tailPlane.parent = root;
+
+            const topStripe = BABYLON.MeshBuilder.CreateBox("playerTopStripe", {
+                width: 0.5,
+                height: 0.08,
+                depth: 0.08
+            }, scene);
+            topStripe.position.set(0.26, 0.05, -0.16);
+            topStripe.rotation.z = 0.12;
+            topStripe.material = materials.playerAccent;
+            topStripe.parent = root;
+
+            const bottomStripe = topStripe.clone("playerBottomStripe");
+            bottomStripe.position.set(-0.34, -0.16, -0.16);
+            bottomStripe.rotation.z = -0.12;
+            bottomStripe.parent = root;
+
+            const missilePylon = BABYLON.MeshBuilder.CreateBox("playerMissilePylon", {
+                width: 0.32,
+                height: 0.08,
+                depth: 0.1
+            }, scene);
+            missilePylon.position.set(0.2, -0.36, 0.02);
+            missilePylon.material = materials.playerAccent;
+            missilePylon.parent = root;
+
+            const pod = BABYLON.MeshBuilder.CreateBox("playerLowerPod", {
+                width: 0.58,
+                height: 0.14,
+                depth: 0.14
+            }, scene);
+            pod.position.set(0.1, -0.46, 0.03);
+            pod.material = materials.playerHull;
+            pod.parent = root;
+
+            const gunTop = BABYLON.MeshBuilder.CreateCylinder("playerGunTop", {
+                diameter: 0.06,
+                height: 0.46,
+                tessellation: 12
+            }, scene);
+            gunTop.rotation.z = Math.PI / 2;
+            gunTop.position.set(0.82, 0.12, -0.04);
+            gunTop.material = materials.playerGun;
+            gunTop.parent = root;
+
+            const gunBottom = gunTop.clone("playerGunBottom");
+            gunBottom.position.y = -0.08;
+            gunBottom.parent = root;
+
+            const engine = BABYLON.MeshBuilder.CreateCylinder("playerEngine", {
+                diameter: 0.32,
+                height: 0.26,
+                tessellation: 16
+            }, scene);
+            engine.rotation.z = Math.PI / 2;
+            engine.position.set(-0.86, -0.02, 0);
+            engine.material = materials.playerGun;
+            engine.parent = root;
+
+            const flameMain = BABYLON.MeshBuilder.CreateCylinder("playerFlameMain", {
+                diameterTop: 0,
+                diameterBottom: 0.28,
+                height: 0.58,
+                tessellation: 8
+            }, scene);
+            flameMain.rotation.z = Math.PI / 2;
+            flameMain.position.set(-1.18, -0.02, 0);
+            flameMain.material = materials.engine;
+            flameMain.parent = root;
+
+            const flameAux = BABYLON.MeshBuilder.CreateCylinder("playerFlameAux", {
+                diameterTop: 0,
+                diameterBottom: 0.14,
+                height: 0.36,
+                tessellation: 8
+            }, scene);
+            flameAux.rotation.z = Math.PI / 2;
+            flameAux.position.set(-0.82, -0.32, 0);
+            flameAux.material = materials.engine;
+            flameAux.parent = root;
+
+            root.position.set(world.minX + 1.3, 0, 0);
+            root.metadata = {
+                flames: [flameMain, flameAux]
+            };
+            return root;
+        }
+
+        function createEnemyShip(scene, materials, isAsteroid) {
+            const root = new BABYLON.TransformNode(isAsteroid ? "asteroid" : "enemyDrone", scene);
+
+            if (isAsteroid) {
+                const mainRock = BABYLON.MeshBuilder.CreatePolyhedron("asteroidCore", {
+                    type: 2,
+                    size: 0.46 + Math.random() * 0.18
+                }, scene);
+                mainRock.material = materials.asteroid;
+                mainRock.parent = root;
+
+                for (let i = 0; i < 3; i++) {
+                    const chip = BABYLON.MeshBuilder.CreatePolyhedron("asteroidChip", {
+                        type: 1,
+                        size: 0.16 + Math.random() * 0.12
+                    }, scene);
+                    const angle = Math.random() * Math.PI * 2;
+                    chip.position.set(Math.cos(angle) * 0.32, Math.sin(angle) * 0.24, 0.03);
+                    chip.rotation.set(Math.random(), Math.random(), Math.random());
+                    chip.material = materials.asteroid;
+                    chip.parent = root;
+                }
+                return root;
+            }
+
+            const body = BABYLON.MeshBuilder.CreateBox("enemyBody", {
+                width: 0.48,
+                height: 0.48,
+                depth: 0.18
+            }, scene);
+            body.rotation.z = Math.PI / 4;
+            body.material = materials.enemy;
+            body.parent = root;
+
+            const wingTop = BABYLON.MeshBuilder.CreateBox("enemyWingTop", {
+                width: 0.48,
+                height: 0.1,
+                depth: 0.12
+            }, scene);
+            wingTop.position.set(-0.22, 0.34, 0);
+            wingTop.rotation.z = -0.25;
+            wingTop.material = materials.enemyWing;
+            wingTop.parent = root;
+
+            const wingBottom = wingTop.clone("enemyWingBottom");
+            wingBottom.position.y = -0.34;
+            wingBottom.rotation.z = 0.25;
+            wingBottom.parent = root;
+
+            const core = BABYLON.MeshBuilder.CreateSphere("enemyCore", {
+                diameter: 0.2,
+                segments: 12
+            }, scene);
+            core.position.z = -0.12;
+            core.material = materials.enemyCore;
+            core.parent = root;
+
+            return root;
+        }
+
+        function createScene() {
+            const scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color4(0.012, 0.018, 0.05, 1);
+
+            const camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -14), scene);
+            camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+            camera.orthoLeft = -9.6;
+            camera.orthoRight = 9.6;
+            camera.orthoTop = 5.4;
+            camera.orthoBottom = -5.4;
+            camera.setTarget(BABYLON.Vector3.Zero());
+
+            const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 0, -1), scene);
+            light.intensity = 0.85;
+
+            const glow = new BABYLON.GlowLayer("glow", scene);
+            glow.intensity = 0.72;
+
+            const materials = {
+                player: createGlowMaterial(scene, "playerMat", new BABYLON.Color3(0.22, 0.88, 1), 0.9),
+                playerHull: createGlowMaterial(scene, "playerHullMat", new BABYLON.Color3(0.42, 0.56, 0.72), 0.32),
+                playerWing: createGlowMaterial(scene, "playerWingMat", new BABYLON.Color3(0.22, 0.34, 0.52), 0.42),
+                playerAccent: createGlowMaterial(scene, "playerAccentMat", new BABYLON.Color3(1, 0.48, 0.08), 0.78),
+                playerCanopy: createGlowMaterial(scene, "playerCanopyMat", new BABYLON.Color3(0.24, 0.9, 1), 1.05),
+                playerGun: createGlowMaterial(scene, "playerGunMat", new BABYLON.Color3(0.12, 0.16, 0.25), 0.2),
+                playerCore: createGlowMaterial(scene, "playerCoreMat", new BABYLON.Color3(0.78, 1, 0.96), 1.25),
+                engine: createGlowMaterial(scene, "engineMat", new BABYLON.Color3(1, 0.42, 0.12), 1.25),
+                bullet: createGlowMaterial(scene, "bulletMat", new BABYLON.Color3(1, 0.92, 0.28), 1.2),
+                missile: createGlowMaterial(scene, "missileMat", new BABYLON.Color3(1, 0.48, 0.15), 1.05),
+                laser: createGlowMaterial(scene, "laserMat", new BABYLON.Color3(0.34, 1, 0.42), 1.1),
+                shockwave: createGlowMaterial(scene, "shockwaveMat", new BABYLON.Color3(0.7, 0.95, 1), 1.2),
+                enemy: createGlowMaterial(scene, "enemyMat", new BABYLON.Color3(1, 0.18, 0.34), 0.85),
+                enemyWing: createGlowMaterial(scene, "enemyWingMat", new BABYLON.Color3(0.8, 0.08, 0.18), 0.55),
+                enemyCore: createGlowMaterial(scene, "enemyCoreMat", new BABYLON.Color3(1, 0.62, 0.86), 1.05),
+                asteroid: createGlowMaterial(scene, "asteroidMat", new BABYLON.Color3(0.65, 0.54, 0.43), 0.25),
+                capsule: createGlowMaterial(scene, "capsuleMat", new BABYLON.Color3(1, 0.34, 0.95), 1.1),
+                option: createGlowMaterial(scene, "optionMat", new BABYLON.Color3(0.42, 1, 0.72), 1.05),
+                spark: createGlowMaterial(scene, "sparkMat", new BABYLON.Color3(0.75, 0.95, 1), 1.3),
+                star: createGlowMaterial(scene, "starMat", new BABYLON.Color3(0.65, 0.9, 1), 0.9),
+                terrain: createGlowMaterial(scene, "terrainMat", new BABYLON.Color3(0.35, 0.45, 0.68), 0.22)
+            };
+
+            const player = createPlayerShip(scene, materials);
+
+            const stars = [];
+            for (let i = 0; i < 115; i++) {
+                const star = BABYLON.MeshBuilder.CreateSphere("star", {
+                    diameter: 0.025 + Math.random() * 0.055,
+                    segments: 8
+                }, scene);
+                star.position.set(
+                    world.minX + Math.random() * (world.maxX - world.minX),
+                    world.minY + Math.random() * (world.maxY - world.minY),
+                    1.8 + Math.random() * 1.8
+                );
+                star.metadata = {
+                    speed: 0.8 + Math.random() * 1.8
+                };
+                star.material = materials.star;
+                stars.push(star);
+            }
+
+            return {
+                scene,
+                player,
+                stars,
+                materials
+            };
+        }
+
+        const game = createScene();
+
+        function updateHud() {
+            scoreEl.textContent = `SCORE ${state.score}`;
+            livesEl.textContent = `LIFE ${state.lives}`;
+            waveEl.textContent = `WAVE ${state.wave}`;
+            powerEl.textContent = state.powerCursor >= 0 ? `READY ${powerItems[state.powerCursor]}` : "READY -";
+            const mainWeapon = state.hasLaser ? "LASER" : "SHOT";
+            const missileText = state.missileLevel > 0 ? ` + MSL${state.missileLevel}` : "";
+            weaponEl.textContent = `${mainWeapon}${missileText}  SPD ${state.speedLevel}`;
+            powerSlots.forEach((slot, index) => {
+                const disabled = isPowerMaxed(index);
+                slot.classList.toggle("isActive", index === state.powerCursor);
+                slot.classList.toggle("isDisabled", disabled);
+                slot.classList.toggle("isOwned",
+                    (index === 0 && state.speedLevel > 0)
+                    || (index === 1 && state.missileLevel > 0)
+                    || (index === 2 && state.hasLaser)
+                    || (index === 3 && options.length > 0)
+                    || (index === 4 && state.shield > 0)
+                );
+            });
+        }
+
+        function isPowerMaxed(index) {
+            switch (index) {
+                case 0:
+                    return state.speedLevel >= 3;
+                case 1:
+                    return state.missileLevel >= 2;
+                case 2:
+                    return state.hasLaser;
+                case 3:
+                    return options.length >= 2;
+                case 4:
+                    return state.shield > 0;
+                default:
+                    return true;
+            }
+        }
+
+        function resetGame() {
+            bullets.splice(0).forEach((item) => item.dispose());
+            enemies.splice(0).forEach((item) => item.dispose());
+            capsules.splice(0).forEach((item) => item.dispose());
+            options.splice(0).forEach((item) => item.dispose());
+            terrain.splice(0).forEach((item) => item.dispose());
+            shockwaves.splice(0).forEach((item) => item.dispose());
+            sparks.splice(0).forEach((item) => item.dispose());
+            playerTrail.splice(0);
+            state.score = 0;
+            state.lives = 3;
+            state.wave = 1;
+            state.elapsed = 0;
+            state.fireCooldown = 0;
+            state.enemyTimer = 0;
+            state.formationTimer = 1.6;
+            state.terrainTimer = 2;
+            state.kills = 0;
+            state.powerCursor = -1;
+            state.speedLevel = 0;
+            state.missileLevel = 0;
+            state.hasLaser = false;
+            state.shield = 0;
+            state.gameOver = false;
+            game.player.position.set(world.minX + 1.3, 0, 0);
+            messageEl.classList.remove("isVisible");
+            updateHud();
+        }
+
+        function fireOneShot(origin) {
+            const isLaser = state.hasLaser;
+            if (!isLaser && bullets.filter((bullet) => bullet.metadata.kind === "normal").length >= 3) {
+                return;
+            }
+            const bullet = isLaser
+                ? BABYLON.MeshBuilder.CreateBox("laser", { width: 1.05, height: 0.08, depth: 0.08 }, game.scene)
+                : BABYLON.MeshBuilder.CreateSphere("bullet", { diameter: 0.16, segments: 12 }, game.scene);
+            bullet.position.set(origin.x + 0.65, origin.y, -0.05);
+            bullet.metadata = {
+                kind: isLaser ? "laser" : "normal",
+                speed: isLaser ? 15 : 12,
+                radius: isLaser ? 0.32 : 0.16,
+                damage: isLaser ? 2 : 1
+            };
+            bullet.material = isLaser ? game.materials.laser : game.materials.bullet;
+            bullets.push(bullet);
+        }
+
+        function fireMissile(origin) {
+            const activeMissiles = bullets.filter((bullet) => bullet.metadata.kind === "missile").length;
+            if (activeMissiles >= 2) {
+                return;
+            }
+            const missile = BABYLON.MeshBuilder.CreateBox("missile", {
+                width: 0.42,
+                height: 0.14,
+                depth: 0.12
+            }, game.scene);
+            missile.position.set(origin.x + 0.38, origin.y - 0.52, -0.04);
+            missile.rotation.z = -0.38;
+            missile.metadata = {
+                kind: "missile",
+                speed: 8.5,
+                vx: 7.6,
+                vy: -3.2,
+                radius: 0.26,
+                damage: 2,
+                explosive: state.missileLevel >= 2
+            };
+            missile.material = game.materials.missile;
+            bullets.push(missile);
+        }
+
+        function fireBullet() {
+            fireOneShot(game.player.position);
+            if (state.missileLevel > 0) {
+                fireMissile(game.player.position);
+            }
+            options.forEach((option) => {
+                fireOneShot(option.position);
+            });
+        }
+
+        function spawnEnemyAt(x, y, delayOffset) {
+            const isAsteroid = Math.random() < 0.22;
+            const mesh = createEnemyShip(game.scene, game.materials, isAsteroid);
+            mesh.position.set(x + delayOffset, y, 0);
+            mesh.rotation.z = Math.random() * Math.PI;
+            mesh.metadata = {
+                speed: 2.8 + state.wave * 0.38 + Math.random() * 0.65,
+                radius: isAsteroid ? 0.45 : 0.38,
+                hp: isAsteroid ? 2 + Math.floor(state.wave / 3) : 1,
+                points: isAsteroid ? 150 : 100,
+                spin: (Math.random() - 0.5) * 3.8,
+                waveY: y,
+                wavePhase: Math.random() * Math.PI * 2
+            };
+            mesh.material = isAsteroid ? game.materials.asteroid : game.materials.enemy;
+            enemies.push(mesh);
+        }
+
+        function spawnEnemy() {
+            spawnEnemyAt(world.maxX + 0.7, world.minY + 0.5 + Math.random() * (world.maxY - world.minY - 1), 0);
+        }
+
+        function spawnFormation() {
+            const baseY = world.minY + 1 + Math.random() * (world.maxY - world.minY - 2);
+            for (let i = 0; i < 5; i++) {
+                const y = baseY + Math.sin(i * 0.85) * 0.75;
+                spawnEnemyAt(world.maxX + 0.7, BABYLON.Scalar.Clamp(y, world.minY + 0.5, world.maxY - 0.5), i * 0.65);
+            }
+        }
+
+        function spawnCapsule(position) {
+            const capsule = BABYLON.MeshBuilder.CreateBox("powerCapsule", {
+                width: 0.55,
+                height: 0.28,
+                depth: 0.14
+            }, game.scene);
+            capsule.position.copyFrom(position);
+            capsule.position.z = -0.04;
+            capsule.metadata = {
+                speed: 2.2,
+                radius: 0.34
+            };
+            capsule.material = game.materials.capsule;
+            capsules.push(capsule);
+        }
+
+        function spawnTerrainBlock() {
+            const top = Math.random() < 0.5;
+            const height = 0.55 + Math.random() * 1.3;
+            const block = BABYLON.MeshBuilder.CreateBox("terrain", {
+                width: 1.6 + Math.random() * 1.2,
+                height,
+                depth: 0.28
+            }, game.scene);
+            block.position.set(world.maxX + 1.4, top ? world.maxY - height / 2 : world.minY + height / 2, 0.2);
+            block.metadata = {
+                speed: 2.15 + state.wave * 0.12,
+                radius: Math.max(block.scaling.x, height) * 0.45
+            };
+            block.material = game.materials.terrain;
+            terrain.push(block);
+        }
+
+        function addOption() {
+            if (options.length >= 2) {
+                return;
+            }
+            const option = BABYLON.MeshBuilder.CreateSphere("option", {
+                diameter: 0.36,
+                segments: 16
+            }, game.scene);
+            option.position.set(game.player.position.x - 1.1 - options.length * 0.9, game.player.position.y, -0.08);
+            option.metadata = {
+                trailOffset: 10 + options.length * 14,
+                radius: 0.22
+            };
+            option.material = game.materials.option;
+            options.push(option);
+        }
+
+        function collectCapsule(capsule) {
+            state.powerCursor = (state.powerCursor + 1) % powerItems.length;
+            state.score += 250;
+            addSparks(capsule.position, 20);
+            updateHud();
+        }
+
+        function activatePower() {
+            if (state.powerCursor < 0 || state.gameOver) {
+                return;
+            }
+            if (isPowerMaxed(state.powerCursor)) {
+                return;
+            }
+
+            switch (state.powerCursor) {
+                case 0:
+                    state.speedLevel = Math.min(3, state.speedLevel + 1);
+                    break;
+                case 1:
+                    state.missileLevel = Math.min(2, state.missileLevel + 1);
+                    break;
+                case 2:
+                    state.hasLaser = true;
+                    break;
+                case 3:
+                    addOption();
+                    break;
+                case 4:
+                    state.shield = 1;
+                    break;
+            }
+            state.powerCursor = -1;
+            addSparks(game.player.position, 24);
+            updateHud();
+        }
+
+        function addSparks(position, count) {
+            for (let i = 0; i < count; i++) {
+                const spark = BABYLON.MeshBuilder.CreateSphere("spark", {
+                    diameter: 0.08 + Math.random() * 0.07,
+                    segments: 8
+                }, game.scene);
+                spark.position.copyFrom(position);
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1.2 + Math.random() * 3.2;
+                spark.metadata = {
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 0.32 + Math.random() * 0.25,
+                    maxLife: 0.57
+                };
+                spark.material = game.materials.spark;
+                sparks.push(spark);
+            }
+        }
+
+        function distance2D(a, b) {
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function damagePlayer() {
+            if (state.shield > 0) {
+                state.shield = 0;
+                game.player.scaling.set(1.25, 1.25, 1.25);
+                addSparks(game.player.position, 24);
+                updateHud();
+                return;
+            }
+            state.lives -= 1;
+            state.powerCursor = -1;
+            state.missileLevel = 0;
+            state.hasLaser = false;
+            state.speedLevel = Math.max(0, state.speedLevel - 1);
+            options.splice(0).forEach((option) => option.dispose());
+            game.player.scaling.set(1.25, 1.25, 1.25);
+            addSparks(game.player.position, 18);
+            if (state.lives <= 0) {
+                state.gameOver = true;
+                finalScoreEl.textContent = `SCORE ${state.score}`;
+                messageEl.classList.add("isVisible");
+            }
+            updateHud();
+        }
+
+        function updatePlayer(delta) {
+            const velocity = new BABYLON.Vector2(0, 0);
+            if (keys.has("ArrowUp") || keys.has("KeyW")) velocity.y += 1;
+            if (keys.has("ArrowDown") || keys.has("KeyS")) velocity.y -= 1;
+            if (keys.has("ArrowLeft") || keys.has("KeyA")) velocity.x -= 1;
+            if (keys.has("ArrowRight") || keys.has("KeyD")) velocity.x += 1;
+            const isMoving = velocity.lengthSquared() > 0;
+            if (isMoving) {
+                velocity.normalize();
+                const playerSpeed = 6.1 + state.speedLevel * 0.75;
+                game.player.position.x += velocity.x * playerSpeed * delta;
+                game.player.position.y += velocity.y * playerSpeed * delta;
+            }
+
+            game.player.position.x = BABYLON.Scalar.Clamp(game.player.position.x, world.minX + 0.5, world.maxX - 0.5);
+            game.player.position.y = BABYLON.Scalar.Clamp(game.player.position.y, world.minY + 0.45, world.maxY - 0.45);
+            game.player.rotation.y = BABYLON.Scalar.Lerp(game.player.rotation.y, velocity.y * -0.35, 0.18);
+            game.player.scaling.x = BABYLON.Scalar.Lerp(game.player.scaling.x, 1, 0.16);
+            game.player.scaling.y = BABYLON.Scalar.Lerp(game.player.scaling.y, 1, 0.16);
+            game.player.scaling.z = BABYLON.Scalar.Lerp(game.player.scaling.z, 1, 0.16);
+            if (game.player.metadata.flames) {
+                const pulse = 0.85 + Math.sin(state.elapsed * 22) * 0.2;
+                game.player.metadata.flames.forEach((flame, index) => {
+                    const flamePulse = pulse + index * 0.06;
+                    flame.scaling.x = flamePulse;
+                    flame.scaling.y = flamePulse;
+                });
+            }
+
+            if (isMoving) {
+                playerTrail.unshift(game.player.position.clone());
+                if (playerTrail.length > 80) {
+                    playerTrail.length = 80;
+                }
+                options.forEach((option) => {
+                    const target = playerTrail[option.metadata.trailOffset] || game.player.position;
+                    option.position.x = BABYLON.Scalar.Lerp(option.position.x, target.x - 0.8, 0.16);
+                    option.position.y = BABYLON.Scalar.Lerp(option.position.y, target.y, 0.16);
+                    option.rotation.z += delta * 3.5;
+                });
+            }
+
+            state.fireCooldown -= delta;
+            if (keys.has("KeyZ") && state.fireCooldown <= 0) {
+                fireBullet();
+                state.fireCooldown = state.hasLaser ? 0.13 : 0.18;
+            }
+        }
+
+        function findMissileTarget(missile) {
+            let target = null;
+            let bestDistance = Infinity;
+            enemies.forEach((enemy) => {
+                if (enemy.position.x < missile.position.x - 0.4) {
+                    return;
+                }
+                const distance = distance2D(missile.position, enemy.position);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    target = enemy;
+                }
+            });
+            return target;
+        }
+
+        function updateMissile(missile, delta) {
+            const target = findMissileTarget(missile);
+            if (target) {
+                const direction = new BABYLON.Vector2(
+                    target.position.x - missile.position.x,
+                    target.position.y - missile.position.y
+                );
+                if (direction.lengthSquared() > 0.0001) {
+                    direction.normalize();
+                    const desiredVx = direction.x * missile.metadata.speed;
+                    const desiredVy = direction.y * missile.metadata.speed;
+                    const turn = Math.min(1, delta * 4.2);
+                    missile.metadata.vx = BABYLON.Scalar.Lerp(missile.metadata.vx, desiredVx, turn);
+                    missile.metadata.vy = BABYLON.Scalar.Lerp(missile.metadata.vy, desiredVy, turn);
+                }
+            }
+
+            missile.position.x += missile.metadata.vx * delta;
+            missile.position.y += missile.metadata.vy * delta;
+            missile.rotation.z = Math.atan2(missile.metadata.vy, missile.metadata.vx);
+        }
+
+        function destroyEnemyAt(index, position) {
+            const enemy = enemies[index];
+            if (!enemy) {
+                return;
+            }
+            state.score += enemy.metadata.points;
+            state.kills += 1;
+            if (state.kills % 5 === 0 || Math.random() < 0.08) {
+                spawnCapsule(position);
+            }
+            addSparks(position, 22);
+            enemy.dispose();
+            enemies.splice(index, 1);
+            updateHud();
+        }
+
+        function addShockwave(position, directEnemy) {
+            const shockwave = BABYLON.MeshBuilder.CreateTorus("shockwave", {
+                diameter: 0.22,
+                thickness: 0.035,
+                tessellation: 64
+            }, game.scene);
+            shockwave.rotation.x = Math.PI / 2;
+            shockwave.position.set(position.x, position.y, -0.09);
+            shockwave.material = game.materials.shockwave;
+            shockwave.metadata = {
+                age: 0,
+                duration: 0.42,
+                radius: 0.11,
+                maxRadius: 1.45,
+                damage: 2,
+                damagedEnemies: new Set(directEnemy ? [directEnemy] : [])
+            };
+            shockwaves.push(shockwave);
+        }
+
+        function explodeMissile(position, directEnemy) {
+            addSparks(position, 34);
+            addShockwave(position, directEnemy);
+        }
+
+        function updateShockwaves(delta) {
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                const shockwave = shockwaves[i];
+                shockwave.metadata.age += delta;
+                const progress = Math.min(1, shockwave.metadata.age / shockwave.metadata.duration);
+                const radius = BABYLON.Scalar.Lerp(0.11, shockwave.metadata.maxRadius, progress);
+                shockwave.metadata.radius = radius;
+                shockwave.scaling.set(radius / 0.11, radius / 0.11, radius / 0.11);
+
+                for (let k = enemies.length - 1; k >= 0; k--) {
+                    const enemy = enemies[k];
+                    if (shockwave.metadata.damagedEnemies.has(enemy)) {
+                        continue;
+                    }
+                    const distance = distance2D(shockwave.position, enemy.position);
+                    if (distance <= radius + enemy.metadata.radius) {
+                        shockwave.metadata.damagedEnemies.add(enemy);
+                        enemy.metadata.hp -= shockwave.metadata.damage;
+                        addSparks(enemy.position, 10);
+                        if (enemy.metadata.hp <= 0) {
+                            destroyEnemyAt(k, enemy.position.clone());
+                        }
+                    }
+                }
+
+                if (progress >= 1) {
+                    shockwave.dispose();
+                    shockwaves.splice(i, 1);
+                }
+            }
+        }
+
+        function updateLists(delta) {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                if (bullet.metadata.kind === "missile") {
+                    updateMissile(bullet, delta);
+                } else {
+                    bullet.position.x += bullet.metadata.speed * delta;
+                    bullet.position.y += (bullet.metadata.vy || 0) * delta;
+                }
+                if (bullet.position.x > world.maxX + 1.6 || bullet.position.y < world.minY - 1 || bullet.position.y > world.maxY + 1) {
+                    bullet.dispose();
+                    bullets.splice(i, 1);
+                }
+            }
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                enemy.position.x -= enemy.metadata.speed * delta;
+                enemy.position.y = enemy.metadata.waveY + Math.sin(state.elapsed * 2.2 + enemy.metadata.wavePhase) * 0.28;
+                enemy.rotation.z += enemy.metadata.spin * delta;
+
+                if (distance2D(enemy.position, game.player.position) < enemy.metadata.radius + 0.38) {
+                    addSparks(enemy.position, 14);
+                    enemy.dispose();
+                    enemies.splice(i, 1);
+                    damagePlayer();
+                    continue;
+                }
+
+                if (enemy.position.x < world.minX - 1) {
+                    enemy.dispose();
+                    enemies.splice(i, 1);
+                    continue;
+                }
+
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    const bullet = bullets[j];
+                    if (distance2D(enemy.position, bullet.position) < enemy.metadata.radius + bullet.metadata.radius) {
+                        const hitPosition = bullet.position.clone();
+                        const enemyPosition = enemy.position.clone();
+                        const bulletDamage = bullet.metadata.damage;
+                        const isExplosiveMissile = bullet.metadata.kind === "missile" && bullet.metadata.explosive;
+                        bullet.dispose();
+                        bullets.splice(j, 1);
+                        enemy.metadata.hp -= bulletDamage;
+                        addSparks(hitPosition, 8);
+                        if (isExplosiveMissile) {
+                            explodeMissile(hitPosition, enemy);
+                        }
+                        if (enemy.metadata.hp <= 0) {
+                            const currentIndex = enemies.indexOf(enemy);
+                            if (currentIndex >= 0) {
+                                destroyEnemyAt(currentIndex, enemyPosition);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            for (let i = capsules.length - 1; i >= 0; i--) {
+                const capsule = capsules[i];
+                capsule.position.x -= capsule.metadata.speed * delta;
+                capsule.rotation.z += delta * 5;
+                if (distance2D(capsule.position, game.player.position) < capsule.metadata.radius + 0.42) {
+                    collectCapsule(capsule);
+                    capsule.dispose();
+                    capsules.splice(i, 1);
+                    continue;
+                }
+                if (capsule.position.x < world.minX - 1) {
+                    capsule.dispose();
+                    capsules.splice(i, 1);
+                }
+            }
+
+            for (let i = terrain.length - 1; i >= 0; i--) {
+                const block = terrain[i];
+                block.position.x -= block.metadata.speed * delta;
+                if (distance2D(block.position, game.player.position) < block.metadata.radius + 0.24) {
+                    addSparks(game.player.position, 18);
+                    damagePlayer();
+                    block.position.x = world.minX - 2;
+                }
+                if (block.position.x < world.minX - 2) {
+                    block.dispose();
+                    terrain.splice(i, 1);
+                }
+            }
+
+            updateShockwaves(delta);
+
+            for (let i = sparks.length - 1; i >= 0; i--) {
+                const spark = sparks[i];
+                spark.metadata.life -= delta;
+                spark.position.x += spark.metadata.vx * delta;
+                spark.position.y += spark.metadata.vy * delta;
+                const scale = Math.max(0, spark.metadata.life / spark.metadata.maxLife);
+                spark.scaling.set(scale, scale, scale);
+                if (spark.metadata.life <= 0) {
+                    spark.dispose();
+                    sparks.splice(i, 1);
+                }
+            }
+        }
+
+        function updateStars(delta) {
+            game.stars.forEach((star) => {
+                star.position.x -= star.metadata.speed * delta;
+                if (star.position.x < world.minX - 0.3) {
+                    star.position.x = world.maxX + Math.random();
+                    star.position.y = world.minY + Math.random() * (world.maxY - world.minY);
+                }
+            });
+        }
+
+        game.scene.onBeforeRenderObservable.add(() => {
+            const delta = Math.min(engine.getDeltaTime() / 1000, 0.033);
+            updateStars(delta);
+
+            if (state.gameOver) {
+                return;
+            }
+
+            state.elapsed += delta;
+            state.wave = 1 + Math.floor(state.elapsed / 22);
+            state.enemyTimer -= delta;
+            state.formationTimer -= delta;
+            state.terrainTimer -= delta;
+
+            const spawnDelay = Math.max(0.42, 1.08 - state.wave * 0.08);
+            if (state.enemyTimer <= 0) {
+                spawnEnemy();
+                state.enemyTimer = spawnDelay;
+            }
+            if (state.formationTimer <= 0) {
+                spawnFormation();
+                state.formationTimer = Math.max(4.5, 8.2 - state.wave * 0.4);
+            }
+            if (state.terrainTimer <= 0) {
+                spawnTerrainBlock();
+                state.terrainTimer = Math.max(2.6, 5.2 - state.wave * 0.2);
+            }
+
+            updatePlayer(delta);
+            updateLists(delta);
+            updateHud();
+        });
+
+        resetGame();
+
+        engine.runRenderLoop(() => {
+            game.scene.render();
+        });
+
+        window.addEventListener("resize", () => {
+            engine.resize();
+        });
+    </script>
+</body>
+</html>
