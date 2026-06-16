@@ -1,232 +1,307 @@
-<html>
+<!DOCTYPE html>
+<html lang="ja">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WebXR Moon VR</title>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <style>
-        body,#renderCanvas { width: 100%; height: 100%;}
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif;
+        }
+
+        #renderCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        .page-link {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 10;
+            padding: 8px 10px;
+            color: #e9f1ff;
+            text-decoration: none;
+            background: rgba(10, 14, 24, 0.68);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .page-link:focus-visible,
+        .page-link:hover {
+            background: rgba(38, 62, 92, 0.84);
+            outline: none;
+        }
     </style>
 </head>
 <body>
+    <a class="page-link" href="./index.html">サンプル一覧へ</a>
     <canvas id="renderCanvas"></canvas>
+
     <script>
         const canvas = document.getElementById("renderCanvas");
         const engine = new BABYLON.Engine(canvas, true);
 
-        //各種定義
-        const cvRg = Math.PI/180;
-        const iZoom=2;
-        var earth_dist = 12/iZoom;       //太陽-地球の距離
-        var moon_dist = 2/iZoom;        //地球-月の距離
-        var sun_r = 4/iZoom;            //太陽の大きさ
-        var earth_r = 1/iZoom;          //地球の大きさ
-        var moon_r = 0.3/iZoom;         //月の大きさ
-        var moon_shadow_height=6/iZoom; //月の影の長さ
-        var earth_dec=0;                //地球初期位置
-        var moon_dec=180;               //月初期位置
+        const DEG = Math.PI / 180;
+        const zoom = 2;
+        const earthDistance = 12 / zoom;
+        const moonDistance = 2 / zoom;
+        const sunRadius = 4 / zoom;
+        const earthRadius = 1 / zoom;
+        const moonRadius = 0.3 / zoom;
+        const moonShadowHeight = 6 / zoom;
 
-        const createScene = async function () {
-            // シーンを作成
+        const spaceImages = [
+            "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_4.jpg",
+            "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_5.jpg",
+            "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_3.jpg",
+            "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_2.jpg",
+            "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_5.jpg",
+            "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_1.jpg"
+        ];
+
+        function rotateX(position, origin, degrees) {
+            const y = position.y - origin.y;
+            const z = position.z - origin.z;
+
+            position.y = y * Math.cos(DEG * degrees) - z * Math.sin(DEG * degrees) + origin.y;
+            position.z = y * Math.sin(DEG * degrees) + z * Math.cos(DEG * degrees) + origin.z;
+        }
+
+        function createSkybox(scene) {
+            const skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000 }, scene);
+            const skyboxMaterial = new BABYLON.BackgroundMaterial("skyBoxMaterial", scene);
+            const skyboxTexture = BABYLON.CubeTexture.CreateFromImages(spaceImages, scene);
+
+            skyboxMaterial.backFaceCulling = false;
+            skyboxMaterial.reflectionTexture = skyboxTexture;
+            skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+            skyboxTexture.useRGBColor = false;
+            skybox.material = skyboxMaterial;
+        }
+
+        function createMoonShadow(scene) {
+            const moonShadow = BABYLON.MeshBuilder.CreateCylinder("moonShadow", {
+                height: moonShadowHeight,
+                diameterTop: 0,
+                diameterBottom: moonRadius,
+                updatable: true,
+                tessellation: 64
+            }, scene);
+
+            const positions = moonShadow.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+            const vertexCount = positions.length / 3;
+
+            for (let i = 0; i < vertexCount; i += 1) {
+                positions[i * 3 + 1] += moonShadowHeight / 2;
+            }
+
+            moonShadow.updateVerticesData(BABYLON.VertexBuffer.PositionKind, positions);
+
+            const material = new BABYLON.StandardMaterial("moonShadowMaterial", scene);
+            material.emissiveColor = new BABYLON.Color3(1, 0, 0);
+            material.alpha = 0.4;
+
+            moonShadow.material = material;
+            moonShadow.renderingGroupId = 3;
+            return moonShadow;
+        }
+
+        async function createScene() {
             const scene = new BABYLON.Scene(engine);
 
-            // カメラを作成し、シーンに追加
-            const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 4, 6, BABYLON.Vector3.Zero(), scene);
+            const camera = new BABYLON.ArcRotateCamera(
+                "camera",
+                Math.PI / 2,
+                Math.PI / 4,
+                6,
+                BABYLON.Vector3.Zero(),
+                scene
+            );
             camera.attachControl(canvas, true);
             camera.wheelDeltaPercentage = 0.004;
-            camera.minZ = 0.1;     
-    
-            // Skyboxを作成
-    const skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {size: 1000}, scene);
+            camera.minZ = 0.1;
 
-    // Skybox用のマテリアルを作成
-    const skyboxMaterial = new BABYLON.BackgroundMaterial("skyBoxMaterial", scene);
-    skyboxMaterial.backFaceCulling = false;  // 内側の面を描画
+            createSkybox(scene);
 
-    // CubeTextureで6面の画像を指定
-    const files = [
-        "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_4.jpg", // 正面
-        "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_5.jpg", // 背面
-        "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_3.jpg", // 上
-        "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_2.jpg", // 下
-        "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_5.jpg", // 右
-        "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_1.jpg"  // 左
-    ];
+            const sun = BABYLON.MeshBuilder.CreateSphere("sun", { diameter: sunRadius, segments: 32 }, scene);
+            const earth = BABYLON.MeshBuilder.CreateSphere("earth", { diameter: earthRadius, segments: 32 }, scene);
+            const moon = BABYLON.MeshBuilder.CreateSphere("moon", { diameter: moonRadius, segments: 64 }, scene);
 
-    const skyboxTexture = new BABYLON.CubeTexture.CreateFromImages(files, scene);
-
-    // Skyboxマテリアルにテクスチャを設定
-    skyboxMaterial.reflectionTexture = skyboxTexture;
-    skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
-   // 立方体の内側に描画するため、裏面の表示を有効化
-    skyboxMaterial.backFaceCulling = false;
-        // 背景のマテリアルなので、光源の影響を受けない
-    skyboxTexture.useRGBColor = false; // RGB色を無効にすることで、テクスチャをそのまま表示
-
-    // Skyboxにマテリアルを適用
-    skybox.material = skyboxMaterial;
-
-
-
-            // WebXRのデフォルト体験を作成
-            const xr = await BABYLON.WebXRDefaultExperience.CreateAsync(scene);
-
-            //太陽、地球、月の球体生成
-            var sun = BABYLON.MeshBuilder.CreateSphere("sun", {diameter: sun_r, segments: 32}, scene);
-            var earth = BABYLON.MeshBuilder.CreateSphere("earth", {diameter: earth_r, segments: 32}, scene);
-            var moon = BABYLON.MeshBuilder.CreateSphere("moon", {diameter: moon_r, segments: 64}, scene);
-            //中心にライトを設置（太陽と重ねる）
-            var light = new BABYLON.PointLight("pointLight", new BABYLON.Vector3(0, 0, 0), scene);
+            const light = new BABYLON.PointLight("pointLight", new BABYLON.Vector3(0, 0, 0), scene);
             light.intensity = 10.0;
 
-            //太陽はパーティクルヘルパーを使用する
             BABYLON.ParticleHelper.CreateAsync("sun", scene).then((set) => {
-                //set.emitter.options.diameter = sun_r;
-                set.systems[0].particleEmitterType.radius=sun_r/iZoom;
-                set.systems[2].particleEmitterType.radius=sun_r/iZoom;
-                set.systems[1].particleEmitterType.radius=sun_r/iZoom;
-                set.systems[0].maxSize=1/iZoom;
-                set.systems[2].maxSize=1/iZoom;
-                set.systems[1].maxScaleX=sun_r/iZoom;
-                set.systems[1].maxScaleY=sun_r/iZoom;
+                set.systems[0].particleEmitterType.radius = sunRadius / zoom;
+                set.systems[1].particleEmitterType.radius = sunRadius / zoom;
+                set.systems[2].particleEmitterType.radius = sunRadius / zoom;
+                set.systems[0].maxSize = 1 / zoom;
+                set.systems[2].maxSize = 1 / zoom;
+                set.systems[1].maxScaleX = sunRadius / zoom;
+                set.systems[1].maxScaleY = sunRadius / zoom;
                 set.start();
             });
-            var sun_material = new BABYLON.StandardMaterial("sun_material", scene);
-            sun_material.diffuseColor = new BABYLON.Color3(0.3773, 0.0930,0.0266);
-            sun_material.emissiveColor = new BABYLON.Color3(0.3773, 0.0930,0.0266);
-            sun.material = sun_material;
-            sun.renderingGroupId = 3; 
 
+            const sunMaterial = new BABYLON.StandardMaterial("sunMaterial", scene);
+            sunMaterial.diffuseColor = new BABYLON.Color3(0.3773, 0.0930, 0.0266);
+            sunMaterial.emissiveColor = new BABYLON.Color3(0.3773, 0.0930, 0.0266);
+            sun.material = sunMaterial;
+            sun.renderingGroupId = 3;
 
-            const arc1 = BABYLON.Curve3.ArcThru3Points(new BABYLON.Vector3(0, 0,  earth_dist), new BABYLON.Vector3(earth_dist, 0,  0), new BABYLON.Vector3(0, 0,-earth_dist));
-            const arcLine1 = BABYLON.MeshBuilder.CreateLines("arc1", {points: arc1.getPoints()})
-            const arc2 = BABYLON.Curve3.ArcThru3Points(new BABYLON.Vector3(0, 0,  -earth_dist), new BABYLON.Vector3(-earth_dist, 0,  0), new BABYLON.Vector3(0, 0,earth_dist));
-            const arcLine2 = BABYLON.MeshBuilder.CreateLines("arc2", {points: arc2.getPoints()})
+            const earthMaterial = new BABYLON.StandardMaterial("earthMaterial", scene);
+            earthMaterial.diffuseTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/babyBook15/earthTecture1k.jpg", scene);
+            earthMaterial.diffuseTexture.vScale = -1;
+            earthMaterial.diffuseTexture.uScale = -1;
+            earthMaterial.bumpTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/babyBook15/earthNormalMap.jpg", scene);
+            earthMaterial.bumpTexture.vScale = -1;
+            earthMaterial.bumpTexture.uScale = -1;
+            earthMaterial.invertNormalMapX = true;
+            earthMaterial.invertNormalMapY = true;
+            earthMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+            earth.material = earthMaterial;
+            earth.renderingGroupId = 3;
 
-            //月の影の三角錐を作成
-            var moonShadow = BABYLON.MeshBuilder.CreateCylinder("moonShadow", {height:moon_shadow_height, diameterTop: 0, diameterBottom:moon_r, updatable:true,tessellation:64}, scene); 
-            var moonShadowPos = moonShadow.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-            var numberOfVertices =moonShadowPos.length/3;	
-            for(var i = 0; i<numberOfVertices; i++) {
-                moonShadowPos[i*3+1] = moonShadowPos[i*3+1] +moon_shadow_height/2;
+            const moonMaterial = new BABYLON.StandardMaterial("moonMaterial", scene);
+            moonMaterial.diffuseTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/babyBook15/moon1k.jpg", scene);
+            moonMaterial.diffuseTexture.vScale = -1;
+            moonMaterial.diffuseTexture.uScale = -1;
+            moonMaterial.bumpTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/babyBook15/moonNormalMap.jpg", scene);
+            moonMaterial.bumpTexture.vScale = -1;
+            moonMaterial.bumpTexture.uScale = -1;
+            moonMaterial.invertNormalMapX = true;
+            moonMaterial.invertNormalMapY = true;
+            moonMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+            moon.material = moonMaterial;
+            moon.renderingGroupId = 3;
+
+            const moonShadow = createMoonShadow(scene);
+            const earthOrbitA = BABYLON.Curve3.ArcThru3Points(
+                new BABYLON.Vector3(0, 0, earthDistance),
+                new BABYLON.Vector3(earthDistance, 0, 0),
+                new BABYLON.Vector3(0, 0, -earthDistance)
+            );
+            BABYLON.MeshBuilder.CreateLines("earthOrbitA", { points: earthOrbitA.getPoints() }, scene);
+
+            const earthOrbitB = BABYLON.Curve3.ArcThru3Points(
+                new BABYLON.Vector3(0, 0, -earthDistance),
+                new BABYLON.Vector3(-earthDistance, 0, 0),
+                new BABYLON.Vector3(0, 0, earthDistance)
+            );
+            BABYLON.MeshBuilder.CreateLines("earthOrbitB", { points: earthOrbitB.getPoints() }, scene);
+
+            const earthClones = [];
+            const moonClones = [];
+            const shadowClones = [];
+
+            for (let i = 0; i <= 12; i += 1) {
+                earthClones.push(earth.clone(`earth${i}`));
+                moonClones.push(moon.clone(`moon${i}`));
+                shadowClones.push(moonShadow.clone(`moonShadow${i}`));
             }
-            moonShadow.updateVerticesData(BABYLON.VertexBuffer.PositionKind, moonShadowPos);
-            var moonShadow_material = new BABYLON.StandardMaterial("material", scene);
-            moonShadow_material.emissiveColor = new BABYLON.Color3(1, 0, 0);
-            moonShadow_material.alpha = 0.4;
-            moonShadow.material= moonShadow_material;
-            moonShadow.renderingGroupId = 3;  
 
-            //地球のマテリアル作成
-            var earth_material = new BABYLON.StandardMaterial("earth_material", scene);
-            earth_material.diffuseTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/babyBook15/earthTecture1k.jpg", scene);
-            earth_material.diffuseTexture.vScale = -1;
-            earth_material.diffuseTexture.uScale = -1;
-            earth_material.bumpTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/babyBook15/earthNormalMap.jpg", scene);
-            earth_material.bumpTexture.vScale = -1;
-            earth_material.bumpTexture.uScale = -1;
-            earth_material.invertNormalMapX = true;
-            earth_material.invertNormalMapY = true;
-            earth_material.specularColor = new BABYLON.Color3(0, 0, 0);
-            earth.material= earth_material;
-            earth.renderingGroupId = 3;  
-
-            //月のマテリアル作成
-            var moon_material =  new BABYLON.StandardMaterial("moon_material", scene);
-            moon_material.diffuseTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/babyBook15/moon1k.jpg", scene);
-            moon_material.diffuseTexture.vScale = -1;
-            moon_material.diffuseTexture.uScale = -1;
-            moon_material.bumpTexture = new BABYLON.Texture("https://raw.githubusercontent.com/ykoba079/sample1/master/image/babyBook15/moonNormalMap.jpg", scene);
-            moon_material.bumpTexture.vScale = -1;
-            moon_material.bumpTexture.uScale = -1;
-            moon_material.invertNormalMapX = true;
-            moon_material.invertNormalMapY = true;
-            moon_material.specularColor = new BABYLON.Color3(0, 0, 0);
-            moon.material= moon_material;
-            moon.renderingGroupId = 3;  
-            
-            //12か月分の簡易表示
-            var arrEarth=[];
-            var arrMoon=[];
-            var arrShadow=[];
-            for(i=0;i<=12;i++){
-            arrEarth.push(earth.clone());
-            arrMoon.push(moon.clone());
-            arrShadow.push(moonShadow.clone());
+            let earthAngle = 0;
+            for (const earthClone of earthClones) {
+                earthAngle += 30;
+                earthClone.position.x = Math.sin(DEG * earthAngle) * earthDistance;
+                earthClone.position.z = Math.cos(DEG * earthAngle) * earthDistance;
             }
-            for(var objEarth of arrEarth){
-                earth_dec = earth_dec+30;
-                objEarth .position.x =  Math.sin(cvRg * earth_dec)*earth_dist;
-                objEarth .position.z =  Math.cos(cvRg * earth_dec)*earth_dist;
-            }
-            for(i=0;i<=12;i++){
-                moon_dec=moon_dec+30;
-                arrMoon[i].position.x = Math.sin(cvRg * moon_dec)*moon_dist + arrEarth[i].position.x;
-                arrMoon[i].position.z = Math.cos(cvRg * moon_dec)*moon_dist + arrEarth[i].position.z;
-                rotateX(arrMoon[i].position,arrEarth[i].position,25)
 
-                arrShadow[i].position.x = arrMoon[i].position.x;
-                arrShadow[i].position.y = arrMoon[i].position.y;
-                arrShadow[i].position.z = arrMoon[i].position.z;
+            let moonAngle = 180;
+            for (let i = 0; i <= 12; i += 1) {
+                moonAngle += 30;
 
-                const direction = sun.position.subtract(arrMoon[i].position);
+                moonClones[i].position.x = Math.sin(DEG * moonAngle) * moonDistance + earthClones[i].position.x;
+                moonClones[i].position.z = Math.cos(DEG * moonAngle) * moonDistance + earthClones[i].position.z;
+                rotateX(moonClones[i].position, earthClones[i].position, 25);
+
+                shadowClones[i].position.copyFrom(moonClones[i].position);
+
+                const direction = sun.position.subtract(moonClones[i].position);
                 direction.normalize();
-                const rot = BABYLON.Quaternion.FromUnitVectorsToRef(new BABYLON.Vector3(0,-1,0), direction, new BABYLON.Quaternion());
-                arrShadow[i].rotationQuaternion = rot;
+                shadowClones[i].rotationQuaternion = BABYLON.Quaternion.FromUnitVectorsToRef(
+                    new BABYLON.Vector3(0, -1, 0),
+                    direction,
+                    new BABYLON.Quaternion()
+                );
 
-                const posArc1 = new BABYLON.Vector3(arrEarth[i].position.x-moon_dist,arrEarth[i].position.y,arrEarth[i].position.z);
-                let posArc2 = new BABYLON.Vector3(arrEarth[i].position.x,arrEarth[i].position.y,arrEarth[i].position.z-moon_dist);
-                rotateX(posArc2,arrEarth[i].position,25);
-                const posArc3 = new BABYLON.Vector3(arrEarth[i].position.x+moon_dist,arrEarth[i].position.y,arrEarth[i].position.z);
-                let posArc4 = new BABYLON.Vector3(arrEarth[i].position.x,arrEarth[i].position.y,arrEarth[i].position.z+moon_dist);
-                rotateX(posArc4,arrEarth[i].position,25);
-                const arc1 = BABYLON.Curve3.ArcThru3Points(posArc1,posArc2,posArc3);
-                const arcLine1 = BABYLON.MeshBuilder.CreateLines("arc1", {points: arc1.getPoints()})
-                const arc2 = BABYLON.Curve3.ArcThru3Points(posArc3,posArc4,posArc1);
-                const arcLine2 = BABYLON.MeshBuilder.CreateLines("arc2", {points: arc2.getPoints()})
+                const moonOrbitA = new BABYLON.Vector3(
+                    earthClones[i].position.x - moonDistance,
+                    earthClones[i].position.y,
+                    earthClones[i].position.z
+                );
+                const moonOrbitB = new BABYLON.Vector3(
+                    earthClones[i].position.x,
+                    earthClones[i].position.y,
+                    earthClones[i].position.z - moonDistance
+                );
+                const moonOrbitC = new BABYLON.Vector3(
+                    earthClones[i].position.x + moonDistance,
+                    earthClones[i].position.y,
+                    earthClones[i].position.z
+                );
+                const moonOrbitD = new BABYLON.Vector3(
+                    earthClones[i].position.x,
+                    earthClones[i].position.y,
+                    earthClones[i].position.z + moonDistance
+                );
+
+                rotateX(moonOrbitB, earthClones[i].position, 25);
+                rotateX(moonOrbitD, earthClones[i].position, 25);
+
+                const localMoonOrbitA = BABYLON.Curve3.ArcThru3Points(moonOrbitA, moonOrbitB, moonOrbitC);
+                BABYLON.MeshBuilder.CreateLines(`moonOrbitA${i}`, { points: localMoonOrbitA.getPoints() }, scene);
+
+                const localMoonOrbitB = BABYLON.Curve3.ArcThru3Points(moonOrbitC, moonOrbitD, moonOrbitA);
+                BABYLON.MeshBuilder.CreateLines(`moonOrbitB${i}`, { points: localMoonOrbitB.getPoints() }, scene);
             }
-            moonShadow.visibility=false;
-            
-            // テレポート機能の設定を遅延させ、初期化完了後に設定する
-            xr.baseExperience.onStateChangedObservable.add((state) => {
-                if (state === BABYLON.WebXRState.READY) {
-                    // テレポート機能の設定
-                    const teleportation = xr.baseExperience.featuresManager.enableFeature(
-                        BABYLON.WebXRFeatureName.TELEPORTATION,
-                        "latest",
-                        {
-                            floorMeshes: [ground], // テレポート先として有効なメッシュを指定
-                        }
-                    );
-                }
-            });
-            // コントローラーの入力を監視
-            xr.input.onControllerAddedObservable.add(controller => {
-                // ボタンが押されたときのイベントリスナーを追加
-                controller.onMotionControllerInitObservable.add(motionController => {
-                    motionController.onTriggerStateChangedObservable.add((state) => {
-                        if (state.pressed) {
-                            console.log("コントローラーのボタンが押されました！");
-                            alert("コントローラーのボタンが押されました！");
-                        }
-                    });
-                });
-            });
 
+            earth.setEnabled(false);
+            moon.setEnabled(false);
+            moonShadow.setEnabled(false);
+
+            if (window.isSecureContext && navigator.xr) {
+                try {
+                    const xr = await BABYLON.WebXRDefaultExperience.CreateAsync(scene);
+                    xr.input.onControllerAddedObservable.add((controller) => {
+                        controller.onMotionControllerInitObservable.add((motionController) => {
+                            motionController.onTriggerStateChangedObservable.add((state) => {
+                                if (state.pressed) {
+                                    console.log("VR controller trigger pressed");
+                                }
+                            });
+                        });
+                    });
+                } catch (error) {
+                    console.warn("WebXR is unavailable. Falling back to the normal 3D view.", error);
+                }
+            } else {
+                console.warn("WebXR requires HTTPS and a compatible browser. Showing the normal 3D view.");
+            }
 
             return scene;
-        };
+        }
 
-        createScene().then(sceneToRender => {
-            engine.runRenderLoop(() => sceneToRender.render());
+        createScene().then((sceneToRender) => {
+            engine.runRenderLoop(() => {
+                sceneToRender.render();
+            });
+        }).catch((error) => {
+            console.error(error);
         });
 
-        //X軸回りで回転
-function rotateX(posMoon ,posEarth,rg){
-    var y = posMoon.y - posEarth.y;
-    var z = posMoon.z - posEarth.z;
-
-    posMoon.y = y * Math.cos(cvRg*rg) - z * Math.sin(cvRg*rg) + posEarth.y;
-    posMoon.z = y * Math.sin(cvRg*rg) + z * Math.cos(cvRg*rg) + posEarth.z;
-}
-
+        window.addEventListener("resize", () => {
+            engine.resize();
+        });
     </script>
 </body>
 </html>
