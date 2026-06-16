@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>WebXR Moon VR</title>
+    <title>WebXR Moon / AR</title>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <style>
         html,
@@ -18,9 +18,26 @@
 
         #renderCanvas {
             display: block;
+            position: relative;
+            z-index: 1;
             width: 100%;
             height: 100%;
             touch-action: none;
+        }
+
+        #cameraFeed {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            display: none;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+        }
+
+        body.is-ar #cameraFeed {
+            display: block;
         }
 
         .page-link {
@@ -61,7 +78,7 @@
             display: none;
         }
 
-        .vr-fallback-button {
+        .ar-fallback-button {
             position: fixed;
             right: 12px;
             bottom: 12px;
@@ -77,12 +94,12 @@
             font-weight: 700;
         }
 
-        .vr-fallback-button.is-visible {
+        .ar-fallback-button.is-visible {
             display: block;
         }
 
-        .vr-fallback-button:focus-visible,
-        .vr-fallback-button:hover {
+        .ar-fallback-button:focus-visible,
+        .ar-fallback-button:hover {
             background: rgba(38, 62, 92, 0.9);
             outline: none;
         }
@@ -91,19 +108,23 @@
 <body>
     <a class="page-link" href="./index.html">サンプル一覧へ</a>
     <div class="status" id="status">Loading 3D scene...</div>
-    <button class="vr-fallback-button" id="vrFallbackButton" type="button" aria-label="Switch to mobile VR view">VR</button>
+    <button class="ar-fallback-button" id="arFallbackButton" type="button" aria-label="Switch to camera AR view">AR</button>
+    <video id="cameraFeed" autoplay playsinline muted></video>
     <canvas id="renderCanvas"></canvas>
 
     <script>
         const canvas = document.getElementById("renderCanvas");
         const statusPanel = document.getElementById("status");
-        const vrFallbackButton = document.getElementById("vrFallbackButton");
+        const arFallbackButton = document.getElementById("arFallbackButton");
+        const cameraFeed = document.getElementById("cameraFeed");
         const engine = new BABYLON.Engine(canvas, true, {
             preserveDrawingBuffer: true,
-            stencil: true
+            stencil: true,
+            alpha: true
         });
-        let normalCamera = null;
-        let legacyVrCamera = null;
+        let skyboxMesh = null;
+        let cameraStream = null;
+        let activeScene = null;
 
         const DEG = Math.PI / 180;
         const zoom = 2;
@@ -141,6 +162,7 @@
             skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
             skyboxTexture.useRGBColor = false;
             skybox.material = skyboxMaterial;
+            skyboxMesh = skybox;
         }
 
         function setStatus(message) {
@@ -187,63 +209,72 @@
             });
         }
 
-        async function requestDeviceOrientationPermission() {
-            if (typeof DeviceOrientationEvent === "undefined" ||
-                typeof DeviceOrientationEvent.requestPermission !== "function") {
-                return true;
+        async function startCameraFeed() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error("Camera access is not available in this browser.");
             }
 
-            try {
-                const permission = await DeviceOrientationEvent.requestPermission();
-                return permission === "granted";
-            } catch (error) {
-                console.warn("Device orientation permission request failed.", error);
-                return false;
-            }
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                    facingMode: { ideal: "environment" },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            });
+            cameraFeed.srcObject = cameraStream;
+            await cameraFeed.play();
         }
 
-        function showFallbackVrButton(scene, camera) {
-            normalCamera = camera;
-            vrFallbackButton.classList.add("is-visible");
-
-            vrFallbackButton.addEventListener("click", async () => {
-                if (legacyVrCamera) {
-                    scene.activeCamera = normalCamera;
-                    normalCamera.attachControl(canvas, true);
-                    legacyVrCamera.detachControl(canvas);
-                    legacyVrCamera.dispose();
-                    legacyVrCamera = null;
-                    vrFallbackButton.textContent = "VR";
-                    vrFallbackButton.setAttribute("aria-label", "Switch to mobile VR view");
-                    setStatus("");
-                    return;
+        function stopCameraFeed() {
+            if (cameraStream) {
+                for (const track of cameraStream.getTracks()) {
+                    track.stop();
                 }
+                cameraStream = null;
+            }
+            cameraFeed.srcObject = null;
+        }
 
-                const orientationAllowed = await requestDeviceOrientationPermission();
-                if (!orientationAllowed) {
-                    setStatus("Motion sensor permission was not granted. Showing the normal 3D view.");
-                    return;
-                }
+        async function enableArView(scene) {
+            setStatus("Starting camera...");
+            await startCameraFeed();
+            document.body.classList.add("is-ar");
+            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+            if (skyboxMesh) {
+                skyboxMesh.setEnabled(false);
+            }
+            arFallbackButton.textContent = "3D";
+            arFallbackButton.setAttribute("aria-label", "Return to normal 3D view");
+            setStatus("");
+        }
 
-                legacyVrCamera = new BABYLON.VRDeviceOrientationArcRotateCamera(
-                    "legacyVrCamera",
-                    normalCamera.alpha,
-                    normalCamera.beta,
-                    normalCamera.radius,
-                    normalCamera.target.clone(),
-                    scene,
-                    true
-                );
-                legacyVrCamera.minZ = 0.1;
-                scene.activeCamera = legacyVrCamera;
-                legacyVrCamera.attachControl(canvas, true);
-                vrFallbackButton.textContent = "2D";
-                vrFallbackButton.setAttribute("aria-label", "Return to normal 3D view");
-                setStatus("");
+        function disableArView(scene) {
+            stopCameraFeed();
+            document.body.classList.remove("is-ar");
+            scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
+            if (skyboxMesh) {
+                skyboxMesh.setEnabled(true);
+            }
+            arFallbackButton.textContent = "AR";
+            arFallbackButton.setAttribute("aria-label", "Switch to camera AR view");
+            setStatus("");
+        }
 
-                const fullscreenTarget = document.documentElement;
-                if (fullscreenTarget.requestFullscreen) {
-                    fullscreenTarget.requestFullscreen().catch(() => {});
+        function showArButton(scene) {
+            arFallbackButton.classList.add("is-visible");
+
+            arFallbackButton.addEventListener("click", async () => {
+                try {
+                    if (cameraStream) {
+                        disableArView(scene);
+                        return;
+                    }
+                    await enableArView(scene);
+                } catch (error) {
+                    console.warn("Camera AR view is unavailable.", error);
+                    disableArView(scene);
+                    setStatus(`Camera AR view is unavailable: ${error.message}`);
                 }
             });
         }
@@ -429,9 +460,10 @@
             moon.setEnabled(false);
             moonShadow.setEnabled(false);
 
+            activeScene = scene;
             setupWebXR(scene);
             if (isIOS() || !navigator.xr) {
-                showFallbackVrButton(scene, camera);
+                showArButton(scene);
             }
 
             return scene;
@@ -450,6 +482,14 @@
 
         window.addEventListener("resize", () => {
             engine.resize();
+        });
+
+        window.addEventListener("pagehide", () => {
+            if (activeScene) {
+                disableArView(activeScene);
+            } else {
+                stopCameraFeed();
+            }
         });
     </script>
 </body>
