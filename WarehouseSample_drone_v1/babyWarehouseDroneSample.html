@@ -401,7 +401,7 @@
             cameraCopyPending: false,
             route: [],
             routeIndex: 0,
-            speed: 6,
+            speed: 3,
             scanRadius: 4.2,
             scannedItemIds: new Set(),
             currentShelfId: "-",
@@ -1140,37 +1140,132 @@ function setQrLabelsVisible(isVisible){
     });
 }
 
+function getDroneShelfLookDirection(qrSide){
+    switch(qrSide){
+        case "posX":
+            return new BABYLON.Vector3(-1, 0, 0);
+        case "negX":
+            return new BABYLON.Vector3(1, 0, 0);
+        case "posZ":
+            return new BABYLON.Vector3(0, 0, -1);
+        case "negZ":
+        default:
+            return new BABYLON.Vector3(0, 0, 1);
+    }
+}
+
+function createDroneRoutePoint(marker, lookDirection, standOffDistance, flightY, scanY, shelfId){
+    const point = new BABYLON.Vector3(
+        marker.x - lookDirection.x * standOffDistance,
+        flightY,
+        marker.z - lookDirection.z * standOffDistance
+    );
+    point.lookDirection = lookDirection;
+    point.scanTarget = new BABYLON.Vector3(marker.x, scanY, marker.z);
+    point.scanY = scanY;
+    point.shelfId = shelfId || marker.id;
+    return point;
+}
+
+function createDroneRouteTransitionPoint(marker, lookDirection, standOffDistance, flightY, scanY, shelfId){
+    const point = createDroneRoutePoint(marker, lookDirection, standOffDistance, flightY, scanY, shelfId);
+    point.isTransitionPoint = true;
+    return point;
+}
+
+function getDroneRouteDistance(a, b){
+    return Math.hypot(a.x - b.x, a.z - b.z, (a.y - b.y) * 0.35);
+}
+
 function createDroneRoute(){
     const markers = createWarehouseMarkers()
-        .filter(marker => /^A\d{4}$/.test(marker.id))
         .sort((a, b) => {
-            const aBay = Number(a.id.slice(1, 3));
-            const bBay = Number(b.id.slice(1, 3));
-            const aLevel = Number(a.id.slice(3, 5));
-            const bLevel = Number(b.id.slice(3, 5));
-            return aBay - bBay || aLevel - bLevel;
+            return a.rowIndex - b.rowIndex
+                || a.segmentIndex - b.segmentIndex
+                || a.bayIndex - b.bayIndex
+                || a.levelIndex - b.levelIndex;
         });
-    const markersByBay = new Map();
+    const markersByPass = new Map();
     markers.forEach(marker => {
-        const bay = marker.id.slice(1, 3);
-        if(!markersByBay.has(bay)){
-            markersByBay.set(bay, []);
+        const passKey = `${marker.rowIndex}:${marker.segmentIndex}`;
+        if(!markersByPass.has(passKey)){
+            markersByPass.set(passKey, []);
         }
-        markersByBay.get(bay).push(marker);
+        markersByPass.get(passKey).push(marker);
+    });
+    const standOffDistance = 1.9;
+    const endClearance = 1.05;
+    const passes = [...markersByPass.values()].map(passMarkers => {
+        const lookDirection = getDroneShelfLookDirection(passMarkers[0].qrSide);
+        const travelAxis = Math.abs(lookDirection.x) > 0 ? "z" : "x";
+        const bayGroups = new Map();
+        passMarkers.forEach(marker => {
+            if(!bayGroups.has(marker.bayIndex)){
+                bayGroups.set(marker.bayIndex, []);
+            }
+            bayGroups.get(marker.bayIndex).push(marker);
+        });
+        const orderedBayGroups = [...bayGroups.values()]
+            .sort((a, b) => a[0][travelAxis] - b[0][travelAxis]);
+        const scanMarkers = [];
+        orderedBayGroups.forEach((bayMarkers, bayOrderIndex) => {
+            const orderedLevels = [...bayMarkers].sort((a, b) => {
+                const levelDiff = a.levelIndex - b.levelIndex;
+                return bayOrderIndex % 2 === 0 ? levelDiff : -levelDiff;
+            });
+            scanMarkers.push(...orderedLevels);
+        });
+        const firstScanMarker = scanMarkers[0];
+        const lastScanMarker = scanMarkers[scanMarkers.length - 1];
+        const entryScanY = firstScanMarker.y + 0.22;
+        const exitScanY = lastScanMarker.y + 0.22;
+        const entryMarker = {...firstScanMarker};
+        const exitMarker = {...lastScanMarker};
+        entryMarker[travelAxis] -= endClearance;
+        exitMarker[travelAxis] += endClearance;
+        const points = [
+            createDroneRouteTransitionPoint(entryMarker, lookDirection, standOffDistance, firstScanMarker.y + 0.67, entryScanY, firstScanMarker.id),
+            ...scanMarkers.map(marker => createDroneRoutePoint(marker, lookDirection, standOffDistance, marker.y + 0.67, marker.y + 0.22, marker.id)),
+            createDroneRouteTransitionPoint(exitMarker, lookDirection, standOffDistance, lastScanMarker.y + 0.67, exitScanY, lastScanMarker.id)
+        ];
+        return {
+            rowIndex: passMarkers[0].rowIndex,
+            segmentIndex: passMarkers[0].segmentIndex,
+            points,
+            start: points[0],
+            end: points[points.length - 1]
+        };
     });
     const route = [];
-    [...markersByBay.entries()].forEach(([bay, bayMarkers], bayIndex) => {
-        const orderedMarkers = [...bayMarkers].sort((a, b) => {
-            const levelDiff = Number(a.id.slice(3, 5)) - Number(b.id.slice(3, 5));
-            return bayIndex % 2 === 0 ? -levelDiff : levelDiff;
+    if(passes.length === 0){
+        return route;
+    }
+    const remainingPasses = [...passes];
+    let currentPassIndex = remainingPasses.findIndex(pass => pass.rowIndex === 0 && pass.segmentIndex === 0);
+    if(currentPassIndex < 0){
+        currentPassIndex = 0;
+    }
+    let currentPosition = remainingPasses[currentPassIndex].start;
+    while(remainingPasses.length > 0){
+        const [pass] = remainingPasses.splice(currentPassIndex, 1);
+        const forwardDistance = getDroneRouteDistance(currentPosition, pass.start);
+        const reverseDistance = getDroneRouteDistance(currentPosition, pass.end);
+        const passPoints = reverseDistance < forwardDistance ? [...pass.points].reverse() : pass.points;
+        route.push(...passPoints);
+        currentPosition = passPoints[passPoints.length - 1];
+        currentPassIndex = 0;
+        let nearestDistance = Infinity;
+        remainingPasses.forEach((candidate, index) => {
+            const distance = Math.min(
+                getDroneRouteDistance(currentPosition, candidate.start),
+                getDroneRouteDistance(currentPosition, candidate.end)
+            );
+            if(distance < nearestDistance){
+                nearestDistance = distance;
+                currentPassIndex = index;
+            }
         });
-        orderedMarkers.forEach(marker => {
-            const point = new BABYLON.Vector3(marker.x - 1.9, marker.y + 0.45, marker.z);
-            point.scanTarget = new BABYLON.Vector3(marker.x, marker.y + 0.22, marker.z);
-            point.shelfId = marker.id;
-            route.push(point);
-        });
-    });
+    }
     return route;
 }
 
@@ -1188,6 +1283,7 @@ function createInventoryDrone(scene){
     scanMat.diffuseColor = new BABYLON.Color3(0.36, 0.78, 1);
     scanMat.emissiveColor = new BABYLON.Color3(0.08, 0.18, 0.24);
     scanMat.alpha = 0.22;
+    scanMat.backFaceCulling = false;
 
     const root = new BABYLON.TransformNode("inventoryDrone", scene);
     const body = BABYLON.MeshBuilder.CreateBox("inventoryDroneBody", {width: 0.9, height: 0.22, depth: 0.65}, scene);
@@ -1216,19 +1312,13 @@ function createInventoryDrone(scene){
         drone.rotors.push(rotor);
     });
 
-    const scanCone = BABYLON.MeshBuilder.CreateCylinder("inventoryDroneScanCone", {
-        height: drone.scanRadius * 2,
-        diameterTop: 0.35,
-        diameterBottom: 2.0,
-        tessellation: 32
-    }, scene);
+    const scanCone = createDroneCameraFrustum(scene, scanMat, drone.scanRadius);
     scanCone.parent = root;
-    scanCone.position.z = drone.scanRadius;
-    scanCone.rotation.x = Math.PI / 2;
-    scanCone.material = scanMat;
-    scanCone.isPickable = false;
 
     root.position.copyFrom(drone.route[0]);
+    if(drone.route[0]?.lookDirection){
+        root.rotation.y = Math.atan2(drone.route[0].lookDirection.x, drone.route[0].lookDirection.z);
+    }
     root.setEnabled(false);
     drone.root = root;
     drone.scanCone = scanCone;
@@ -1252,6 +1342,60 @@ function createInventoryDrone(scene){
     renderTarget.refreshRate = 1;
     scene.customRenderTargets.push(renderTarget);
     drone.renderTarget = renderTarget;
+}
+
+function createDroneCameraFrustum(scene, material, scanRadius){
+    const root = new BABYLON.TransformNode("inventoryDroneCameraFrustumRoot", scene);
+    const nearZ = 0.45;
+    const farZ = scanRadius * 1.55;
+    const halfHeight = 1.85;
+    const halfWidth = halfHeight * 4 / 3;
+    const positions = [
+        0, -0.05, nearZ,
+        -halfWidth, -halfHeight, farZ,
+        halfWidth, -halfHeight, farZ,
+        halfWidth, halfHeight, farZ,
+        -halfWidth, halfHeight, farZ
+    ];
+    const indices = [
+        0, 1, 2,
+        0, 2, 3,
+        0, 3, 4,
+        0, 4, 1,
+        1, 4, 3,
+        1, 3, 2
+    ];
+    const normals = [];
+    BABYLON.VertexData.ComputeNormals(positions, indices, normals);
+    const vertexData = new BABYLON.VertexData();
+    vertexData.positions = positions;
+    vertexData.indices = indices;
+    vertexData.normals = normals;
+
+    const frustum = new BABYLON.Mesh("inventoryDroneCameraFrustum", scene);
+    vertexData.applyToMesh(frustum);
+    frustum.parent = root;
+    frustum.material = material;
+    frustum.isPickable = false;
+
+    const apex = new BABYLON.Vector3(0, -0.05, nearZ);
+    const corners = [
+        new BABYLON.Vector3(-halfWidth, -halfHeight, farZ),
+        new BABYLON.Vector3(halfWidth, -halfHeight, farZ),
+        new BABYLON.Vector3(halfWidth, halfHeight, farZ),
+        new BABYLON.Vector3(-halfWidth, halfHeight, farZ)
+    ];
+    const outline = BABYLON.MeshBuilder.CreateLines("inventoryDroneCameraFrustumOutline", {
+        points: [
+            apex, corners[0], corners[1], apex, corners[2], corners[3], apex,
+            corners[0], corners[3], corners[2], corners[1], corners[0]
+        ]
+    }, scene);
+    outline.parent = root;
+    outline.color = new BABYLON.Color3(0.12, 0.85, 1);
+    outline.isPickable = false;
+
+    return root;
 }
 
 function toggleDroneInventory(){
@@ -1283,6 +1427,9 @@ function startDroneInventory(){
     drone.active = true;
     if(drone.root && drone.route.length > 0){
         drone.root.position.copyFrom(drone.route[0]);
+        if(drone.route[0]?.lookDirection){
+            drone.root.rotation.y = Math.atan2(drone.route[0].lookDirection.x, drone.route[0].lookDirection.z);
+        }
         drone.root.setEnabled(true);
     }
     renderDroneCameraView();
@@ -1326,6 +1473,9 @@ function resetDroneInventoryState(){
     });
     if(drone.root && drone.route.length > 0){
         drone.root.position.copyFrom(drone.route[0]);
+        if(drone.route[0]?.lookDirection){
+            drone.root.rotation.y = Math.atan2(drone.route[0].lookDirection.x, drone.route[0].lookDirection.z);
+        }
         drone.root.setEnabled(true);
     }
 }
@@ -1352,6 +1502,9 @@ function showStoppedDroneCameraView(){
         if(drone.route.length > 0 && !drone.root.isEnabled()){
             drone.root.position.copyFrom(drone.route[0]);
             drone.routeIndex = 0;
+            if(drone.route[0]?.lookDirection){
+                drone.root.rotation.y = Math.atan2(drone.route[0].lookDirection.x, drone.route[0].lookDirection.z);
+            }
         }
         drone.root.setEnabled(true);
     }
@@ -1368,17 +1521,17 @@ function updateInventoryDrone(scene){
         return;
     }
     const deltaSeconds = scene.getEngine().getDeltaTime() / 1000;
-    const target = drone.route[drone.routeIndex];
+    let target = drone.route[drone.routeIndex];
     const direction = target.subtract(drone.root.position);
     const distance = direction.length();
     if(distance < 0.2){
         drone.routeIndex = (drone.routeIndex + 1) % drone.route.length;
+        target = drone.route[drone.routeIndex];
     }else{
         const step = Math.min(distance, drone.speed * deltaSeconds);
         drone.root.position.addInPlace(direction.normalize().scale(step));
     }
-    const lookTarget = target.scanTarget || target;
-    const lookDirection = lookTarget.subtract(drone.root.position);
+    const lookDirection = getDroneCurrentLookDirection();
     drone.root.rotation.y = Math.atan2(lookDirection.x, lookDirection.z);
     drone.rotors.forEach((rotor, index) => {
         rotor.rotation.y += (index % 2 === 0 ? 1 : -1) * deltaSeconds * 24;
@@ -1388,13 +1541,32 @@ function updateInventoryDrone(scene){
     renderDroneCameraView();
 }
 
+function getDroneCurrentLookDirection(){
+    const drone = appState.drone;
+    const routeTarget = drone.route[drone.routeIndex];
+    if(routeTarget?.lookDirection){
+        return routeTarget.lookDirection.clone().normalize();
+    }
+    return new BABYLON.Vector3(Math.sin(drone.root.rotation.y), 0, Math.cos(drone.root.rotation.y));
+}
+
+function getDroneCurrentLookTarget(){
+    const drone = appState.drone;
+    const lookDirection = getDroneCurrentLookDirection();
+    const lookTarget = drone.root.position.add(lookDirection.scale(drone.scanRadius * 1.4));
+    const routeTarget = drone.route[drone.routeIndex];
+    if(routeTarget?.scanY !== undefined){
+        lookTarget.y = routeTarget.scanY;
+    }
+    return lookTarget;
+}
+
 function updateDroneCameraPose(){
     const drone = appState.drone;
     if(!drone.camera || !drone.root){
         return;
     }
-    const routeTarget = drone.route[drone.routeIndex];
-    const lookTarget = routeTarget?.scanTarget || drone.root.position.add(new BABYLON.Vector3(Math.sin(drone.root.rotation.y), 0, Math.cos(drone.root.rotation.y)));
+    const lookTarget = getDroneCurrentLookTarget();
     const forward = lookTarget.subtract(drone.root.position).normalize();
     const cameraPosition = drone.root.position.add(forward.scale(0.55));
     cameraPosition.y -= 0.04;
@@ -2514,6 +2686,12 @@ function createWarehouseMarkers(){
                     const y = levels[levelIndex];
                     markers.push({
                         id: `${row.code}${String(rowBayNumber).padStart(2, "0")}${String(levelIndex + 1).padStart(2, "0")}`,
+                        rowCode: row.code,
+                        rowIndex,
+                        segmentIndex,
+                        bayIndex,
+                        rowBayNumber,
+                        levelIndex,
                         x,
                         y,
                         z,
