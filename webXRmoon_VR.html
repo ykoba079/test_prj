@@ -122,9 +122,9 @@
         const earthRadius = 1 / zoom;
         const moonRadius = 0.3 / zoom;
         const moonShadowHeight = 6 / zoom;
-        const moveSensitivity = 4.2;
-        const moveDamping = 0.9;
-        const moveDeadZone = 0.06;
+        const moveSensitivity = 2.6;
+        const moveDamping = 0.78;
+        const moveDeadZone = 0.22;
 
         const spaceImages = [
             "https://raw.githubusercontent.com/ykoba079/sample1/master/nif/img/mat_space_4.jpg",
@@ -273,7 +273,7 @@
             const pitchDelta = (beta - motionReference.beta) * DEG * 0.9;
             const rollDelta = (gamma - motionReference.gamma) * DEG * 0.25;
 
-            motionCamera.rotation.x = clamp(motionBase.x + pitchDelta, -1.35, 1.35);
+            motionCamera.rotation.x = clamp(motionBase.x - pitchDelta, -1.35, 1.35);
             motionCamera.rotation.y = motionBase.y - yawDelta;
             motionCamera.rotation.z = motionBase.z + rollDelta;
         }
@@ -283,7 +283,7 @@
                 return;
             }
 
-            const raw = event.acceleration || event.accelerationIncludingGravity;
+            const raw = event.acceleration;
             if (!raw || raw.x === null || raw.y === null || raw.z === null) {
                 return;
             }
