@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>WebXR Moon / AR</title>
+    <title>WebXR Moon / Gyro</title>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <style>
         html,
@@ -18,26 +18,9 @@
 
         #renderCanvas {
             display: block;
-            position: relative;
-            z-index: 1;
             width: 100%;
             height: 100%;
             touch-action: none;
-        }
-
-        #cameraFeed {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            display: none;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            background: #000;
-        }
-
-        body.is-ar #cameraFeed {
-            display: block;
         }
 
         .page-link {
@@ -78,7 +61,7 @@
             display: none;
         }
 
-        .ar-fallback-button {
+        .motion-button {
             position: fixed;
             right: 12px;
             bottom: 12px;
@@ -94,12 +77,12 @@
             font-weight: 700;
         }
 
-        .ar-fallback-button.is-visible {
+        .motion-button.is-visible {
             display: block;
         }
 
-        .ar-fallback-button:focus-visible,
-        .ar-fallback-button:hover {
+        .motion-button:focus-visible,
+        .motion-button:hover {
             background: rgba(38, 62, 92, 0.9);
             outline: none;
         }
@@ -108,23 +91,23 @@
 <body>
     <a class="page-link" href="./index.html">サンプル一覧へ</a>
     <div class="status" id="status">Loading 3D scene...</div>
-    <button class="ar-fallback-button" id="arFallbackButton" type="button" aria-label="Switch to camera AR view">AR</button>
-    <video id="cameraFeed" autoplay playsinline muted></video>
+    <button class="motion-button" id="motionButton" type="button" aria-label="Use phone motion to move the view">GYRO</button>
     <canvas id="renderCanvas"></canvas>
 
     <script>
         const canvas = document.getElementById("renderCanvas");
         const statusPanel = document.getElementById("status");
-        const arFallbackButton = document.getElementById("arFallbackButton");
-        const cameraFeed = document.getElementById("cameraFeed");
+        const motionButton = document.getElementById("motionButton");
         const engine = new BABYLON.Engine(canvas, true, {
             preserveDrawingBuffer: true,
-            stencil: true,
-            alpha: true
+            stencil: true
         });
         let skyboxMesh = null;
-        let cameraStream = null;
         let activeScene = null;
+        let activeCamera = null;
+        let motionModeEnabled = false;
+        let motionReference = null;
+        let motionBase = null;
 
         const DEG = Math.PI / 180;
         const zoom = 2;
@@ -209,72 +192,91 @@
             });
         }
 
-        async function startCameraFeed() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error("Camera access is not available in this browser.");
+        async function requestDeviceOrientationPermission() {
+            if (typeof DeviceOrientationEvent === "undefined" ||
+                typeof DeviceOrientationEvent.requestPermission !== "function") {
+                return true;
             }
 
-            cameraStream = await navigator.mediaDevices.getUserMedia({
-                audio: false,
-                video: {
-                    facingMode: { ideal: "environment" },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                }
-            });
-            cameraFeed.srcObject = cameraStream;
-            await cameraFeed.play();
+            try {
+                const permission = await DeviceOrientationEvent.requestPermission();
+                return permission === "granted";
+            } catch (error) {
+                console.warn("Device orientation permission request failed.", error);
+                return false;
+            }
         }
 
-        function stopCameraFeed() {
-            if (cameraStream) {
-                for (const track of cameraStream.getTracks()) {
-                    track.stop();
-                }
-                cameraStream = null;
-            }
-            cameraFeed.srcObject = null;
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
         }
 
-        async function enableArView(scene) {
-            setStatus("Starting camera...");
-            await startCameraFeed();
-            document.body.classList.add("is-ar");
-            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
-            if (skyboxMesh) {
-                skyboxMesh.setEnabled(false);
+        function onDeviceOrientation(event) {
+            if (!motionModeEnabled || !activeCamera || event.alpha === null) {
+                return;
             }
-            arFallbackButton.textContent = "3D";
-            arFallbackButton.setAttribute("aria-label", "Return to normal 3D view");
+
+            if (!motionReference) {
+                motionReference = {
+                    alpha: event.alpha || 0,
+                    beta: event.beta || 0,
+                    gamma: event.gamma || 0
+                };
+                motionBase = {
+                    alpha: activeCamera.alpha,
+                    beta: activeCamera.beta,
+                    radius: activeCamera.radius
+                };
+            }
+
+            const yawDelta = ((event.alpha || 0) - motionReference.alpha) * DEG;
+            const pitchDelta = ((event.beta || 0) - motionReference.beta) * DEG * 0.65;
+            const rollDelta = ((event.gamma || 0) - motionReference.gamma) * DEG * 0.35;
+
+            activeCamera.alpha = motionBase.alpha - yawDelta + rollDelta;
+            activeCamera.beta = clamp(motionBase.beta + pitchDelta, 0.25, Math.PI - 0.25);
+        }
+
+        async function enableMotionView() {
+            const orientationAllowed = await requestDeviceOrientationPermission();
+            if (!orientationAllowed) {
+                setStatus("Motion sensor permission was not granted.");
+                return;
+            }
+
+            motionModeEnabled = true;
+            motionReference = null;
+            motionBase = null;
+            window.addEventListener("deviceorientation", onDeviceOrientation, true);
+            motionButton.textContent = "3D";
+            motionButton.setAttribute("aria-label", "Return to touch camera control");
             setStatus("");
         }
 
-        function disableArView(scene) {
-            stopCameraFeed();
-            document.body.classList.remove("is-ar");
-            scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
-            if (skyboxMesh) {
-                skyboxMesh.setEnabled(true);
-            }
-            arFallbackButton.textContent = "AR";
-            arFallbackButton.setAttribute("aria-label", "Switch to camera AR view");
+        function disableMotionView() {
+            motionModeEnabled = false;
+            motionReference = null;
+            motionBase = null;
+            window.removeEventListener("deviceorientation", onDeviceOrientation, true);
+            motionButton.textContent = "GYRO";
+            motionButton.setAttribute("aria-label", "Use phone motion to move the view");
             setStatus("");
         }
 
-        function showArButton(scene) {
-            arFallbackButton.classList.add("is-visible");
+        function showMotionButton() {
+            motionButton.classList.add("is-visible");
 
-            arFallbackButton.addEventListener("click", async () => {
+            motionButton.addEventListener("click", async () => {
                 try {
-                    if (cameraStream) {
-                        disableArView(scene);
+                    if (motionModeEnabled) {
+                        disableMotionView();
                         return;
                     }
-                    await enableArView(scene);
+                    await enableMotionView();
                 } catch (error) {
-                    console.warn("Camera AR view is unavailable.", error);
-                    disableArView(scene);
-                    setStatus(`Camera AR view is unavailable: ${error.message}`);
+                    console.warn("Motion view is unavailable.", error);
+                    disableMotionView();
+                    setStatus(`Motion view is unavailable: ${error.message}`);
                 }
             });
         }
@@ -322,6 +324,7 @@
             camera.wheelDeltaPercentage = 0.004;
             camera.minZ = 0.1;
             scene.activeCamera = camera;
+            activeCamera = camera;
 
             createSkybox(scene);
 
@@ -463,7 +466,7 @@
             activeScene = scene;
             setupWebXR(scene);
             if (isIOS() || !navigator.xr) {
-                showArButton(scene);
+                showMotionButton();
             }
 
             return scene;
@@ -485,11 +488,7 @@
         });
 
         window.addEventListener("pagehide", () => {
-            if (activeScene) {
-                disableArView(activeScene);
-            } else {
-                stopCameraFeed();
-            }
+            disableMotionView();
         });
     </script>
 </body>
