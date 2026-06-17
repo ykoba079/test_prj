@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>WebXR Moon / Gyro</title>
+    <title>WebXR Moon / Move</title>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <style>
         html,
@@ -91,7 +91,7 @@
 <body>
     <a class="page-link" href="./index.html">サンプル一覧へ</a>
     <div class="status" id="status">Loading 3D scene...</div>
-    <button class="motion-button" id="motionButton" type="button" aria-label="Use phone motion to move the view">GYRO</button>
+    <button class="motion-button" id="motionButton" type="button" aria-label="Use phone motion to move the camera">MOVE</button>
     <canvas id="renderCanvas"></canvas>
 
     <script>
@@ -105,9 +105,14 @@
         let skyboxMesh = null;
         let activeScene = null;
         let activeCamera = null;
+        let normalCamera = null;
+        let motionCamera = null;
         let motionModeEnabled = false;
         let motionReference = null;
         let motionBase = null;
+        let accelerationReference = null;
+        let motionVelocity = new BABYLON.Vector3(0, 0, 0);
+        let lastMotionTime = null;
 
         const DEG = Math.PI / 180;
         const zoom = 2;
@@ -193,18 +198,34 @@
         }
 
         async function requestDeviceOrientationPermission() {
+            let orientationAllowed = true;
+            let motionAllowed = true;
+
             if (typeof DeviceOrientationEvent === "undefined" ||
                 typeof DeviceOrientationEvent.requestPermission !== "function") {
-                return true;
+                orientationAllowed = true;
+            } else {
+                try {
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    orientationAllowed = permission === "granted";
+                } catch (error) {
+                    console.warn("Device orientation permission request failed.", error);
+                    orientationAllowed = false;
+                }
             }
 
-            try {
-                const permission = await DeviceOrientationEvent.requestPermission();
-                return permission === "granted";
-            } catch (error) {
-                console.warn("Device orientation permission request failed.", error);
-                return false;
+            if (typeof DeviceMotionEvent !== "undefined" &&
+                typeof DeviceMotionEvent.requestPermission === "function") {
+                try {
+                    const permission = await DeviceMotionEvent.requestPermission();
+                    motionAllowed = permission === "granted";
+                } catch (error) {
+                    console.warn("Device motion permission request failed.", error);
+                    motionAllowed = false;
+                }
             }
+
+            return orientationAllowed && motionAllowed;
         }
 
         function clamp(value, min, max) {
@@ -212,7 +233,7 @@
         }
 
         function onDeviceOrientation(event) {
-            if (!motionModeEnabled || !activeCamera || event.alpha === null) {
+            if (!motionModeEnabled || !motionCamera || event.alpha === null) {
                 return;
             }
 
@@ -223,9 +244,9 @@
                     gamma: event.gamma || 0
                 };
                 motionBase = {
-                    alpha: activeCamera.alpha,
-                    beta: activeCamera.beta,
-                    radius: activeCamera.radius
+                    x: motionCamera.rotation.x,
+                    y: motionCamera.rotation.y,
+                    z: motionCamera.rotation.z
                 };
             }
 
@@ -233,8 +254,69 @@
             const pitchDelta = ((event.beta || 0) - motionReference.beta) * DEG * 0.65;
             const rollDelta = ((event.gamma || 0) - motionReference.gamma) * DEG * 0.35;
 
-            activeCamera.alpha = motionBase.alpha - yawDelta + rollDelta;
-            activeCamera.beta = clamp(motionBase.beta + pitchDelta, 0.25, Math.PI - 0.25);
+            motionCamera.rotation.x = clamp(motionBase.x + pitchDelta, -1.35, 1.35);
+            motionCamera.rotation.y = motionBase.y - yawDelta;
+            motionCamera.rotation.z = motionBase.z + rollDelta;
+        }
+
+        function onDeviceMotion(event) {
+            if (!motionModeEnabled || !motionCamera) {
+                return;
+            }
+
+            const raw = event.acceleration || event.accelerationIncludingGravity;
+            if (!raw || raw.x === null || raw.y === null || raw.z === null) {
+                return;
+            }
+
+            const now = performance.now();
+            if (lastMotionTime === null) {
+                lastMotionTime = now;
+                accelerationReference = {
+                    x: raw.x || 0,
+                    y: raw.y || 0,
+                    z: raw.z || 0
+                };
+                return;
+            }
+
+            const dt = Math.min((now - lastMotionTime) / 1000, 0.05);
+            lastMotionTime = now;
+
+            const ax = (raw.x || 0) - accelerationReference.x;
+            const ay = (raw.y || 0) - accelerationReference.y;
+            const az = (raw.z || 0) - accelerationReference.z;
+            const deadZone = 0.12;
+            const filtered = new BABYLON.Vector3(
+                Math.abs(ax) < deadZone ? 0 : ax,
+                Math.abs(ay) < deadZone ? 0 : ay,
+                Math.abs(az) < deadZone ? 0 : az
+            );
+
+            const right = motionCamera.getDirection(BABYLON.Axis.X);
+            const up = motionCamera.getDirection(BABYLON.Axis.Y);
+            const forward = motionCamera.getDirection(BABYLON.Axis.Z);
+            const impulse = right.scale(filtered.x)
+                .add(up.scale(-filtered.y * 0.45))
+                .add(forward.scale(-filtered.z));
+
+            motionVelocity.addInPlace(impulse.scale(dt * 1.7));
+            motionVelocity.scaleInPlace(0.86);
+
+            if (motionVelocity.length() < 0.002) {
+                return;
+            }
+
+            motionCamera.position.addInPlace(motionVelocity);
+
+            const distanceFromSun = motionCamera.position.length();
+            if (distanceFromSun < 1.8) {
+                motionCamera.position.normalize().scaleInPlace(1.8);
+                motionVelocity.scaleInPlace(0.2);
+            } else if (distanceFromSun > 22) {
+                motionCamera.position.normalize().scaleInPlace(22);
+                motionVelocity.scaleInPlace(0.2);
+            }
         }
 
         async function enableMotionView() {
@@ -244,22 +326,59 @@
                 return;
             }
 
+            if (!activeScene || !normalCamera) {
+                return;
+            }
+
+            motionCamera = new BABYLON.UniversalCamera("motionCamera", normalCamera.position.clone(), activeScene);
+            motionCamera.minZ = 0.1;
+            motionCamera.speed = 0.12;
+            motionCamera.angularSensibility = 6000;
+            motionCamera.setTarget(BABYLON.Vector3.Zero());
+            normalCamera.detachControl(canvas);
+            activeScene.activeCamera = motionCamera;
+            activeCamera = motionCamera;
+            motionCamera.attachControl(canvas, true);
+
             motionModeEnabled = true;
             motionReference = null;
             motionBase = null;
+            accelerationReference = null;
+            motionVelocity = new BABYLON.Vector3(0, 0, 0);
+            lastMotionTime = null;
             window.addEventListener("deviceorientation", onDeviceOrientation, true);
+            window.addEventListener("devicemotion", onDeviceMotion, true);
             motionButton.textContent = "3D";
             motionButton.setAttribute("aria-label", "Return to touch camera control");
-            setStatus("");
+            setStatus("MOVE mode on");
+            window.setTimeout(() => {
+                if (motionModeEnabled) {
+                    setStatus("");
+                }
+            }, 1800);
         }
 
         function disableMotionView() {
             motionModeEnabled = false;
             motionReference = null;
             motionBase = null;
+            accelerationReference = null;
+            motionVelocity = new BABYLON.Vector3(0, 0, 0);
+            lastMotionTime = null;
             window.removeEventListener("deviceorientation", onDeviceOrientation, true);
-            motionButton.textContent = "GYRO";
-            motionButton.setAttribute("aria-label", "Use phone motion to move the view");
+            window.removeEventListener("devicemotion", onDeviceMotion, true);
+
+            if (activeScene && motionCamera) {
+                motionCamera.detachControl(canvas);
+                activeScene.activeCamera = normalCamera;
+                activeCamera = normalCamera;
+                normalCamera.attachControl(canvas, true);
+                motionCamera.dispose();
+                motionCamera = null;
+            }
+
+            motionButton.textContent = "MOVE";
+            motionButton.setAttribute("aria-label", "Use phone motion to move the camera");
             setStatus("");
         }
 
@@ -325,6 +444,7 @@
             camera.minZ = 0.1;
             scene.activeCamera = camera;
             activeCamera = camera;
+            normalCamera = camera;
 
             createSkybox(scene);
 
