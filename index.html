@@ -107,6 +107,17 @@
             font-size: 14px;
         }
 
+        .item-thumbnail {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            margin-bottom: 12px;
+            object-fit: cover;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #eef1ed;
+        }
+
         .note {
             margin-top: 28px;
             padding-top: 18px;
@@ -119,50 +130,56 @@
 <body>
     <header>
         <div class="header-inner">
-            <h1>Babylon.js / Web サンプル集</h1>
-            <p class="lead">GitHub Pagesで公開しているデモをまとめています。各カードから直接サンプルを開けます。</p>
+            <h1>犯人のヤス </h1>
+            <p class="lead">GitHub Pagesでデモなどをまとめています。</p>
         </div>
     </header>
 
     <main>
+        <section aria-labelledby="docs-heading">
+            <h2 id="docs-heading">資料</h2>
+            <div class="grid">
+                <a class="item" href="https://docs.google.com/presentation/d/1BpP00ovQkSD-RmIayzFA6C62kiCdUk3_roL-LvjFYtw/edit?slide=id.g3998715a547_0_2#slide=id.g3998715a547_0_2" target="_blank" rel="noopener noreferrer">
+                    <img class="item-thumbnail" src="./img/3dgs_kashika.jpg" alt="Googleスライド 資料 1のプレビュー">
+                    <strong>3DGSやWebでの表示について</strong>
+                    <span>XRmeetupAichi、NIFS可視化研究会でお話した資料</span>
+                </a>
+                <a class="item" href="https://docs.google.com/presentation/d/1VzdlPJsEamJs3TYCK9w8cVrf2QWNskiJ2eTmLsEosbo/edit?slide=id.g25401222e99_0_491#slide=id.g25401222e99_0_491" target="_blank" rel="noopener noreferrer">
+                    <img class="item-thumbnail" src="./img/gisyoten14.jpg" alt="Googleスライド 資料 2のプレビュー">
+                    <strong>Babylon.jsで会場見取り図を3D表示</strong>
+                    <span>Babylon.js勉強会で参加したときの裏側あれこれ</span>
+                </a>
+            </div>
+        </section>
+
         <section aria-labelledby="babylon-heading">
             <h2 id="babylon-heading">Babylon.js デモ</h2>
             <div class="grid">
                 <a class="item" href="./WarehouseSample_drone_v1/babyWarehouseDroneSample.html">
-                    <strong>倉庫ドローン在庫サンプル</strong>
-                    <span>倉庫内をドローンで確認するBabylon.jsサンプルです。</span>
+                    <img class="item-thumbnail" src="./img/wharehouse_drone.jpg" alt="倉庫ドローン在庫サンプルのプレビュー">
+                    <strong>倉庫サンプル</strong>
+                    <span>倉庫内を可視化したりドローンで確認するサンプル</span>
                 </a>
                 <a class="item" href="./babyOfficeSample.html">
+                    <img class="item-thumbnail" src="./img/office_view.jpg" alt="オフィスサンプルのプレビュー">
                     <strong>オフィスサンプル</strong>
-                    <span>オフィス空間を使った3D表示サンプルです。</span>
+                    <span>オフィス空間の3D表示サンプルです。</span>
                 </a>
                 <a class="item" href="./minecraft-babylon/">
+                    <img class="item-thumbnail" src="./img/areppoi.jpg" alt="Babylon Block Worldのプレビュー">
                     <strong>Babylon Block World</strong>
-                    <span>ブロックワールド風の3D操作デモです。</span>
+                    <span>ブロックワールド風の3Dデモ</span>
                 </a>
                 <a class="item" href="./babylon-code-nature-documentary/">
+                    <img class="item-thumbnail" src="./img/babylon_nature.jpg" alt="自然ドキュメンタリーのプレビュー">
                     <strong>自然ドキュメンタリー</strong>
-                    <span>コードだけで作る山・森・海の表現サンプルです。</span>
+                    <span>コードだけで作る山・森・海の表現サンプル</span>
                 </a>
-            </div>
-        </section>
 
-        <section aria-labelledby="game-heading">
-            <h2 id="game-heading">ゲーム</h2>
-            <div class="grid">
-                <a class="item" href="./space-shooter/">
-                    <strong>Gradius Style Mini Shooter</strong>
-                    <span>横スクロールシューティングのミニゲームです。</span>
-                </a>
-            </div>
-        </section>
-
-        <section aria-labelledby="web-heading">
-            <h2 id="web-heading">Web / XR / GIS サンプル</h2>
-            <div class="grid">
                 <a class="item" href="./webXRmoon_VR.html">
-                    <strong>WebXR Moon / Move</strong>
-                    <span>スマホの向きと動きで視点を変え、太陽・地球・月の位置関係を確認できます。</span>
+                    <img class="item-thumbnail" src="./img/babylon_moon1.jpg" alt="WebXR Moon / Moveのプレビュー">
+                    <strong>日食可視化</strong>
+                    <span>月の影の位置関係を可視化するサンプル</span>
                 </a>
                 <a class="item" href="./gis_test.html">
                     <strong>GIS テスト</strong>
@@ -176,6 +193,11 @@
                     <strong>画像物体検出</strong>
                     <span>画像を使った物体検出サンプルです。</span>
                 </a>
+
+                <a class="item" href="./space-shooter/">
+                    <strong>Gradius Style Mini Shooter</strong>
+                    <span>横スクロールシューティングのミニゲームです。</span>
+                </a>
             </div>
         </section>
 
@@ -183,6 +205,7 @@
             <h2 id="gaussian-heading">Gaussian Splatting</h2>
             <div class="grid">
                 <a class="item" href="./baby3DGSTrim.html">
+                    <img class="item-thumbnail" src="./img/gaussian_edit_temple.jpg" alt="Gaussian Splatting サンプル 1のプレビュー">
                     <strong>Gaussian Splatting サンプル 1</strong>
                     <span>3D Gaussian Splattingの表示サンプルです。</span>
                 </a>
@@ -196,6 +219,23 @@
                 </a>
             </div>
         </section>
+
+        <section aria-labelledby="scaniverse-heading">
+            <h2 id="scaniverse-heading">Scaniverse</h2>
+            <div class="grid">
+                <a class="item" href="https://scaniverse.com/@yasud" target="_blank" rel="noopener noreferrer">
+                    <img class="item-thumbnail" src="./img/scaniverse1.jpg" alt="Scaniverse スキャン 2024年までのプレビュー">
+                    <strong>Scaniverse スキャン 2024年まで</strong>
+                    <span>2024年までにScaniverseでスキャンしたページを開きます。</span>
+                </a>
+                <a class="item" href="https://scaniverse.com/@ykoba791" target="_blank" rel="noopener noreferrer">
+                    <img class="item-thumbnail" src="./img/scaniverse2.jpg" alt="Scaniverse スキャン 2025年からのプレビュー">
+                    <strong>Scaniverse スキャン 2025年から</strong>
+                    <span>2025年からScaniverseでスキャンしたページを開きます。3DGS</span>
+                </a>
+            </div>
+        </section>
+
 
         <p class="note">GitHub Pagesの公開URLは通常、https://ykoba079.github.io/test_prj/ になります。</p>
     </main>
