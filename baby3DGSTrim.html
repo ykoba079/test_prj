@@ -145,8 +145,7 @@
 
       button.onPointerUpObservable.add(() => {
         makeSplatsInCubeTransparent(splattingMesh, box);
-        splattingMesh.updateData(splattingMesh.splatsData);
-        splattingMesh.scaling.y = 1;
+        splattingMesh.updateData(splattingMesh.splatsData, undefined, { flipY: false });
         splattingMesh.computeWorldMatrix(true);
       });
 
@@ -174,7 +173,7 @@
           point.z <= bbox.maximumWorld.z
         ) {
           const baseIndex = (i * 8 + 6) * 4;
-          const modifiedByte = 1;
+          const modifiedByte = 0;
           view.setUint8(baseIndex + 3, modifiedByte);
         }
       }
