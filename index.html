@@ -13,7 +13,10 @@
             --muted: #66706a;
             --line: #d9ddd5;
             --accent: #2f6f63;
+            --accent-strong: #1f4c44;
             --accent-soft: #e3f1ed;
+            --event-bg: #f1ece2;
+            --event-line: #d6c8ad;
         }
 
         * {
@@ -68,6 +71,84 @@
             margin: 0 0 14px;
             font-size: 20px;
             letter-spacing: 0;
+        }
+
+        .event {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 20px;
+            align-items: center;
+            padding: 22px;
+            background: var(--event-bg);
+            border: 1px solid var(--event-line);
+            border-radius: 8px;
+        }
+
+        .event p {
+            margin: 8px 0 0;
+            color: var(--muted);
+        }
+
+        .event-title {
+            margin: 0;
+            color: var(--accent-strong);
+            font-size: clamp(24px, 3.5vw, 36px);
+            line-height: 1.25;
+        }
+
+        .event-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .event-actions {
+            margin-top: 16px;
+        }
+
+        .event-link {
+            display: inline-flex;
+            align-items: center;
+            min-height: 40px;
+            padding: 7px 14px;
+            color: #ffffff;
+            background: var(--accent-strong);
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .event-link:hover,
+        .event-link:focus-visible {
+            background: var(--accent);
+            outline: none;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            min-height: 32px;
+            padding: 4px 10px;
+            color: var(--accent-strong);
+            background: rgba(255, 255, 255, 0.66);
+            border: 1px solid var(--event-line);
+            border-radius: 999px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .event-mark {
+            display: grid;
+            place-items: center;
+            width: clamp(84px, 12vw, 124px);
+            aspect-ratio: 1;
+            color: #ffffff;
+            background: var(--accent);
+            border-radius: 8px;
+            font-weight: 700;
+            line-height: 1.3;
+            text-align: center;
         }
 
         .grid {
@@ -125,40 +206,65 @@
             color: var(--muted);
             font-size: 14px;
         }
+
+        @media (max-width: 640px) {
+            .event {
+                grid-template-columns: 1fr;
+            }
+
+            .event-mark {
+                width: 96px;
+            }
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="header-inner">
-            <h1>犯人のヤス </h1>
-            <p class="lead">GitHub Pagesでデモなどをまとめています。</p>
+            <h1>犯人はヤスのGithub</h1>
+            <p class="lead">GitHub Pagesでデモや資料などをまとめています。</p>
         </div>
     </header>
 
     <main>
+
         <section aria-labelledby="docs-heading">
-            <h2 id="docs-heading">資料</h2>
+            <h2 id="docs-heading">記事・資料</h2>
             <div class="grid">
                 <a class="item" href="https://docs.google.com/presentation/d/1BpP00ovQkSD-RmIayzFA6C62kiCdUk3_roL-LvjFYtw/edit?slide=id.g3998715a547_0_2#slide=id.g3998715a547_0_2" target="_blank" rel="noopener noreferrer">
-                    <img class="item-thumbnail" src="./img/3dgs_kashika.jpg" alt="Googleスライド 資料 1のプレビュー">
-                    <strong>3DGSやWebでの表示について</strong>
-                    <span>XRmeetupAichi、NIFS可視化研究会でお話した資料</span>
+                    <img class="item-thumbnail" src="./img/3dgs_kashika.jpg" alt="Googleスライド資料 1 のプレビュー">
+                    <strong>3DGSをWebで表示する方法</strong>
+                    <span>XR Meetup Aichi / 土岐の可視化研究会で話した資料</span>
                 </a>
                 <a class="item" href="https://docs.google.com/presentation/d/1VzdlPJsEamJs3TYCK9w8cVrf2QWNskiJ2eTmLsEosbo/edit?slide=id.g25401222e99_0_491#slide=id.g25401222e99_0_491" target="_blank" rel="noopener noreferrer">
-                    <img class="item-thumbnail" src="./img/gisyoten14.jpg" alt="Googleスライド 資料 2のプレビュー">
+                    <img class="item-thumbnail" src="./img/gisyoten14.jpg" alt="Googleスライド資料 2 のプレビュー">
                     <strong>Babylon.jsで会場見取り図を3D表示</strong>
                     <span>Babylon.js勉強会で参加したときの裏側あれこれ</span>
+                </a>
+                <a class="item" href="https://qiita.com/Ykoba791" target="_blank" rel="noopener noreferrer">
+                    <strong>Qiita 投稿</strong>
+                    <span>Babylon.js、WebXR、3D表示などの技術メモ・記事</span>
+                </a>
+                <a class="item" href="https://techbookfest.org/organization/dqewxtYMsQVP3EiYjeQyCH" target="_blank" rel="noopener noreferrer">
+                    <strong>Babylon.js 勉強会 技術同人誌</strong>
+                    <span>Babylon.js勉強会として共同制作している技術同人誌</span>
                 </a>
             </div>
         </section>
 
         <section aria-labelledby="babylon-heading">
-            <h2 id="babylon-heading">Babylon.js デモ</h2>
+            <h2 id="babylon-heading">デモ 主にBabylon.js</h2>
             <div class="grid">
                 <a class="item" href="./WarehouseSample_drone_v1/babyWarehouseDroneSample.html">
                     <img class="item-thumbnail" src="./img/wharehouse_drone.jpg" alt="倉庫ドローン在庫サンプルのプレビュー">
                     <strong>倉庫サンプル</strong>
-                    <span>倉庫内を可視化したりドローンで確認するサンプル</span>
+                    <span>倉庫内を可視化し、ドローンで確認するサンプル</span>
+                </a>
+
+                <a class="item" href="./nagonocanvas.html">
+                    <img class="item-thumbnail" src="./img/nagono_view.jpg" alt="会場3Dモデルのプレビュー">
+                    <strong>なごのCanvas 会場</strong>
+                    <span>製造業でも生成AI活用したい！名古屋LLM MeetUp 会場の現状復帰用見取り図です</span>
                 </a>
                 <a class="item" href="./babyOfficeSample.html">
                     <img class="item-thumbnail" src="./img/office_view.jpg" alt="オフィスサンプルのプレビュー">
@@ -175,7 +281,6 @@
                     <strong>自然ドキュメンタリー</strong>
                     <span>コードだけで作る山・森・海の表現サンプル</span>
                 </a>
-
                 <a class="item" href="./webXRmoon_VR.html">
                     <img class="item-thumbnail" src="./img/babylon_moon1.jpg" alt="WebXR Moon / Moveのプレビュー">
                     <strong>日食可視化</strong>
@@ -193,7 +298,6 @@
                     <strong>画像物体検出</strong>
                     <span>画像を使った物体検出サンプルです。</span>
                 </a>
-
                 <a class="item" href="./space-shooter/">
                     <strong>Gradius Style Mini Shooter</strong>
                     <span>横スクロールシューティングのミニゲームです。</span>
@@ -205,19 +309,19 @@
             <h2 id="gaussian-heading">Gaussian Splatting</h2>
             <div class="grid">
                 <a class="item" href="./baby3DGSTrim.html">
-                    <img class="item-thumbnail" src="./img/gaussian_edit_temple.jpg" alt="Gaussian Splatting サンプル 1のプレビュー">
+                    <img class="item-thumbnail" src="./img/gaussian_edit_temple.jpg" alt="Gaussian Splatting サンプル 1 のプレビュー">
                     <strong>Gaussian Splatting トリミングサンプル 1</strong>
-                    <span>3DGSで通行人データで手動トリミングするサンプルです。</span>
+                    <span>3DGSの通行人データを手動でトリミングするサンプルです。</span>
                 </a>
                 <a class="item" href="./baby3DGSTrim2.html">
-                    <img class="item-thumbnail" src="./img/gaussian_editsample2.jpg" alt="Gaussian Splatting サンプル 2のプレビュー">
+                    <img class="item-thumbnail" src="./img/gaussian_editsample2.jpg" alt="Gaussian Splatting サンプル 2 のプレビュー">
                     <strong>Gaussian Splatting トリミングサンプル 2</strong>
-                    <span>3DGSで、フロートノイズがあるデータを手動トリミングするサンプルです。</span>
+                    <span>3DGSでフロートノイズがあるデータを手動でトリミングするサンプルです。</span>
                 </a>
                 <a class="item" href="./baby3DGSTrim4.html">
-                    <img class="item-thumbnail" src="./img/gaussian_editsample3.jpg" alt="Gaussian Splatting サンプル 2のプレビュー">
+                    <img class="item-thumbnail" src="./img/gaussian_editsample3.jpg" alt="Gaussian Splatting 編集サンプルのプレビュー">
                     <strong>Gaussian Splatting 編集サンプル</strong>
-                    <span>3DGSで、スプラットサイズを変更するサンプルです</span>
+                    <span>3DGSでスプラットサイズを変更するサンプルです。</span>
                 </a>
             </div>
         </section>
@@ -233,11 +337,10 @@
                 <a class="item" href="https://scaniverse.com/@ykoba791" target="_blank" rel="noopener noreferrer">
                     <img class="item-thumbnail" src="./img/scaniverse2.jpg" alt="Scaniverse スキャン 2025年からのプレビュー">
                     <strong>Scaniverse スキャン 2025年から</strong>
-                    <span>2025年からScaniverseでスキャンしたページを開きます。3DGS</span>
+                    <span>2025年からScaniverseでスキャンしたページを開きます。</span>
                 </a>
             </div>
         </section>
-
 
         <p class="note">GitHub Pagesの公開URLは通常、https://ykoba079.github.io/test_prj/ になります。</p>
     </main>

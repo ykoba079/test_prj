@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>那古野Canvas 会場3Dモデル</title>
+    <style>
+        html,
+        body {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            color: #f8f8f4;
+            background: #33344d;
+            font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        #renderCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            touch-action: none;
+        }
+
+        .toolbar {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 10;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 40px;
+            min-height: 40px;
+            min-width: 86px;
+            padding: 0 14px;
+            border: 0;
+            border-radius: 6px;
+            color: #222;
+            background: rgba(255, 255, 255, 0.92);
+            font: inherit;
+            font-size: 14px;
+            line-height: 1;
+            text-decoration: none;
+            white-space: nowrap;
+            cursor: pointer;
+            appearance: none;
+        }
+
+        .button:hover,
+        .button:focus-visible {
+            background: #ffffff;
+            outline: none;
+        }
+
+        .caption {
+            position: fixed;
+            left: 12px;
+            bottom: 12px;
+            z-index: 10;
+            max-width: min(520px, calc(100vw - 24px));
+            padding: 10px 12px;
+            border-radius: 6px;
+            color: #222;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 640px) {
+            .toolbar {
+                left: 8px;
+                top: 8px;
+            }
+
+            .caption {
+                right: 8px;
+                left: 8px;
+                bottom: 8px;
+            }
+        }
+    </style>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.js"></script>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <div class="toolbar" aria-label="表示操作">
+        <a class="button" href="./index.html">戻る</a>
+        <button id="resetViewButton" class="button" type="button">初期位置</button>
+    </div>
+    <div class="caption">机と椅子を片付けるときは、この3Dモデルを見ながら元の位置に戻してください。</div>
+
+    <script>
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true);
+
+        const createScene = function () {
+            const scene = new BABYLON.Scene(engine);
+            const initialCamera = {
+                alpha: -Math.PI / 2,
+                beta: Math.PI / 2.5,
+                radius: 3,
+                target: new BABYLON.Vector3(-2, 4.2, 11.0)
+            };
+            const camera = new BABYLON.ArcRotateCamera(
+                "camera",
+                initialCamera.alpha,
+                initialCamera.beta,
+                initialCamera.radius,
+                new BABYLON.Vector3(0, 6, 14.5),
+                scene
+            );
+            camera.setTarget(initialCamera.target.clone());
+            const initialView = {
+                alpha: camera.alpha,
+                beta: camera.beta,
+                radius: camera.radius,
+                target: camera.target.clone()
+            };
+
+            const isTouchDevice = window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+            const controlSettings = isTouchDevice
+                ? {
+                    wheelDeltaPercentage: 0.015,
+                    inertia: 0.45,
+                    angularSensibility: 1500,
+                    pinchPrecision: 300,
+                    panningSensibility: 12000
+                }
+                : {
+                    wheelDeltaPercentage: 0.03,
+                    inertia: 0.7,
+                    angularSensibility: 1800,
+                    pinchPrecision: 120,
+                    panningSensibility: 1000
+                };
+
+            camera.wheelDeltaPercentage = controlSettings.wheelDeltaPercentage;
+            camera.attachControl(canvas, true);
+            camera.minZ = 0.001;
+            camera.inertia = controlSettings.inertia;
+            camera.lowerBetaLimit = BABYLON.Tools.ToRadians(20);
+            camera.upperBetaLimit = BABYLON.Tools.ToRadians(85);
+            camera.lowerRadiusLimit = 1.2;
+            camera.upperRadiusLimit = 8;
+
+            const pointerInput = camera.inputs.attached.pointers;
+            if (pointerInput) {
+                pointerInput.angularSensibilityX = controlSettings.angularSensibility;
+                pointerInput.angularSensibilityY = controlSettings.angularSensibility;
+                pointerInput.pinchPrecision = controlSettings.pinchPrecision;
+                pointerInput.panningSensibility = controlSettings.panningSensibility;
+            }
+
+            document.getElementById("resetViewButton").addEventListener("click", function () {
+                camera.inertialAlphaOffset = 0;
+                camera.inertialBetaOffset = 0;
+                camera.inertialRadiusOffset = 0;
+                camera.inertialPanningX = 0;
+                camera.inertialPanningY = 0;
+                camera.alpha = initialView.alpha;
+                camera.beta = initialView.beta;
+                camera.radius = initialView.radius;
+                camera.setTarget(initialView.target.clone());
+            });
+
+            scene.ambientColor = new BABYLON.Color3(1, 1, 1);
+
+            const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+            light.intensity = 0.9;
+
+            BABYLON.SceneLoader.ImportMeshAsync("", "./models/", "nagonocanvas2a.glb").then((result) => {
+                const root = result.meshes[0];
+                root.scaling.x = 0.1;
+                root.scaling.y = 0.1;
+                root.scaling.z = -0.1;
+                root.position.x = -1.9;
+                root.position.y = 4.2;
+                root.position.z = 11.0;
+                root.rotate(BABYLON.Axis.Y, -0.05, BABYLON.Space.WORLD);
+
+                for (let i = 0; i < result.meshes.length; i += 1) {
+                    result.meshes[i].isPickable = false;
+                }
+            });
+
+            return scene;
+        };
+
+        const scene = createScene();
+        engine.runRenderLoop(function () {
+            scene.render();
+        });
+
+        window.addEventListener("resize", function () {
+            engine.resize();
+        });
+    </script>
+</body>
+</html>
