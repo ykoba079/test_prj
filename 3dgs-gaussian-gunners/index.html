@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gaussian Gunners</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #10151a;
+      color: #f4f0e8;
+      font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif;
+    }
+
+    #renderCanvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 12px 12px auto 12px;
+      z-index: 5;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: start;
+      pointer-events: none;
+    }
+
+    #status,
+    #controls {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 8px;
+      background: rgba(19, 25, 29, 0.82);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+      backdrop-filter: blur(10px);
+    }
+
+    #status {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 9px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: rgba(255, 255, 255, 0.1);
+      white-space: nowrap;
+    }
+
+    .p1 {
+      color: #9de0ff;
+    }
+
+    .p2 {
+      color: #ffd98d;
+    }
+
+    #controls {
+      width: min(320px, calc(100vw - 24px));
+      padding: 10px;
+      pointer-events: auto;
+    }
+
+    .controlRow {
+      display: grid;
+      grid-template-columns: 56px 1fr 46px;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #6fbce5;
+    }
+
+    .radioGroup {
+      display: flex;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .radioGroup label {
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 6px;
+      background: #202a30;
+      color: #f4f0e8;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 4px;
+      white-space: nowrap;
+    }
+
+    .radioGroup input {
+      margin: 0;
+      accent-color: #6fbce5;
+    }
+
+    .buttonRow {
+      display: grid;
+      grid-template-columns: 1fr 1fr 44px;
+      gap: 8px;
+    }
+
+    .fileRow {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    input[type="file"] {
+      min-width: 0;
+      color: #f4f0e8;
+      font-size: 12px;
+    }
+
+    button {
+      min-height: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 7px;
+      background: #d77b39;
+      color: #17110d;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #29343b;
+      color: #f4f0e8;
+    }
+
+    button.compact {
+      min-height: 32px;
+      padding: 0 9px;
+      background: #43515a;
+      color: #f4f0e8;
+      font-size: 12px;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    #message {
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      z-index: 5;
+      max-width: min(620px, calc(100vw - 24px));
+      transform: translateX(-50%);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: rgba(19, 25, 29, 0.78);
+      color: #f5efe4;
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    @media (max-width: 720px) {
+      #hud {
+        grid-template-columns: 1fr;
+      }
+
+      #controls {
+        width: auto;
+      }
+
+      #status {
+        font-size: 12px;
+      }
+
+      #message {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>
+  <div id="hud">
+    <div id="status">
+      <span id="turnLabel" class="pill">Player 1</span>
+      <span id="hp1" class="pill p1">P1 100</span>
+      <span id="hp2" class="pill p2">P2 100</span>
+      <span id="windLabel" class="pill">Wind 0.00</span>
+      <span id="modeLabel" class="pill">Tabletop</span>
+    </div>
+    <div id="controls">
+      <div class="fileRow">
+        <input id="splatFile" type="file" accept=".spz,.splat,.ply">
+        <button id="sampleButton" class="compact" type="button">Sample</button>
+      </div>
+      <label class="controlRow">
+        <span>サイズ</span>
+        <input id="splatScale" type="range" min="50" max="180" value="100">
+        <span id="splatScaleValue">100</span>
+      </label>
+      <label class="controlRow">
+        <span>BOX</span>
+        <span class="radioGroup" id="boxView">
+          <label><input type="radio" name="boxView" value="normal">通常</label>
+          <label><input type="radio" name="boxView" value="faint" checked>薄く</label>
+          <label><input type="radio" name="boxView" value="hidden">非表示</label>
+        </span>
+        <span id="boxViewValue">薄く</span>
+      </label>
+      <label class="controlRow">
+        <span>角度</span>
+        <input id="angle" type="range" min="10" max="80" value="45">
+        <span id="angleValue">45</span>
+      </label>
+      <label class="controlRow">
+        <span>強さ</span>
+        <input id="power" type="range" min="10" max="34" value="22">
+        <span id="powerValue">22</span>
+      </label>
+      <div class="buttonRow">
+        <button id="startButton" type="button">Start</button>
+        <button id="fireButton">発射</button>
+        <button id="viewButton" class="secondary" title="視点切替">↕</button>
+      </div>
+    </div>
+  </div>
+  <div id="message">3DGSのサイズを調整してStartを押すと、スプラット分布から判定BOXを生成します。</div>
+
+  <script>
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true, {
+      preserveDrawingBuffer: true,
+      stencil: true,
+      antialias: true
+    });
+
+    const ui = {
+      splatFile: document.getElementById("splatFile"),
+      sampleButton: document.getElementById("sampleButton"),
+      splatScale: document.getElementById("splatScale"),
+      splatScaleValue: document.getElementById("splatScaleValue"),
+      boxView: document.getElementById("boxView"),
+      boxViewInputs: Array.from(document.querySelectorAll('input[name="boxView"]')),
+      boxViewValue: document.getElementById("boxViewValue"),
+      angle: document.getElementById("angle"),
+      power: document.getElementById("power"),
+      angleValue: document.getElementById("angleValue"),
+      powerValue: document.getElementById("powerValue"),
+      startButton: document.getElementById("startButton"),
+      fireButton: document.getElementById("fireButton"),
+      viewButton: document.getElementById("viewButton"),
+      turnLabel: document.getElementById("turnLabel"),
+      hp1: document.getElementById("hp1"),
+      hp2: document.getElementById("hp2"),
+      windLabel: document.getElementById("windLabel"),
+      modeLabel: document.getElementById("modeLabel")
+    };
+
+    // 砲撃ゲーム用の判定BOX群です。
+    // 3DGSそのものでは衝突判定しづらいので、スプラット分布からBOXを作ります。
+    const boxField = {
+      minX: -9,
+      maxX: 9,
+      minY: -6,
+      maxY: 6,
+      minZ: -4,
+      maxZ: 4,
+      boxes: [],
+      root: null,
+      material: null,
+      started: false,
+      destroyCount: 20,
+      blastRadius: 2.24
+    };
+
+    // 読み込んだ3DGSの情報です。
+    // splatsDataは後で透明化処理を行うため、keepInRam付きで読み込みます。
+    const splat = {
+      mesh: null,
+      transform: null,
+      bounds: null,
+      densityCenter: null,
+      baseScale: 1,
+      scale: 1,
+      offset: new BABYLON.Vector3(),
+      sourceName: "sample"
+    };
+
+    // プレイヤー、弾、風など、ゲーム進行に関する状態です。
+    const state = {
+      currentPlayer: 0,
+      inFlight: false,
+      gameOver: false,
+      wind: 0,
+      tabletop: true,
+      tanks: [],
+      hp: [100, 100],
+      projectile: null,
+      projectileOwner: null,
+      projectileAge: 0,
+      projectileVelocity: new BABYLON.Vector3()
+    };
+
+    const scene = new BABYLON.Scene(engine);
+    scene.clearColor = new BABYLON.Color4(0.055, 0.075, 0.09, 1);
+
+    const camera = new BABYLON.ArcRotateCamera(
+      "camera",
+      -Math.PI / 2,
+      1.1,
+      34,
+      new BABYLON.Vector3(0, -1.4, 0),
+      scene
+    );
+    camera.lowerRadiusLimit = 18;
+    camera.upperRadiusLimit = 52;
+    camera.wheelDeltaPercentage = 0.03;
+    camera.panningSensibility = 80;
+    camera.attachControl(canvas, true);
+
+    const light = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0.2, 1, -0.5), scene);
+    light.intensity = 0.9;
+    const sun = new BABYLON.DirectionalLight("sun", new BABYLON.Vector3(-0.35, -0.8, 0.45), scene);
+    sun.position.set(12, 18, -10);
+    sun.intensity = 0.85;
+
+    function setMessage(text) {
+      document.getElementById("message").textContent = text;
+    }
+
+    // splatsData内の1スプラットをBabylon.js側で扱いやすいVector3にします。
+    // 1スプラットはfloat 8個分として並んでおり、先頭3つがXYZ座標です。
+    function splatPointAt(floatData, index) {
+      return new BABYLON.Vector3(
+        floatData[index * 8],
+        floatData[index * 8 + 1],
+        floatData[index * 8 + 2]
+      );
+    }
+
+    // 3DGSのローカル座標を、このゲーム内の座標に変換します。
+    // 表示用メッシュと判定BOX生成で同じ変換を使うのが大事です。
+    function toGamePoint(localPoint) {
+      return localPoint.scale(splat.scale).add(splat.offset);
+    }
+
+    // 判定BOXをすべて消します。
+    function clearBoxes() {
+      boxField.boxes.forEach((box) => box.mesh.dispose());
+      boxField.boxes = [];
+      boxField.started = false;
+    }
+
+    // 判定BOX用の半透明マテリアルを用意します。
+    function getBoxMaterial() {
+      if (!boxField.material) {
+        boxField.material = new BABYLON.StandardMaterial("boxFieldMat", scene);
+        boxField.material.diffuseColor = new BABYLON.Color3(0.36, 0.74, 0.52);
+        boxField.material.emissiveColor = new BABYLON.Color3(0.02, 0.08, 0.04);
+        boxField.material.alpha = 0.12;
+      }
+      return boxField.material;
+    }
+
+    // 判定BOXの表示方法を切り替えます。
+    // 判定自体はBOXを非表示にしても残ります。
+    function updateBoxVisibility() {
+      const checked = ui.boxViewInputs.find((input) => input.checked);
+      const mode = checked ? checked.value : "faint";
+      const labels = {
+        normal: "通常",
+        faint: "薄く",
+        hidden: "非表示"
+      };
+      ui.boxViewValue.textContent = labels[mode];
+
+      const material = getBoxMaterial();
+      material.alpha = mode === "normal" ? 0.34 : 0.08;
+
+      boxField.boxes.forEach((box) => {
+        const visible = mode !== "hidden";
+        box.mesh.isVisible = visible;
+        box.mesh.visibility = mode === "normal" ? 1 : 0.28;
+        box.mesh.edgesWidth = mode === "normal" ? 1 : 0.55;
+      });
+    }
+
+    // 砲台を置くため、指定したX座標に近く、中央レーンに近いBOXを探します。
+    function findTankBox(x) {
+      if (!boxField.boxes.length) {
+        return null;
+      }
+      const sameSide = boxField.boxes.filter((box) => x < 0 ? box.center.x <= 0 : box.center.x >= 0);
+      const candidates = sameSide.length ? sameSide : boxField.boxes;
+      return candidates
+        .map((box) => {
+          const xDistance = Math.abs(box.center.x - x);
+          const zDistance = Math.abs(box.center.z);
+          const heightBonus = Math.max(0, box.max.y + 6) * 0.08;
+          return { box, score: xDistance + zDistance * 0.75 - heightBonus };
+        })
+        .sort((a, b) => a.score - b.score)[0].box;
+    }
+
+    function pointInsideBox(point, box) {
+      return (
+        point.x >= box.min.x &&
+        point.x <= box.max.x &&
+        point.y >= box.min.y &&
+        point.y <= box.max.y &&
+        point.z >= box.min.z &&
+        point.z <= box.max.z
+      );
+    }
+
+    function distanceToBox(point, box) {
+      const dx = Math.max(box.min.x - point.x, 0, point.x - box.max.x);
+      const dy = Math.max(box.min.y - point.y, 0, point.y - box.max.y);
+      const dz = Math.max(box.min.z - point.z, 0, point.z - box.max.z);
+      return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    function makeCollisionBox(center, size, density) {
+      const mesh = BABYLON.MeshBuilder.CreateBox("splatCollisionBox", {
+        width: size.x,
+        height: size.y,
+        depth: size.z
+      }, scene);
+      mesh.position.copyFrom(center);
+      mesh.material = getBoxMaterial();
+      mesh.enableEdgesRendering();
+      mesh.edgesWidth = 1;
+      mesh.edgesColor = new BABYLON.Color4(0.86, 1, 0.76, 0.55);
+      const half = size.scale(0.5);
+      const box = {
+        mesh,
+        center: center.clone(),
+        size: size.clone(),
+        density,
+        min: center.subtract(half),
+        max: center.add(half)
+      };
+      mesh.metadata = box;
+      boxField.boxes.push(box);
+    }
+
+    // 3DGSのスプラット分布から判定BOX群を作ります。
+    // 密度が高いセルは半分サイズのBOXへ分割し、細かく壊れるようにします。
+    function buildBoxesFromSplats(mesh) {
+      clearBoxes();
+      if (!mesh?.splatsData) {
+        setMessage("3DGSデータがないため、判定BOXを生成できません。");
+        return;
+      }
+
+      const floatData = new Float32Array(mesh.splatsData);
+      const coarseSize = 1.25;
+      const cells = new Map();
+      const step = Math.max(1, Math.floor(floatData.length / 8 / 180000));
+
+      for (let i = 0; i < floatData.length / 8; i += step) {
+        const p = toGamePoint(splatPointAt(floatData, i));
+        if (
+          p.x < boxField.minX || p.x > boxField.maxX ||
+          p.y < boxField.minY || p.y > boxField.maxY ||
+          p.z < boxField.minZ || p.z > boxField.maxZ
+        ) {
+          continue;
+        }
+        const gx = Math.floor(p.x / coarseSize);
+        const gy = Math.floor(p.y / coarseSize);
+        const gz = Math.floor(p.z / coarseSize);
+        const key = `${gx},${gy},${gz}`;
+        let cell = cells.get(key);
+        if (!cell) {
+          cell = { points: [], count: 0, gx, gy, gz };
+          cells.set(key, cell);
+        }
+        cell.points.push(p);
+        cell.count++;
+      }
+
+      const counts = Array.from(cells.values()).map((cell) => cell.count);
+      const highDensity = percentile(counts, 0.72) ?? 12;
+      const minCount = Math.max(3, percentile(counts, 0.18) ?? 3);
+
+      for (const cell of cells.values()) {
+        if (cell.count < minCount) {
+          continue;
+        }
+
+        if (cell.count >= highDensity) {
+          const subSize = coarseSize * 0.5;
+          const subCells = new Map();
+          cell.points.forEach((p) => {
+            const sx = Math.floor(p.x / subSize);
+            const sy = Math.floor(p.y / subSize);
+            const sz = Math.floor(p.z / subSize);
+            const key = `${sx},${sy},${sz}`;
+            let subCell = subCells.get(key);
+            if (!subCell) {
+              subCell = { count: 0, sx, sy, sz };
+              subCells.set(key, subCell);
+            }
+            subCell.count++;
+          });
+          for (const subCell of subCells.values()) {
+            if (subCell.count < 2) {
+              continue;
+            }
+            const center = new BABYLON.Vector3(
+              (subCell.sx + 0.5) * subSize,
+              (subCell.sy + 0.5) * subSize,
+              (subCell.sz + 0.5) * subSize
+            );
+            makeCollisionBox(center, new BABYLON.Vector3(subSize, subSize, subSize), subCell.count);
+          }
+        } else {
+          const center = new BABYLON.Vector3(
+            (cell.gx + 0.5) * coarseSize,
+            (cell.gy + 0.5) * coarseSize,
+            (cell.gz + 0.5) * coarseSize
+          );
+          makeCollisionBox(center, new BABYLON.Vector3(coarseSize, coarseSize, coarseSize), cell.count);
+        }
+      }
+
+      boxField.started = true;
+      updateBoxVisibility();
+      state.tanks.forEach(placeTank);
+      setMessage(`${boxField.boxes.length.toLocaleString()}個の判定BOXを生成しました。高密度部分は小さめのBOXにしています。`);
+    }
+
+    // 3DGS全体のおおまかな範囲を調べます。
+    // 全スプラットを厳密に見ると重いので、数が多い場合は間引いています。
+    function computeSplatBounds(mesh) {
+      const floatData = new Float32Array(mesh.splatsData);
+      const min = new BABYLON.Vector3(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
+      const max = new BABYLON.Vector3(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY);
+      const step = Math.max(1, Math.floor(floatData.length / 8 / 160000));
+      for (let i = 0; i < floatData.length / 8; i += step) {
+        const p = splatPointAt(floatData, i);
+        min.minimizeInPlace(p);
+        max.maximizeInPlace(p);
+      }
+      return { min, max };
+    }
+
+    // スプラットが一番密集している場所を探します。
+    // 外接範囲の中心だと背景球や遠景に引っ張られるため、主役に近い場所を中心にします。
+    function computeDensityCenter(mesh, bounds) {
+      const floatData = new Float32Array(mesh.splatsData);
+      const size = bounds.max.subtract(bounds.min);
+      const grid = new Map();
+      const gridCount = 14;
+      const step = Math.max(1, Math.floor(floatData.length / 8 / 180000));
+
+      for (let i = 0; i < floatData.length / 8; i += step) {
+        const p = splatPointAt(floatData, i);
+        const gx = BABYLON.Scalar.Clamp(Math.floor(((p.x - bounds.min.x) / Math.max(size.x, 0.001)) * gridCount), 0, gridCount - 1);
+        const gy = BABYLON.Scalar.Clamp(Math.floor(((p.y - bounds.min.y) / Math.max(size.y, 0.001)) * gridCount), 0, gridCount - 1);
+        const gz = BABYLON.Scalar.Clamp(Math.floor(((p.z - bounds.min.z) / Math.max(size.z, 0.001)) * gridCount), 0, gridCount - 1);
+        const key = `${gx},${gy},${gz}`;
+        let cell = grid.get(key);
+        if (!cell) {
+          cell = { count: 0, sum: new BABYLON.Vector3() };
+          grid.set(key, cell);
+        }
+        cell.count++;
+        cell.sum.addInPlace(p);
+      }
+
+      let best = null;
+      for (const cell of grid.values()) {
+        if (!best || cell.count > best.count) {
+          best = cell;
+        }
+      }
+
+      if (!best) {
+        return bounds.min.add(size.scale(0.5));
+      }
+      return best.sum.scale(1 / best.count);
+    }
+
+    function currentSplatScaleMultiplier() {
+      return Number(ui.splatScale.value) / 100;
+    }
+
+    // 読み込んだ3DGSをゲーム盤の中心に置くためのスケールと位置を決めます。
+    // 密度中心を原点付近に置き、サイズはUIで調整できるようにしています。
+    function configureSplatTransform(mesh) {
+      splat.bounds = computeSplatBounds(mesh);
+      const size = splat.bounds.max.subtract(splat.bounds.min);
+      const center = computeDensityCenter(mesh, splat.bounds);
+      splat.densityCenter = center;
+      const width = Math.max(size.x, 0.001);
+      splat.baseScale = BABYLON.Scalar.Clamp(72 / width, 1.2, 8);
+      splat.scale = splat.baseScale * currentSplatScaleMultiplier();
+      const centerLocalY = center.y;
+      splat.offset.set(
+        -center.x * splat.scale,
+        -1.4 - centerLocalY * splat.scale,
+        -center.z * splat.scale
+      );
+      mesh.scaling.set(splat.scale, splat.scale, splat.scale);
+      mesh.position.copyFrom(splat.offset);
+      mesh.rotation.set(0, 0, 0);
+      mesh.isPickable = false;
+      mesh.computeWorldMatrix(true);
+    }
+
+    // 値の集合から指定パーセント位置の値を取り出します。
+    // スプラットの密度やしきい値を決めるときに、外れ値を避けるために使います。
+    function percentile(values, ratio) {
+      if (!values.length) {
+        return null;
+      }
+      values.sort((a, b) => a - b);
+      return values[Math.floor((values.length - 1) * ratio)];
+    }
+
+    // Startボタンでゲーム開始します。
+    // サイズ調整後の3DGSから判定BOXを作るため、ここで初めてBOX群を生成します。
+    function startGame() {
+      if (!splat.mesh || state.inFlight) {
+        return;
+      }
+      configureSplatTransform(splat.mesh);
+      buildBoxesFromSplats(splat.mesh);
+      resetMatch();
+    }
+
+    // 砲台を作ります。見た目は通常のBabylon.jsメッシュです。
+    function makeTank(name, color, x) {
+      const root = new BABYLON.TransformNode(name, scene);
+      const body = BABYLON.MeshBuilder.CreateBox(`${name}Body`, { width: 1.35, height: 0.55, depth: 1.2 }, scene);
+      const turret = BABYLON.MeshBuilder.CreateCylinder(`${name}Turret`, { diameter: 0.62, height: 0.5, tessellation: 18 }, scene);
+      const barrel = BABYLON.MeshBuilder.CreateCylinder(`${name}Barrel`, { diameter: 0.16, height: 1.45, tessellation: 12 }, scene);
+      const mat = new BABYLON.StandardMaterial(`${name}Mat`, scene);
+      mat.diffuseColor = color;
+      mat.emissiveColor = color.scale(0.18);
+      body.material = mat;
+      turret.material = mat;
+      barrel.material = mat;
+      body.parent = root;
+      turret.parent = root;
+      barrel.parent = root;
+      turret.position.y = 0.38;
+      turret.rotation.x = Math.PI / 2;
+      barrel.position.y = 0.62;
+      barrel.rotation.z = Math.PI / 2;
+      root.metadata = { body, turret, barrel, x };
+      return root;
+    }
+
+    // 砲台を判定BOX群の上に乗せます。
+    function placeTank(tank) {
+      const box = findTankBox(tank.metadata.x);
+      if (box) {
+        tank.position.x = box.center.x;
+        tank.position.y = box.max.y + 0.42;
+        tank.position.z = box.center.z;
+        tank.metadata.supportBox = box;
+        return;
+      }
+      tank.position.x = tank.metadata.x;
+      tank.position.y = -3.5;
+      tank.position.z = 0;
+      tank.metadata.supportBox = null;
+    }
+
+    // 現在プレイヤーの砲身角度をUIの角度に合わせます。
+    function updateBarrel() {
+      const tank = state.tanks[state.currentPlayer];
+      const angle = Number(ui.angle.value) * Math.PI / 180;
+      const direction = state.currentPlayer === 0 ? 1 : -1;
+      tank.metadata.barrel.rotation.z = direction > 0 ? angle - Math.PI / 2 : Math.PI / 2 - angle;
+      tank.metadata.barrel.position.x = Math.cos(angle) * direction * 0.34;
+      tank.metadata.barrel.position.y = 0.62 + Math.sin(angle) * 0.34;
+    }
+
+    // HUDの数値表示を更新します。
+    function updateHud() {
+      ui.splatScaleValue.textContent = ui.splatScale.value;
+      updateBoxVisibility();
+      ui.angleValue.textContent = ui.angle.value;
+      ui.powerValue.textContent = ui.power.value;
+      ui.turnLabel.textContent = `Player ${state.currentPlayer + 1}`;
+      ui.turnLabel.className = `pill ${state.currentPlayer === 0 ? "p1" : "p2"}`;
+      ui.hp1.textContent = `P1 ${Math.max(0, Math.round(state.hp[0]))}`;
+      ui.hp2.textContent = `P2 ${Math.max(0, Math.round(state.hp[1]))}`;
+      ui.windLabel.textContent = `Wind ${state.wind.toFixed(2)}`;
+      ui.modeLabel.textContent = state.tabletop ? "Tabletop" : "Side";
+      updateBarrel();
+    }
+
+    // 1ターンごとに少しだけ横風を変えます。
+    function newWind() {
+      state.wind = BABYLON.Scalar.RandomRange(-0.025, 0.025);
+    }
+
+    // 着弾地点に近いBOXを削除します。
+    // 最大数に達する前でも、爆風半径の外に出たら削除を止めます。
+    function removeNearestBoxes(position, count, blastRadius) {
+      const removeTargets = boxField.boxes
+        .map((box) => ({ box, distance: distanceToBox(position, box) }))
+        .sort((a, b) => a.distance - b.distance)
+        .filter((item) => item.distance <= blastRadius)
+        .slice(0, count)
+        .map((item) => item.box);
+      const targetSet = new Set(removeTargets);
+      removeTargets.forEach((box) => box.mesh.dispose());
+      boxField.boxes = boxField.boxes.filter((box) => !targetSet.has(box));
+      state.tanks.forEach(placeTank);
+      return removeTargets;
+    }
+
+    function farthestRemovedBoxRadius(position, boxes) {
+      if (!boxes.length) {
+        return 0;
+      }
+      return boxes.reduce((maxRadius, box) => {
+        const centerDistance = BABYLON.Vector3.Distance(position, box.center);
+        const boxRadius = box.size.length() * 0.5;
+        return Math.max(maxRadius, centerDistance + boxRadius);
+      }, 0);
+    }
+
+    // 命中地点から指定半径内にある3DGSのスプラットを透明にします。
+    // Vol.6のトリミング処理と同じ考え方で、透明度のバイトを0にしています。
+    function eraseSplatsInRadius(gamePosition, radius) {
+      if (!splat.mesh?.splatsData) {
+        return 0;
+      }
+      const floatData = new Float32Array(splat.mesh.splatsData);
+      const view = new DataView(splat.mesh.splatsData);
+      const radiusSq = radius * radius;
+      let erased = 0;
+      for (let i = 0; i < floatData.length / 8; i++) {
+        const p = toGamePoint(splatPointAt(floatData, i));
+        const dx = p.x - gamePosition.x;
+        const dy = p.y - gamePosition.y;
+        const dz = p.z - gamePosition.z;
+        if (dx * dx + dy * dy + dz * dz <= radiusSq) {
+          const opacityByteIndex = (i * 8 + 6) * 4 + 3;
+          view.setUint8(opacityByteIndex, 0);
+          erased++;
+        }
+      }
+      splat.mesh.updateData(splat.mesh.splatsData, undefined, { flipY: false });
+      splat.mesh.computeWorldMatrix(true);
+      return erased;
+    }
+
+    // 簡易的な爆発エフェクトです。blastRadiusの半径も半透明球で可視化します。
+    function makeExplosion(position, blastRadius) {
+      const sphere = BABYLON.MeshBuilder.CreateSphere("explosion", { diameter: 0.3, segments: 16 }, scene);
+      const mat = new BABYLON.StandardMaterial("explosionMat", scene);
+      mat.diffuseColor = new BABYLON.Color3(1, 0.48, 0.14);
+      mat.emissiveColor = new BABYLON.Color3(1, 0.25, 0.04);
+      mat.alpha = 0.72;
+      sphere.material = mat;
+      sphere.position.copyFrom(position);
+
+      const blast = BABYLON.MeshBuilder.CreateSphere("blastRadius", { diameter: blastRadius * 2, segments: 32 }, scene);
+      const blastMat = new BABYLON.StandardMaterial("blastRadiusMat", scene);
+      blastMat.diffuseColor = new BABYLON.Color3(1, 0.75, 0.28);
+      blastMat.emissiveColor = new BABYLON.Color3(0.55, 0.22, 0.04);
+      blastMat.alpha = 0.16;
+      blastMat.wireframe = true;
+      blast.material = blastMat;
+      blast.position.copyFrom(position);
+
+      let life = 0;
+      scene.onBeforeRenderObservable.add(function grow() {
+        life += engine.getDeltaTime() / 1000;
+        sphere.scaling.setAll(1 + life * 9);
+        mat.alpha = Math.max(0, 0.72 - life * 1.8);
+        blastMat.alpha = Math.max(0, 0.16 - life * 0.22);
+        if (life > 0.72) {
+          scene.onBeforeRenderObservable.removeCallback(grow);
+          sphere.dispose();
+          mat.dispose();
+          blast.dispose();
+          blastMat.dispose();
+        }
+      });
+    }
+
+    // 着弾地点に近い砲台へダメージを与えます。
+    function applyDamage(position) {
+      const damages = [];
+      state.tanks.forEach((tank, index) => {
+        const d = BABYLON.Vector3.Distance(position, tank.position);
+        if (d < 4.2) {
+          const damage = Math.max(0, 42 - d * 9) * 2;
+          state.hp[index] -= damage;
+          damages.push({ tank, index, damage });
+          showDamageNumber(tank, damage);
+        }
+      });
+      return damages;
+    }
+
+    // ダメージ量を砲台の上に表示し、上に移動しながらフェードアウトさせます。
+    function showDamageNumber(tank, damage) {
+      const dynamicTexture = new BABYLON.DynamicTexture("damageText", { width: 256, height: 128 }, scene, true);
+      dynamicTexture.hasAlpha = true;
+      const textureContext = dynamicTexture.getContext();
+      textureContext.clearRect(0, 0, 256, 128);
+      dynamicTexture.drawText(
+        `-${Math.round(damage)}`,
+        null,
+        82,
+        "bold 56px Segoe UI",
+        "#ff6538",
+        "transparent",
+        true
+      );
+
+      const plane = BABYLON.MeshBuilder.CreatePlane("damageNumber", { width: 1.8, height: 0.9 }, scene);
+      const mat = new BABYLON.StandardMaterial("damageNumberMat", scene);
+      mat.diffuseTexture = dynamicTexture;
+      mat.emissiveTexture = dynamicTexture;
+      mat.opacityTexture = dynamicTexture;
+      mat.disableLighting = true;
+      mat.useAlphaFromDiffuseTexture = true;
+      plane.material = mat;
+      plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+      plane.position.copyFrom(tank.position.add(new BABYLON.Vector3(0, 1.65, 0)));
+
+      let life = 0;
+      scene.onBeforeRenderObservable.add(function floatDamage() {
+        life += engine.getDeltaTime() / 1000;
+        plane.position.y += engine.getDeltaTime() / 1000 * 0.85;
+        mat.alpha = Math.max(0, 1 - life / 2.1);
+        if (life > 2.1) {
+          scene.onBeforeRenderObservable.removeCallback(floatDamage);
+          plane.dispose();
+          mat.dispose();
+          dynamicTexture.dispose();
+        }
+      });
+    }
+
+    function makeSmoke(position) {
+      const smokeMat = new BABYLON.StandardMaterial("smokeMat", scene);
+      smokeMat.diffuseColor = new BABYLON.Color3(0.22, 0.22, 0.22);
+      smokeMat.emissiveColor = new BABYLON.Color3(0.06, 0.06, 0.06);
+      smokeMat.alpha = 0.42;
+
+      for (let i = 0; i < 10; i++) {
+        const puff = BABYLON.MeshBuilder.CreateSphere("smokePuff", { diameter: BABYLON.Scalar.RandomRange(0.35, 0.8), segments: 12 }, scene);
+        puff.material = smokeMat;
+        puff.position.copyFrom(position.add(new BABYLON.Vector3(
+          BABYLON.Scalar.RandomRange(-0.45, 0.45),
+          BABYLON.Scalar.RandomRange(0.45, 1.2),
+          BABYLON.Scalar.RandomRange(-0.45, 0.45)
+        )));
+        const velocity = new BABYLON.Vector3(
+          BABYLON.Scalar.RandomRange(-0.18, 0.18),
+          BABYLON.Scalar.RandomRange(0.22, 0.55),
+          BABYLON.Scalar.RandomRange(-0.18, 0.18)
+        );
+        let life = 0;
+        scene.onBeforeRenderObservable.add(function smokeRise() {
+          const dt = engine.getDeltaTime() / 1000;
+          life += dt;
+          puff.position.addInPlace(velocity.scale(dt));
+          puff.scaling.addInPlaceFromFloats(dt * 0.35, dt * 0.35, dt * 0.35);
+          if (life > 4) {
+            scene.onBeforeRenderObservable.removeCallback(smokeRise);
+            puff.dispose();
+          }
+        });
+      }
+      setTimeout(() => smokeMat.dispose(), 4500);
+    }
+
+    function endGame(message, tank) {
+      if (state.gameOver) {
+        return;
+      }
+      state.gameOver = true;
+      state.inFlight = false;
+      ui.fireButton.disabled = true;
+      setMessage(`GAMESET: ${message}`);
+      if (tank) {
+        makeSmoke(tank.position.clone());
+      }
+    }
+
+    function dropTankAndEnd(tank) {
+      if (state.gameOver) {
+        return;
+      }
+      state.gameOver = true;
+      state.inFlight = false;
+      ui.fireButton.disabled = true;
+      let velocity = 0;
+      let life = 0;
+      scene.onBeforeRenderObservable.add(function fallTank() {
+        const dt = engine.getDeltaTime() / 1000;
+        life += dt;
+        velocity += 7.5 * dt;
+        tank.position.y -= velocity * dt;
+        if (life > 1.25 || tank.position.y < boxField.minY - 5) {
+          scene.onBeforeRenderObservable.removeCallback(fallTank);
+          setMessage(`GAMESET: ${tank.name} の足元が崩れました`);
+          makeSmoke(tank.position.clone());
+        }
+      });
+    }
+
+    function hasFooting(tank) {
+      const halfX = 0.72;
+      const halfZ = 0.62;
+      const bottomY = tank.position.y - 0.3;
+      return boxField.boxes.some((box) => {
+        const overlapX = tank.position.x + halfX > box.min.x && tank.position.x - halfX < box.max.x;
+        const overlapZ = tank.position.z + halfZ > box.min.z && tank.position.z - halfZ < box.max.z;
+        const justBelow = box.max.y <= bottomY + 0.18 && bottomY - box.max.y < 0.75;
+        return overlapX && overlapZ && justBelow;
+      });
+    }
+
+    function checkTankFooting() {
+      if (state.gameOver || !boxField.started) {
+        return;
+      }
+      const fallingTank = state.tanks.find((tank) => !hasFooting(tank));
+      if (fallingTank) {
+        dropTankAndEnd(fallingTank);
+      }
+    }
+
+    // 砲弾が着弾したときのまとめ処理です。
+    // 判定BOXを削り、3DGSのスプラットも透明化し、ターンを交代します。
+    function finishShot(position) {
+      state.inFlight = false;
+      ui.fireButton.disabled = false;
+      if (state.projectile) {
+        state.projectile.dispose();
+        state.projectile = null;
+      }
+      state.projectileOwner = null;
+      state.projectileAge = 0;
+      const removedBoxes = removeNearestBoxes(position, boxField.destroyCount, boxField.blastRadius);
+      const eraseRadius = farthestRemovedBoxRadius(position, removedBoxes);
+      makeExplosion(position, Math.max(boxField.blastRadius, eraseRadius));
+      const erased = eraseRadius > 0 ? eraseSplatsInRadius(position, eraseRadius) : 0;
+      const damages = applyDamage(position);
+      const destroyed = damages.find((item) => state.hp[item.index] <= 0);
+      if (destroyed) {
+        updateHud();
+        endGame(`Player ${destroyed.index + 1} が破壊されました`, destroyed.tank);
+        setMessage(`GAMESET: Player ${destroyed.index + 1} が破壊されました`);
+        return;
+      }
+      checkTankFooting();
+      if (state.gameOver) {
+        return;
+      }
+      state.currentPlayer = state.currentPlayer === 0 ? 1 : 0;
+      newWind();
+      updateHud();
+      setMessage(`${removedBoxes.length}個のBOXを削除し、半径${eraseRadius.toFixed(2)}内の${erased.toLocaleString()}個のスプラットを透明化しました。`);
+    }
+
+    // 現在プレイヤーの砲台から砲弾を発射します。
+    function fire() {
+      if (state.gameOver) {
+        setMessage("GAMESETです。Startで再開できます。");
+        return;
+      }
+      if (state.inFlight || !boxField.started) {
+        setMessage("サイズを調整してStartを押すと、判定BOXを生成して発射できます。");
+        return;
+      }
+      const tank = state.tanks[state.currentPlayer];
+      const angle = Number(ui.angle.value) * Math.PI / 180;
+      const power = Number(ui.power.value) * 0.42;
+      const direction = state.currentPlayer === 0 ? 1 : -1;
+      const start = tank.position.add(new BABYLON.Vector3(direction * (0.85 + Math.cos(angle) * 0.9), 0.92 + Math.sin(angle) * 0.9, 0));
+      state.projectile = BABYLON.MeshBuilder.CreateSphere("projectile", { diameter: 0.28, segments: 16 }, scene);
+      const mat = new BABYLON.StandardMaterial("projectileMat", scene);
+      mat.diffuseColor = new BABYLON.Color3(1, 0.88, 0.45);
+      mat.emissiveColor = new BABYLON.Color3(0.7, 0.38, 0.08);
+      state.projectile.material = mat;
+      state.projectile.position.copyFrom(start);
+      state.projectileVelocity.set(Math.cos(angle) * power * direction, Math.sin(angle) * power, 0);
+      state.projectileOwner = state.currentPlayer;
+      state.projectileAge = 0;
+      state.inFlight = true;
+      ui.fireButton.disabled = true;
+    }
+
+    function projectileHitTank(projectilePosition) {
+      if (state.projectileAge < 0.12) {
+        return null;
+      }
+      return state.tanks.find((tank, index) => {
+        if (index === state.projectileOwner) {
+          return false;
+        }
+        const hitCenter = tank.position.add(new BABYLON.Vector3(0, 0.45, 0));
+        return BABYLON.Vector3.Distance(projectilePosition, hitCenter) < 0.85;
+      }) ?? null;
+    }
+
+    // 毎フレーム、砲弾の位置を更新します。
+    // 物理エンジンは使わず、速度・風・重力を足して放物線を作っています。
+    function updateProjectile(deltaSeconds) {
+      if (!state.projectile) {
+        return;
+      }
+      state.projectileAge += deltaSeconds;
+      state.projectileVelocity.x += state.wind;
+      state.projectileVelocity.y -= 10.8 * deltaSeconds;
+      state.projectile.position.addInPlace(state.projectileVelocity.scale(deltaSeconds));
+      const p = state.projectile.position;
+      const hitBox = boxField.boxes.find((box) => pointInsideBox(p, box));
+      const hitTank = projectileHitTank(p);
+      const outOfBounds =
+        p.x < boxField.minX - 2 ||
+        p.x > boxField.maxX + 2 ||
+        p.y < boxField.minY - 4 ||
+        p.y > boxField.maxY + 8 ||
+        Math.abs(p.z) > boxField.maxZ + 4;
+      if (hitBox || hitTank || outOfBounds) {
+        finishShot(p.clone());
+      }
+    }
+
+    // 卓上っぽい俯瞰視点と、砲撃ゲームっぽい横視点を切り替えます。
+    function updateCameraMode() {
+      if (state.tabletop) {
+        camera.alpha = -Math.PI / 2;
+        camera.beta = 0.9;
+        camera.radius = 22;
+        camera.target.set(0, -1.8, 0);
+      } else {
+        camera.alpha = -Math.PI / 2;
+        camera.beta = Math.PI / 2.08;
+        camera.radius = 22;
+        camera.target.set(0, -1.8, 0);
+      }
+      updateHud();
+    }
+
+    // 新しい3DGSを読み込んだときに、ゲーム状態を初期化します。
+    function resetMatch() {
+      state.currentPlayer = 0;
+      state.inFlight = false;
+      state.gameOver = false;
+      state.hp = [100, 100];
+      if (state.projectile) {
+        state.projectile.dispose();
+        state.projectile = null;
+      }
+      newWind();
+      state.tanks.forEach(placeTank);
+      updateHud();
+      ui.fireButton.disabled = !boxField.started;
+    }
+
+    // サイズスライダーを動かしたときに、3DGSの表示だけ作り直します。
+    // BOX生成はStartボタンで行います。
+    function rebuildFromCurrentScale() {
+      if (!splat.mesh || state.inFlight) {
+        updateHud();
+        return;
+      }
+      configureSplatTransform(splat.mesh);
+      clearBoxes();
+      resetMatch();
+      setMessage(`サイズ${ui.splatScale.value}%に変更しました。Startで判定BOXを生成します。`);
+    }
+
+    // 既に表示している3DGSを破棄します。
+    function disposeCurrentSplat() {
+      if (splat.mesh) {
+        splat.mesh.dispose(false, true);
+        splat.mesh = null;
+      }
+      if (splat.transform) {
+        splat.transform.dispose();
+        splat.transform = null;
+      }
+    }
+
+    // 3DGSを読み込み、表示位置を決めます。
+    // 判定BOXはサイズ調整後にStartボタンで生成します。
+    async function loadSplatSource(source, sourceName) {
+      setMessage(`${sourceName} を読み込み中です。`);
+      ui.fireButton.disabled = true;
+      disposeCurrentSplat();
+      try {
+        const result = await BABYLON.ImportMeshAsync(source, scene, {
+          pluginOptions: {
+            splat: {
+              keepInRam: true
+            }
+          }
+        });
+        splat.mesh = result.meshes[0];
+        splat.sourceName = sourceName;
+        configureSplatTransform(splat.mesh);
+        clearBoxes();
+        resetMatch();
+        setMessage(`${sourceName} を読み込みました。サイズを調整してStartを押してください。`);
+      } catch (error) {
+        console.error(error);
+        clearBoxes();
+        resetMatch();
+        setMessage(`${sourceName} を読み込めませんでした。`);
+      }
+    }
+
+    // GitHub上のサンプル3DGSを読み込みます。
+    async function loadSampleSplat() {
+      await loadSplatSource(
+        "https://raw.githubusercontent.com/ykoba079/test_prj/main/models/asahi2_f.spz",
+        "asahi2_f.spz"
+      );
+    }
+
+    // ユーザーが選んだローカルの3DGSファイルを読み込みます。
+    async function loadUserSplat(file) {
+      if (!file) {
+        return;
+      }
+      await loadSplatSource(file, file.name);
+    }
+
+    // 初期状態では砲台を作り、そのあとサンプル3DGSを読み込みます。
+    state.tanks = [
+      makeTank("player1", new BABYLON.Color3(0.2, 0.62, 0.92), -5.8),
+      makeTank("player2", new BABYLON.Color3(0.95, 0.62, 0.24), 5.8)
+    ];
+    state.tanks.forEach(placeTank);
+    newWind();
+    updateCameraMode();
+    loadSampleSplat();
+
+    ui.splatFile.addEventListener("change", () => {
+      loadUserSplat(ui.splatFile.files[0]);
+    });
+    ui.sampleButton.addEventListener("click", loadSampleSplat);
+    ui.splatScale.addEventListener("input", () => {
+      ui.splatScaleValue.textContent = ui.splatScale.value;
+    });
+    ui.splatScale.addEventListener("change", rebuildFromCurrentScale);
+    ui.boxViewInputs.forEach((input) => input.addEventListener("change", updateBoxVisibility));
+    ui.startButton.addEventListener("click", startGame);
+    ui.angle.addEventListener("input", updateHud);
+    ui.power.addEventListener("input", updateHud);
+    ui.fireButton.addEventListener("click", fire);
+    ui.viewButton.addEventListener("click", () => {
+      state.tabletop = !state.tabletop;
+      updateCameraMode();
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === " ") {
+        event.preventDefault();
+        fire();
+      }
+      if (event.key === "ArrowLeft") {
+        ui.angle.value = String(Math.max(Number(ui.angle.min), Number(ui.angle.value) - 1));
+        updateHud();
+      }
+      if (event.key === "ArrowRight") {
+        ui.angle.value = String(Math.min(Number(ui.angle.max), Number(ui.angle.value) + 1));
+        updateHud();
+      }
+      if (event.key === "ArrowDown") {
+        ui.power.value = String(Math.max(Number(ui.power.min), Number(ui.power.value) - 1));
+        updateHud();
+      }
+      if (event.key === "ArrowUp") {
+        ui.power.value = String(Math.min(Number(ui.power.max), Number(ui.power.value) + 1));
+        updateHud();
+      }
+    });
+
+    scene.onBeforeRenderObservable.add(() => {
+      const deltaSeconds = Math.min(engine.getDeltaTime() / 1000, 0.04);
+      updateProjectile(deltaSeconds);
+      if (state.hp[0] <= 0 || state.hp[1] <= 0) {
+        ui.fireButton.disabled = true;
+      }
+    });
+
+    engine.runRenderLoop(() => {
+      scene.render();
+    });
+
+    window.addEventListener("resize", () => {
+      engine.resize();
+    });
+  </script>
+</body>
+</html>
