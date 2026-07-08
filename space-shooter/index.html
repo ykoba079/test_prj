@@ -146,6 +146,7 @@
         }
     </style>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
 </head>
 <body>
     <canvas id="renderCanvas"></canvas>
@@ -159,7 +160,7 @@
     <div id="powerBar" class="powerBar" aria-label="power up bar">
         <div class="powerSlot" data-power-index="0">SPEED</div>
         <div class="powerSlot" data-power-index="1">MISSILE</div>
-        <div class="powerSlot" data-power-index="2">LASER</div>
+        <div class="powerSlot" data-power-index="2">LEMON</div>
         <div class="powerSlot" data-power-index="3">OPTION</div>
         <div class="powerSlot" data-power-index="4">SHIELD</div>
     </div>
@@ -184,7 +185,16 @@
         const messageEl = document.getElementById("message");
         const finalScoreEl = document.getElementById("finalScore");
 
-        const powerItems = ["SPEED", "MISSILE", "LASER", "OPTION", "SHIELD"];
+        const powerItems = ["SPEED", "MISSILE", "LEMON", "OPTION", "SHIELD"];
+        const playerModelFiles = ["シューティング自機.glb", "シューティング自機白.glb"];
+        const playerModelYaw = Math.PI / 2;
+        const playerModelRoll = 0.46;
+        const playerModelLeftX = -0.72;
+        const modelAssetFiles = {
+            missileLemon: "reference_lemon_with_leaf.glb",
+            laserLemon: "cut_lemon_1_8.glb",
+            enemyKaraage: "からあげ先生.glb"
+        };
 
         const world = {
             minX: -8.6,
@@ -203,6 +213,7 @@
             formationTimer: 1.6,
             terrainTimer: 2,
             kills: 0,
+            enemiesSinceCapsule: 0,
             powerCursor: -1,
             speedLevel: 0,
             missileLevel: 0,
@@ -213,6 +224,7 @@
 
         const keys = new Set();
         const bullets = [];
+        const enemyBullets = [];
         const enemies = [];
         const capsules = [];
         const options = [];
@@ -246,182 +258,139 @@
             return material;
         }
 
+        function createEngineFlame(scene, materials, name, x, y, size) {
+            const flame = BABYLON.MeshBuilder.CreateCylinder(name, {
+                diameterTop: 0,
+                diameterBottom: 0.14 * size,
+                height: 0.58 * size,
+                tessellation: 8
+            }, scene);
+            flame.rotation.z = Math.PI / 2;
+            flame.position.set(x, y, 0.02);
+            flame.material = materials.engine;
+            return flame;
+        }
+
+        function fitImportedModelToPlayer(root, meshes) {
+            const modelMeshes = meshes.filter((mesh) => mesh.getTotalVertices && mesh.getTotalVertices() > 0);
+            if (modelMeshes.length === 0) {
+                return;
+            }
+
+            root.computeWorldMatrix(true);
+            modelMeshes.forEach((mesh) => mesh.computeWorldMatrix(true));
+            const bounds = BABYLON.Mesh.MinMax(modelMeshes);
+            const size = bounds.max.subtract(bounds.min);
+            const maxDimension = Math.max(size.x, size.y, size.z);
+            const scale = maxDimension > 0 ? 1.65 / maxDimension : 1;
+            const center = bounds.min.add(size.scale(0.5));
+
+            root.position.set(0, 0, 0);
+            modelMeshes.forEach((mesh) => {
+                mesh.position.subtractInPlace(center);
+            });
+
+            root.rotation.y = playerModelYaw;
+            root.rotation.z = 0;
+            root.scaling.setAll(scale);
+            root.computeWorldMatrix(true);
+            modelMeshes.forEach((mesh) => mesh.computeWorldMatrix(true));
+
+            const fittedBounds = BABYLON.Mesh.MinMax(modelMeshes);
+            const fittedCenterY = (fittedBounds.min.y + fittedBounds.max.y) * 0.5;
+            root.position.x = playerModelLeftX - fittedBounds.min.x;
+            root.position.y = -fittedCenterY;
+        }
+
+        function fitImportedModel(root, meshes, targetSize, rotation, scaleMultiplier = BABYLON.Vector3.One()) {
+            const modelMeshes = meshes.filter((mesh) => mesh.getTotalVertices && mesh.getTotalVertices() > 0);
+            if (modelMeshes.length === 0) {
+                return;
+            }
+
+            root.computeWorldMatrix(true);
+            modelMeshes.forEach((mesh) => mesh.computeWorldMatrix(true));
+            const bounds = BABYLON.Mesh.MinMax(modelMeshes);
+            const size = bounds.max.subtract(bounds.min);
+            const maxDimension = Math.max(size.x, size.y, size.z);
+            const center = bounds.min.add(size.scale(0.5));
+
+            modelMeshes.forEach((mesh) => {
+                mesh.position.subtractInPlace(center);
+            });
+            root.rotation.set(rotation.x, rotation.y, rotation.z);
+            const scale = maxDimension > 0 ? targetSize / maxDimension : 1;
+            root.scaling.set(scale * scaleMultiplier.x, scale * scaleMultiplier.y, scale * scaleMultiplier.z);
+        }
+
+        function loadModelTemplate(scene, templates, key, fileName, targetSize, rotation = BABYLON.Vector3.Zero(), scaleMultiplier = BABYLON.Vector3.One()) {
+            BABYLON.SceneLoader.ImportMeshAsync("", "./", fileName, scene).then((result) => {
+                const templateRoot = new BABYLON.TransformNode(`${key}Template`, scene);
+                const modelRoot = new BABYLON.TransformNode(`${key}Model`, scene);
+                modelRoot.parent = templateRoot;
+                result.meshes.forEach((mesh) => {
+                    mesh.parent = modelRoot;
+                    mesh.setEnabled(false);
+                });
+                fitImportedModel(modelRoot, result.meshes, targetSize, rotation);
+                templateRoot.scaling.set(scaleMultiplier.x, scaleMultiplier.y, scaleMultiplier.z);
+                templateRoot.setEnabled(false);
+                templates[key] = templateRoot;
+            }).catch((error) => {
+                console.warn(`Could not load ${fileName}`, error);
+            });
+        }
+
+        function cloneModelTemplate(key, name) {
+            const template = game.modelTemplates[key];
+            if (!template) {
+                return null;
+            }
+
+            const clone = template.clone(name, null, false);
+            clone.setEnabled(true);
+            clone.getChildMeshes(false).forEach((mesh) => {
+                mesh.setEnabled(true);
+            });
+            return clone;
+        }
+
+        function loadPlayerModel(scene, root, fileIndex = 0) {
+            const fileName = playerModelFiles[fileIndex];
+            if (!fileName) {
+                console.warn("Could not load any player GLB model.");
+                return;
+            }
+
+            BABYLON.SceneLoader.ImportMeshAsync("", "./", fileName, scene).then((result) => {
+                const importedRoot = new BABYLON.TransformNode("playerModelRoot", scene);
+                result.meshes.forEach((mesh) => {
+                    mesh.parent = importedRoot;
+                });
+                fitImportedModelToPlayer(importedRoot, result.meshes);
+                importedRoot.parent = root;
+                root.metadata.modelRoot = importedRoot;
+            }).catch(() => {
+                loadPlayerModel(scene, root, fileIndex + 1);
+            });
+        }
+
         function createPlayerShip(scene, materials) {
             const root = new BABYLON.TransformNode("playerShip", scene);
-
-            const fuselage = BABYLON.MeshBuilder.CreateBox("playerFuselage", {
-                width: 1.42,
-                height: 0.3,
-                depth: 0.24
-            }, scene);
-            fuselage.position.x = 0.02;
-            fuselage.material = materials.playerHull;
-            fuselage.parent = root;
-
-            const spine = BABYLON.MeshBuilder.CreateBox("playerSpine", {
-                width: 0.84,
-                height: 0.12,
-                depth: 0.18
-            }, scene);
-            spine.position.set(-0.04, 0.19, -0.03);
-            spine.rotation.z = -0.06;
-            spine.material = materials.playerWing;
-            spine.parent = root;
-
-            const nose = BABYLON.MeshBuilder.CreateCylinder("playerNose", {
-                diameterTop: 0,
-                diameterBottom: 0.34,
-                height: 0.72,
-                tessellation: 6
-            }, scene);
-            nose.rotation.z = -Math.PI / 2;
-            nose.position.x = 1.04;
-            nose.scaling.y = 0.72;
-            nose.material = materials.playerHull;
-            nose.parent = root;
-
-            const canopy = BABYLON.MeshBuilder.CreateSphere("playerCanopy", {
-                diameter: 0.3,
-                segments: 16
-            }, scene);
-            canopy.position.set(0.38, 0.18, -0.15);
-            canopy.scaling.set(1.3, 0.62, 0.48);
-            canopy.material = materials.playerCanopy;
-            canopy.parent = root;
-
-            const mainWing = BABYLON.MeshBuilder.CreateBox("playerMainWing", {
-                width: 0.92,
-                height: 0.16,
-                depth: 0.12
-            }, scene);
-            mainWing.position.set(-0.18, -0.25, 0.01);
-            mainWing.rotation.z = -0.42;
-            mainWing.material = materials.playerWing;
-            mainWing.parent = root;
-
-            const smallUpperWing = BABYLON.MeshBuilder.CreateBox("playerUpperWingHint", {
-                width: 0.52,
-                height: 0.09,
-                depth: 0.1
-            }, scene);
-            smallUpperWing.position.set(-0.2, 0.33, 0.03);
-            smallUpperWing.rotation.z = 0.34;
-            smallUpperWing.material = materials.playerWing;
-            smallUpperWing.parent = root;
-
-            const ventralWing = BABYLON.MeshBuilder.CreateBox("playerVentralWing", {
-                width: 0.42,
-                height: 0.1,
-                depth: 0.12
-            }, scene);
-            ventralWing.position.set(0.62, -0.28, 0.01);
-            ventralWing.rotation.z = 0.72;
-            ventralWing.material = materials.playerWing;
-            ventralWing.parent = root;
-
-            const fin = BABYLON.MeshBuilder.CreateBox("playerVerticalFin", {
-                width: 0.36,
-                height: 0.58,
-                depth: 0.11
-            }, scene);
-            fin.position.set(-0.5, 0.42, -0.08);
-            fin.rotation.z = -0.32;
-            fin.material = materials.playerWing;
-            fin.parent = root;
-
-            const tailPlane = BABYLON.MeshBuilder.CreateBox("playerTailPlane", {
-                width: 0.52,
-                height: 0.1,
-                depth: 0.1
-            }, scene);
-            tailPlane.position.set(-0.74, -0.16, 0.02);
-            tailPlane.rotation.z = 0.24;
-            tailPlane.material = materials.playerWing;
-            tailPlane.parent = root;
-
-            const topStripe = BABYLON.MeshBuilder.CreateBox("playerTopStripe", {
-                width: 0.5,
-                height: 0.08,
-                depth: 0.08
-            }, scene);
-            topStripe.position.set(0.26, 0.05, -0.16);
-            topStripe.rotation.z = 0.12;
-            topStripe.material = materials.playerAccent;
-            topStripe.parent = root;
-
-            const bottomStripe = topStripe.clone("playerBottomStripe");
-            bottomStripe.position.set(-0.34, -0.16, -0.16);
-            bottomStripe.rotation.z = -0.12;
-            bottomStripe.parent = root;
-
-            const missilePylon = BABYLON.MeshBuilder.CreateBox("playerMissilePylon", {
-                width: 0.32,
-                height: 0.08,
-                depth: 0.1
-            }, scene);
-            missilePylon.position.set(0.2, -0.36, 0.02);
-            missilePylon.material = materials.playerAccent;
-            missilePylon.parent = root;
-
-            const pod = BABYLON.MeshBuilder.CreateBox("playerLowerPod", {
-                width: 0.58,
-                height: 0.14,
-                depth: 0.14
-            }, scene);
-            pod.position.set(0.1, -0.46, 0.03);
-            pod.material = materials.playerHull;
-            pod.parent = root;
-
-            const gunTop = BABYLON.MeshBuilder.CreateCylinder("playerGunTop", {
-                diameter: 0.06,
-                height: 0.46,
-                tessellation: 12
-            }, scene);
-            gunTop.rotation.z = Math.PI / 2;
-            gunTop.position.set(0.82, 0.12, -0.04);
-            gunTop.material = materials.playerGun;
-            gunTop.parent = root;
-
-            const gunBottom = gunTop.clone("playerGunBottom");
-            gunBottom.position.y = -0.08;
-            gunBottom.parent = root;
-
-            const engine = BABYLON.MeshBuilder.CreateCylinder("playerEngine", {
-                diameter: 0.32,
-                height: 0.26,
-                tessellation: 16
-            }, scene);
-            engine.rotation.z = Math.PI / 2;
-            engine.position.set(-0.86, -0.02, 0);
-            engine.material = materials.playerGun;
-            engine.parent = root;
-
-            const flameMain = BABYLON.MeshBuilder.CreateCylinder("playerFlameMain", {
-                diameterTop: 0,
-                diameterBottom: 0.28,
-                height: 0.58,
-                tessellation: 8
-            }, scene);
-            flameMain.rotation.z = Math.PI / 2;
-            flameMain.position.set(-1.18, -0.02, 0);
-            flameMain.material = materials.engine;
+            const flameMain = createEngineFlame(scene, materials, "playerFlameMain", -1.05, -0.02, 1);
+            const flameAux = createEngineFlame(scene, materials, "playerFlameAux", -1.05, -0.02, 1);
+            flameMain.metadata = { baseY: -0.02, bankOffset: -1 };
+            flameAux.metadata = { baseY: -0.02, bankOffset: 1 };
             flameMain.parent = root;
-
-            const flameAux = BABYLON.MeshBuilder.CreateCylinder("playerFlameAux", {
-                diameterTop: 0,
-                diameterBottom: 0.14,
-                height: 0.36,
-                tessellation: 8
-            }, scene);
-            flameAux.rotation.z = Math.PI / 2;
-            flameAux.position.set(-0.82, -0.32, 0);
-            flameAux.material = materials.engine;
             flameAux.parent = root;
 
             root.position.set(world.minX + 1.3, 0, 0);
             root.metadata = {
                 flames: [flameMain, flameAux]
             };
+
+            loadPlayerModel(scene, root);
+
             return root;
         }
 
@@ -524,10 +493,21 @@
                 option: createGlowMaterial(scene, "optionMat", new BABYLON.Color3(0.42, 1, 0.72), 1.05),
                 spark: createGlowMaterial(scene, "sparkMat", new BABYLON.Color3(0.75, 0.95, 1), 1.3),
                 star: createGlowMaterial(scene, "starMat", new BABYLON.Color3(0.65, 0.9, 1), 0.9),
-                terrain: createGlowMaterial(scene, "terrainMat", new BABYLON.Color3(0.35, 0.45, 0.68), 0.22)
+                terrain: createGlowMaterial(scene, "terrainMat", new BABYLON.Color3(0.35, 0.45, 0.68), 0.22),
+                enemyBullet: createGlowMaterial(scene, "enemyBulletMat", new BABYLON.Color3(1, 0.36, 0.72), 1.15)
             };
 
             const player = createPlayerShip(scene, materials);
+            const modelTemplates = {
+                missileLemon: null,
+                laserLemon: null,
+                enemyKaraage: null,
+                enemyKaraageHeavy: null
+            };
+            loadModelTemplate(scene, modelTemplates, "missileLemon", modelAssetFiles.missileLemon, 0.93, new BABYLON.Vector3(0, Math.PI / 2, 0));
+            loadModelTemplate(scene, modelTemplates, "laserLemon", modelAssetFiles.laserLemon, 1.44, new BABYLON.Vector3(0, Math.PI / 2, BABYLON.Tools.ToRadians(80)), new BABYLON.Vector3(2, 0.5, 1));
+            loadModelTemplate(scene, modelTemplates, "enemyKaraage", modelAssetFiles.enemyKaraage, 0.92, new BABYLON.Vector3(0, Math.PI / 2, 0));
+            loadModelTemplate(scene, modelTemplates, "enemyKaraageHeavy", modelAssetFiles.enemyKaraage, 1.38, new BABYLON.Vector3(0, Math.PI, 0));
 
             const stars = [];
             for (let i = 0; i < 115; i++) {
@@ -551,6 +531,7 @@
                 scene,
                 player,
                 stars,
+                modelTemplates,
                 materials
             };
         }
@@ -562,7 +543,7 @@
             livesEl.textContent = `LIFE ${state.lives}`;
             waveEl.textContent = `WAVE ${state.wave}`;
             powerEl.textContent = state.powerCursor >= 0 ? `READY ${powerItems[state.powerCursor]}` : "READY -";
-            const mainWeapon = state.hasLaser ? "LASER" : "SHOT";
+            const mainWeapon = state.hasLaser ? "LEMON" : "SHOT";
             const missileText = state.missileLevel > 0 ? ` + MSL${state.missileLevel}` : "";
             weaponEl.textContent = `${mainWeapon}${missileText}  SPD ${state.speedLevel}`;
             powerSlots.forEach((slot, index) => {
@@ -584,7 +565,7 @@
                 case 0:
                     return state.speedLevel >= 3;
                 case 1:
-                    return state.missileLevel >= 2;
+                    return state.missileLevel >= 4;
                 case 2:
                     return state.hasLaser;
                 case 3:
@@ -598,6 +579,7 @@
 
         function resetGame() {
             bullets.splice(0).forEach((item) => item.dispose());
+            enemyBullets.splice(0).forEach((item) => item.dispose());
             enemies.splice(0).forEach((item) => item.dispose());
             capsules.splice(0).forEach((item) => item.dispose());
             options.splice(0).forEach((item) => item.dispose());
@@ -614,6 +596,7 @@
             state.formationTimer = 1.6;
             state.terrainTimer = 2;
             state.kills = 0;
+            state.enemiesSinceCapsule = 0;
             state.powerCursor = -1;
             state.speedLevel = 0;
             state.missileLevel = 0;
@@ -631,14 +614,15 @@
                 return;
             }
             const bullet = isLaser
-                ? BABYLON.MeshBuilder.CreateBox("laser", { width: 1.05, height: 0.08, depth: 0.08 }, game.scene)
+                ? cloneModelTemplate("laserLemon", "laser") || BABYLON.MeshBuilder.CreateBox("laser", { width: 1.05, height: 0.08, depth: 0.08 }, game.scene)
                 : BABYLON.MeshBuilder.CreateSphere("bullet", { diameter: 0.16, segments: 12 }, game.scene);
             bullet.position.set(origin.x + 0.65, origin.y, -0.05);
             bullet.metadata = {
                 kind: isLaser ? "laser" : "normal",
                 speed: isLaser ? 15 : 12,
                 radius: isLaser ? 0.32 : 0.16,
-                damage: isLaser ? 2 : 1
+                damage: isLaser ? 2 : 1,
+                spin: isLaser ? 9.5 : 0
             };
             bullet.material = isLaser ? game.materials.laser : game.materials.bullet;
             bullets.push(bullet);
@@ -646,17 +630,19 @@
 
         function fireMissile(origin) {
             const activeMissiles = bullets.filter((bullet) => bullet.metadata.kind === "missile").length;
-            if (activeMissiles >= 2) {
+            const missileLimit = state.missileLevel >= 4 ? 4 : state.missileLevel >= 3 ? 3 : 2;
+            if (activeMissiles >= missileLimit) {
                 return;
             }
-            const missile = BABYLON.MeshBuilder.CreateBox("missile", {
+            const missile = state.missileLevel >= 2 ? cloneModelTemplate("missileLemon", "missile") : null;
+            const missileMesh = missile || BABYLON.MeshBuilder.CreateBox("missile", {
                 width: 0.42,
                 height: 0.14,
                 depth: 0.12
             }, game.scene);
-            missile.position.set(origin.x + 0.38, origin.y - 0.52, -0.04);
-            missile.rotation.z = -0.38;
-            missile.metadata = {
+            missileMesh.position.set(origin.x + 0.38, origin.y - 0.52, -0.04);
+            missileMesh.rotation.z = -0.38;
+            missileMesh.metadata = {
                 kind: "missile",
                 speed: 8.5,
                 vx: 7.6,
@@ -665,8 +651,10 @@
                 damage: 2,
                 explosive: state.missileLevel >= 2
             };
-            missile.material = game.materials.missile;
-            bullets.push(missile);
+            if (!missile) {
+                missileMesh.material = game.materials.missile;
+            }
+            bullets.push(missileMesh);
         }
 
         function fireBullet() {
@@ -681,19 +669,35 @@
 
         function spawnEnemyAt(x, y, delayOffset) {
             const isAsteroid = Math.random() < 0.22;
-            const mesh = createEnemyShip(game.scene, game.materials, isAsteroid);
+            const carriesCapsule = state.enemiesSinceCapsule >= 4 || Math.random() < 0.08;
+            const isHeavyKaraage = !carriesCapsule && state.elapsed >= 30 && Math.random() < 0.2;
+            const karaageEnemy = carriesCapsule
+                ? null
+                : cloneModelTemplate(isHeavyKaraage ? "enemyKaraageHeavy" : "enemyKaraage", isHeavyKaraage ? "karaageHeavy" : isAsteroid ? "karaageAsteroid" : "karaageEnemy");
+            const mesh = carriesCapsule
+                ? createEnemyShip(game.scene, game.materials, false)
+                : karaageEnemy || createEnemyShip(game.scene, game.materials, isAsteroid);
             mesh.position.set(x + delayOffset, y, 0);
-            mesh.rotation.z = Math.random() * Math.PI;
+            mesh.rotation.z = isHeavyKaraage ? 0 : Math.random() * Math.PI;
+            if (isAsteroid && !carriesCapsule && !isHeavyKaraage && mesh.name !== "asteroid") {
+                mesh.scaling.scaleInPlace(1.16);
+            }
             mesh.metadata = {
                 speed: 2.8 + state.wave * 0.38 + Math.random() * 0.65,
-                radius: isAsteroid ? 0.45 : 0.38,
-                hp: isAsteroid ? 2 + Math.floor(state.wave / 3) : 1,
-                points: isAsteroid ? 150 : 100,
-                spin: (Math.random() - 0.5) * 3.8,
+                radius: isHeavyKaraage ? 0.68 : carriesCapsule ? 0.38 : isAsteroid ? 0.45 : 0.38,
+                hp: isHeavyKaraage ? 4 : carriesCapsule ? 1 : isAsteroid ? 2 + Math.floor(state.wave / 3) : 1,
+                points: isHeavyKaraage ? 420 : carriesCapsule ? 120 : isAsteroid ? 150 : 100,
+                spin: isHeavyKaraage ? 0 : (Math.random() - 0.5) * 3.8,
                 waveY: y,
-                wavePhase: Math.random() * Math.PI * 2
+                wavePhase: Math.random() * Math.PI * 2,
+                carriesCapsule,
+                canShoot: !!karaageEnemy,
+                shootTimer: 0.7 + Math.random() * 1.6
             };
-            mesh.material = isAsteroid ? game.materials.asteroid : game.materials.enemy;
+            if (mesh.getTotalVertices) {
+                mesh.material = isAsteroid ? game.materials.asteroid : game.materials.enemy;
+            }
+            state.enemiesSinceCapsule = carriesCapsule ? 0 : state.enemiesSinceCapsule + 1;
             enemies.push(mesh);
         }
 
@@ -779,7 +783,7 @@
                     state.speedLevel = Math.min(3, state.speedLevel + 1);
                     break;
                 case 1:
-                    state.missileLevel = Math.min(2, state.missileLevel + 1);
+                    state.missileLevel = Math.min(4, state.missileLevel + 1);
                     break;
                 case 2:
                     state.hasLaser = true;
@@ -862,7 +866,10 @@
 
             game.player.position.x = BABYLON.Scalar.Clamp(game.player.position.x, world.minX + 0.5, world.maxX - 0.5);
             game.player.position.y = BABYLON.Scalar.Clamp(game.player.position.y, world.minY + 0.45, world.maxY - 0.45);
-            game.player.rotation.y = BABYLON.Scalar.Lerp(game.player.rotation.y, velocity.y * -0.35, 0.18);
+            const modelRoot = game.player.metadata.modelRoot;
+            if (modelRoot) {
+                modelRoot.rotation.z = BABYLON.Scalar.Lerp(modelRoot.rotation.z, velocity.y * playerModelRoll, 0.18);
+            }
             game.player.scaling.x = BABYLON.Scalar.Lerp(game.player.scaling.x, 1, 0.16);
             game.player.scaling.y = BABYLON.Scalar.Lerp(game.player.scaling.y, 1, 0.16);
             game.player.scaling.z = BABYLON.Scalar.Lerp(game.player.scaling.z, 1, 0.16);
@@ -870,6 +877,8 @@
                 const pulse = 0.85 + Math.sin(state.elapsed * 22) * 0.2;
                 game.player.metadata.flames.forEach((flame, index) => {
                     const flamePulse = pulse + index * 0.06;
+                    const targetY = flame.metadata.baseY + velocity.y * flame.metadata.bankOffset * 0.08;
+                    flame.position.y = BABYLON.Scalar.Lerp(flame.position.y, targetY, 0.18);
                     flame.scaling.x = flamePulse;
                     flame.scaling.y = flamePulse;
                 });
@@ -933,6 +942,31 @@
             missile.rotation.z = Math.atan2(missile.metadata.vy, missile.metadata.vx);
         }
 
+        function fireEnemyBullet(enemy) {
+            const bullet = BABYLON.MeshBuilder.CreateSphere("enemyBullet", {
+                diameter: 0.16,
+                segments: 12
+            }, game.scene);
+            bullet.position.set(enemy.position.x - 0.32, enemy.position.y, -0.06);
+            const direction = new BABYLON.Vector2(
+                game.player.position.x - bullet.position.x,
+                game.player.position.y - bullet.position.y
+            );
+            if (direction.lengthSquared() > 0.0001) {
+                direction.normalize();
+            } else {
+                direction.set(-1, 0);
+            }
+            const speed = 4.6 + state.wave * 0.18;
+            bullet.metadata = {
+                vx: direction.x * speed,
+                vy: direction.y * speed,
+                radius: 0.14
+            };
+            bullet.material = game.materials.enemyBullet;
+            enemyBullets.push(bullet);
+        }
+
         function destroyEnemyAt(index, position) {
             const enemy = enemies[index];
             if (!enemy) {
@@ -940,7 +974,7 @@
             }
             state.score += enemy.metadata.points;
             state.kills += 1;
-            if (state.kills % 5 === 0 || Math.random() < 0.08) {
+            if (enemy.metadata.carriesCapsule) {
                 spawnCapsule(position);
             }
             addSparks(position, 22);
@@ -1014,6 +1048,10 @@
                 } else {
                     bullet.position.x += bullet.metadata.speed * delta;
                     bullet.position.y += (bullet.metadata.vy || 0) * delta;
+                    if (bullet.metadata.spin) {
+                        bullet.rotation.z += bullet.metadata.spin * delta;
+                        bullet.rotation.y += bullet.metadata.spin * 0.45 * delta;
+                    }
                 }
                 if (bullet.position.x > world.maxX + 1.6 || bullet.position.y < world.minY - 1 || bullet.position.y > world.maxY + 1) {
                     bullet.dispose();
@@ -1026,6 +1064,15 @@
                 enemy.position.x -= enemy.metadata.speed * delta;
                 enemy.position.y = enemy.metadata.waveY + Math.sin(state.elapsed * 2.2 + enemy.metadata.wavePhase) * 0.28;
                 enemy.rotation.z += enemy.metadata.spin * delta;
+                if (enemy.metadata.canShoot && enemy.position.x < world.maxX - 0.2 && enemy.position.x > game.player.position.x + 1.2) {
+                    enemy.metadata.shootTimer -= delta;
+                    if (enemy.metadata.shootTimer <= 0) {
+                        if (Math.random() < 0.42) {
+                            fireEnemyBullet(enemy);
+                        }
+                        enemy.metadata.shootTimer = 1.05 + Math.random() * 1.7;
+                    }
+                }
 
                 if (distance2D(enemy.position, game.player.position) < enemy.metadata.radius + 0.38) {
                     addSparks(enemy.position, 14);
@@ -1063,6 +1110,31 @@
                         }
                         break;
                     }
+                }
+            }
+
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                const bullet = enemyBullets[i];
+                bullet.position.x += bullet.metadata.vx * delta;
+                bullet.position.y += bullet.metadata.vy * delta;
+                bullet.rotation.z += delta * 7;
+
+                if (distance2D(bullet.position, game.player.position) < bullet.metadata.radius + 0.38) {
+                    addSparks(bullet.position, 10);
+                    bullet.dispose();
+                    enemyBullets.splice(i, 1);
+                    damagePlayer();
+                    continue;
+                }
+
+                if (
+                    bullet.position.x < world.minX - 1
+                    || bullet.position.x > world.maxX + 1
+                    || bullet.position.y < world.minY - 1
+                    || bullet.position.y > world.maxY + 1
+                ) {
+                    bullet.dispose();
+                    enemyBullets.splice(i, 1);
                 }
             }
 
