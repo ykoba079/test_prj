@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karaage Enemy Motion Test</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #050814;
+            color: #e8f5ff;
+            font-family: "Segoe UI", system-ui, sans-serif;
+        }
+
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;
+        }
+
+        .panel {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            width: min(360px, calc(100vw - 28px));
+            max-height: calc(100vh - 28px);
+  。          padding: 14px;
+            overflow: auto;
+            background: rgba(7, 13, 31, 0.84);
+            border: 1px solid rgba(126, 206, 255, 0.28);
+            border-radius: 8px;
+            box-shadow: 0 12px 42px rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(12px);
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+
+        .group {
+            display: grid;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        button,
+        select {
+            min-height: 34px;
+            border: 1px solid rgba(126, 206, 255, 0.34);
+            border-radius: 6px;
+            background: rgba(18, 32, 62, 0.92);
+            color: #e8f5ff;
+            font: inherit;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        button:hover,
+        select:hover {
+            border-color: rgba(141, 236, 255, 0.82);
+            background: rgba(28, 52, 94, 0.94);
+        }
+
+        button.isActive {
+            border-color: #fff06a;
+            color: #fff9b4;
+            background: rgba(89, 79, 28, 0.9);
+        }
+
+        label {
+            display: grid;
+            grid-template-columns: 112px 1fr 46px;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .angleGrid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .angleField {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 4px;
+            font-size: 12px;
+        }
+
+        .angleField input {
+            width: 100%;
+            min-height: 32px;
+            border: 1px solid rgba(126, 206, 255, 0.34);
+            border-radius: 6px;
+            padding: 0 8px;
+            background: rgba(18, 32, 62, 0.92);
+            color: #e8f5ff;
+            font: inherit;
+        }
+
+        input[type="range"] {
+            width: 100%;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .row > button {
+            flex: 1;
+        }
+
+        .readout {
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            font-family: Consolas, "SFMono-Regular", monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .hint {
+            margin-top: 10px;
+            color: rgba(232, 245, 255, 0.72);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+
+    <div class="panel">
+        <h1>からあげ挙動テスト</h1>
+
+        <div id="enemyButtons" class="buttons"></div>
+
+        <div class="group">
+            <select id="motionSelect" aria-label="motion pattern">
+                <option value="sine">上下サイン</option>
+                <option value="zigzag">ジグザグ</option>
+                <option value="dash">高速ダッシュ</option>
+                <option value="hover">定位置ホバー</option>
+                <option value="boss">ボスゆらぎ</option>
+            </select>
+
+            <label>
+                速度
+                <input id="speedRange" type="range" min="0" max="7" step="0.1" value="2.4">
+                <span id="speedValue">2.4</span>
+            </label>
+            <label>
+                揺れ幅
+                <input id="ampRange" type="range" min="0" max="4" step="0.05" value="0.45">
+                <span id="ampValue">0.45</span>
+            </label>
+            <label>
+                揺れ速度
+                <input id="freqRange" type="range" min="0" max="8" step="0.1" value="2.2">
+                <span id="freqValue">2.2</span>
+            </label>
+            <label>
+                回転
+                <input id="spinRange" type="range" min="-5" max="5" step="0.1" value="0">
+                <span id="spinValue">0.0</span>
+            </label>
+            <label>
+                射撃間隔
+                <input id="shotRange" type="range" min="0.15" max="300" step="0.05" value="1">
+                <span id="shotValue">1.00</span>
+            </label>
+            <label>
+                表示サイズ
+                <input id="sizeRange" type="range" min="0.3" max="8" step="0.01" value="0.92">
+                <span id="sizeValue">0.92</span>
+            </label>
+
+            <div class="angleGrid" aria-label="model rotation">
+                <label class="angleField">
+                    X角度
+                    <input id="rotXInput" type="number" min="-360" max="360" step="1" value="0">
+                </label>
+                <label class="angleField">
+                    Y角度
+                    <input id="rotYInput" type="number" min="-360" max="360" step="1" value="270">
+                </label>
+                <label class="angleField">
+                    Z角度
+                    <input id="rotZInput" type="number" min="-360" max="360" step="1" value="0">
+                </label>
+            </div>
+        </div>
+
+        <div class="group row">
+            <button id="toggleFireButton" class="isActive">敵弾 ON</button>
+            <button id="resetButton">位置リセット</button>
+        </div>
+
+        <div id="readout" class="readout"></div>
+        <div class="hint">自機は無敵です。矢印/WASDで移動、Space/Zでノーマル弾、敵選択ボタンで対象を切り替えます。</div>
+    </div>
+
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script>
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true);
+
+        const world = {
+            minX: -8.6,
+            maxX: 8.6,
+            minY: -4.8,
+            maxY: 4.8
+        };
+
+        const enemyFacingY = Math.PI * 1.5;
+        const enemyTypes = [
+            { key: "teacherSmall", label: "先生小", file: "model/からあげ先生.glb", motion: "sine", speed: 2.5, waveAmount: 1.75, waveSpeed: 1.0, shotInterval: 300, size: 0.62, hp: 0.5, points: 50, radius: 0.3, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(180), rotationZ: 0 },
+            { key: "teacherMedium", label: "先生中", file: "model/からあげ先生.glb", motion: "sine", speed: 2.5, waveAmount: 1.75, waveSpeed: 1.0, shotInterval: 17.5, size: 0.9, hp: 1, points: 100, radius: 0.38, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(180), rotationZ: 0 },
+            { key: "teacherLarge", label: "先生大", file: "model/からあげ先生.glb", motion: "sine", speed: 2.5, waveAmount: 1.75, waveSpeed: 1.0, shotInterval: 10, size: 1.25, hp: 2, points: 200, radius: 0.56, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(180), rotationZ: 0 },
+            { key: "worker", label: "ワーカー", file: "model/からあげワーカー.glb", motion: "hover", speed: 1.0, waveAmount: 0.8, waveSpeed: 1.0, shotInterval: 7.5, size: 1.8, hp: 10, shieldHp: 4, points: 500, radius: 0.98, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(250), rotationZ: BABYLON.Tools.ToRadians(10), shield: true },
+            { key: "diskA", label: "円盤A", file: "model/からあげ円盤.glb", motion: "hover", speed: 1.5, waveAmount: 2.8, waveSpeed: 0.5, shotInterval: 6.5, size: 4.5, hp: 15, points: 1000, radius: 1.8, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(240), rotationZ: BABYLON.Tools.ToRadians(10), ringShot: true },
+            { key: "diskB", label: "円盤B", file: "model/からあげ円盤.glb", motion: "zigzag", speed: 1.0, waveAmount: 0.8, waveSpeed: 0.8, shotInterval: 14, size: 4.5, hp: 15, points: 1000, radius: 1.8, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(240), rotationZ: BABYLON.Tools.ToRadians(10), ringShot: true },
+            { key: "fighter", label: "戦闘機", file: "model/からあげ戦闘機.glb", motion: "dash", speed: 2.8, waveAmount: 0.7, waveSpeed: 1.4, shotInterval: 11.5, size: 2.2, hp: 1, points: 150, radius: 0.84, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(240), rotationZ: BABYLON.Tools.ToRadians(10) },
+            { key: "battleship", label: "大戦艦", file: "model/からあげ大戦艦.glb", motion: "boss", speed: 2.5, waveAmount: 1.75, waveSpeed: 1.0, shotInterval: 4, size: 6.5, hp: 150, points: 19800, radius: 3.3, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(240), rotationZ: BABYLON.Tools.ToRadians(10), bossShot: true }
+        ];
+
+        const ui = {
+            enemyButtons: document.getElementById("enemyButtons"),
+            motionSelect: document.getElementById("motionSelect"),
+            speedRange: document.getElementById("speedRange"),
+            ampRange: document.getElementById("ampRange"),
+            freqRange: document.getElementById("freqRange"),
+            spinRange: document.getElementById("spinRange"),
+            shotRange: document.getElementById("shotRange"),
+            sizeRange: document.getElementById("sizeRange"),
+            rotXInput: document.getElementById("rotXInput"),
+            rotYInput: document.getElementById("rotYInput"),
+            rotZInput: document.getElementById("rotZInput"),
+            speedValue: document.getElementById("speedValue"),
+            ampValue: document.getElementById("ampValue"),
+            freqValue: document.getElementById("freqValue"),
+            spinValue: document.getElementById("spinValue"),
+            shotValue: document.getElementById("shotValue"),
+            sizeValue: document.getElementById("sizeValue"),
+            toggleFireButton: document.getElementById("toggleFireButton"),
+            resetButton: document.getElementById("resetButton"),
+            readout: document.getElementById("readout")
+        };
+
+        const keys = new Set();
+        const templates = {};
+        const playerBullets = [];
+        const enemyBullets = [];
+        const state = {
+            selectedKey: "karaage",
+            enemy: null,
+            enemySpec: null,
+            elapsed: 0,
+            fireEnabled: true,
+            shootTimer: 0.8,
+            baseY: 0,
+            enemySpinAngle: 0,
+            playerFireCooldown: 0
+        };
+
+        window.addEventListener("keydown", (event) => {
+            keys.add(event.code);
+            if (event.code === "Space" || event.code === "KeyZ") {
+                event.preventDefault();
+            }
+        });
+
+        window.addEventListener("keyup", (event) => {
+            keys.delete(event.code);
+        });
+
+        function createGlowMaterial(scene, name, color, emissiveStrength) {
+            const material = new BABYLON.StandardMaterial(name, scene);
+            material.diffuseColor = color.scale(0.35);
+            material.emissiveColor = color.scale(emissiveStrength);
+            material.specularColor = color.scale(0.25);
+            return material;
+        }
+
+        function fitImportedModel(root, meshes, targetSize, rotation) {
+            const modelMeshes = meshes.filter((mesh) => mesh.getTotalVertices && mesh.getTotalVertices() > 0);
+            if (modelMeshes.length === 0) {
+                return;
+            }
+
+            root.computeWorldMatrix(true);
+            modelMeshes.forEach((mesh) => mesh.computeWorldMatrix(true));
+            const bounds = BABYLON.Mesh.MinMax(modelMeshes);
+            const size = bounds.max.subtract(bounds.min);
+            const maxDimension = Math.max(size.x, size.y, size.z);
+            const center = bounds.min.add(size.scale(0.5));
+
+            modelMeshes.forEach((mesh) => {
+                mesh.position.subtractInPlace(center);
+            });
+            root.rotation.set(rotation.x, rotation.y, rotation.z);
+            root.scaling.setAll(maxDimension > 0 ? targetSize / maxDimension : 1);
+        }
+
+        function loadModelTemplate(scene, spec) {
+            return BABYLON.SceneLoader.ImportMeshAsync("", "./", spec.file, scene).then((result) => {
+                const templateRoot = new BABYLON.TransformNode(`${spec.key}Template`, scene);
+                const modelRoot = new BABYLON.TransformNode(`${spec.key}Model`, scene);
+                modelRoot.parent = templateRoot;
+                result.meshes.forEach((mesh) => {
+                    mesh.parent = modelRoot;
+                    mesh.setEnabled(false);
+                });
+                fitImportedModel(modelRoot, result.meshes, spec.size, BABYLON.Vector3.Zero());
+                templateRoot.setEnabled(false);
+                templates[spec.key] = templateRoot;
+            }).catch((error) => {
+                console.warn(`Could not load ${spec.file}`, error);
+            });
+        }
+
+        function cloneTemplate(key, name) {
+            const template = templates[key];
+            if (!template) {
+                return null;
+            }
+            const clone = template.clone(name, null, false);
+            clone.setEnabled(true);
+            clone.getChildMeshes(false).forEach((mesh) => {
+                mesh.setEnabled(true);
+            });
+            return clone;
+        }
+
+        function createEngineFlame(scene, material, x, y) {
+            const flame = BABYLON.MeshBuilder.CreateCylinder("playerFlame", {
+                diameterTop: 0,
+                diameterBottom: 0.12,
+                height: 0.55,
+                tessellation: 8
+            }, scene);
+            flame.rotation.z = Math.PI / 2;
+            flame.position.set(x, y, 0.03);
+            flame.material = material;
+            return flame;
+        }
+
+        function createFallbackPlayer(scene, materials) {
+            const root = new BABYLON.TransformNode("player", scene);
+            const body = BABYLON.MeshBuilder.CreateBox("playerBody", {
+                width: 0.84,
+                height: 0.32,
+                depth: 0.18
+            }, scene);
+            body.material = materials.player;
+            body.parent = root;
+
+            const nose = BABYLON.MeshBuilder.CreateCylinder("playerNose", {
+                diameterTop: 0,
+                diameterBottom: 0.32,
+                height: 0.46,
+                tessellation: 4
+            }, scene);
+            nose.rotation.z = -Math.PI / 2;
+            nose.position.x = 0.58;
+            nose.material = materials.playerAccent;
+            nose.parent = root;
+
+            createEngineFlame(scene, materials.engine, -0.62, -0.08).parent = root;
+            createEngineFlame(scene, materials.engine, -0.62, 0.08).parent = root;
+            root.position.set(world.minX + 1.3, 0, 0);
+            root.metadata = { invincible: true };
+            return root;
+        }
+
+        function createPlayer(scene, materials) {
+            const root = createFallbackPlayer(scene, materials);
+            BABYLON.SceneLoader.ImportMeshAsync("", "./", "model/シューティング自機白.glb", scene).then((result) => {
+                root.getChildren().forEach((child) => child.dispose());
+                const importedRoot = new BABYLON.TransformNode("playerModelRoot", scene);
+                result.meshes.forEach((mesh) => {
+                    mesh.parent = importedRoot;
+                });
+                fitImportedModel(importedRoot, result.meshes, 1.65, new BABYLON.Vector3(0, Math.PI / 2, 0));
+                importedRoot.parent = root;
+            }).catch((error) => {
+                console.warn("Could not load player model", error);
+            });
+            return root;
+        }
+
+        function createScene() {
+            const scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color4(0.012, 0.018, 0.05, 1);
+
+            const camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -14), scene);
+            camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+            camera.orthoLeft = -9.6;
+            camera.orthoRight = 9.6;
+            camera.orthoTop = 5.4;
+            camera.orthoBottom = -5.4;
+            camera.setTarget(BABYLON.Vector3.Zero());
+
+            const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 0, -1), scene);
+            light.intensity = 0.9;
+
+            const glow = new BABYLON.GlowLayer("glow", scene);
+            glow.intensity = 0.7;
+
+            const materials = {
+                player: createGlowMaterial(scene, "playerMat", new BABYLON.Color3(0.22, 0.88, 1), 0.9),
+                playerAccent: createGlowMaterial(scene, "playerAccentMat", new BABYLON.Color3(1, 0.48, 0.08), 0.78),
+                engine: createGlowMaterial(scene, "engineMat", new BABYLON.Color3(1, 0.42, 0.12), 1.25),
+                shield: createGlowMaterial(scene, "shieldMat", new BABYLON.Color3(0.34, 0.9, 1), 0.75),
+                playerBullet: createGlowMaterial(scene, "playerBulletMat", new BABYLON.Color3(1, 0.92, 0.28), 1.2),
+                bullet: createGlowMaterial(scene, "enemyBulletMat", new BABYLON.Color3(1, 0.36, 0.72), 1.15),
+                star: createGlowMaterial(scene, "starMat", new BABYLON.Color3(0.65, 0.9, 1), 0.9)
+            };
+
+            const player = createPlayer(scene, materials);
+            const stars = [];
+            for (let i = 0; i < 120; i++) {
+                const star = BABYLON.MeshBuilder.CreateSphere("star", {
+                    diameter: 0.02 + Math.random() * 0.05,
+                    segments: 8
+                }, scene);
+                star.position.set(
+                    world.minX + Math.random() * (world.maxX - world.minX),
+                    world.minY + Math.random() * (world.maxY - world.minY),
+                    1.6 + Math.random() * 1.6
+                );
+                star.metadata = { speed: 0.55 + Math.random() * 1.4 };
+                star.material = materials.star;
+                stars.push(star);
+            }
+
+            return { scene, player, materials, stars };
+        }
+
+        const game = createScene();
+
+        function addWorkerShields(enemy) {
+            enemy.metadata.shields = [];
+            [-0.42, 0, 0.42].forEach((y) => {
+                const shield = BABYLON.MeshBuilder.CreateCylinder("workerHexShield", {
+                    diameter: 0.54,
+                    height: 0.035,
+                    tessellation: 6
+                }, game.scene);
+                shield.rotation.x = Math.PI / 2;
+                shield.rotation.z = Math.PI / 6;
+                shield.position.set(-0.14, y, 1.05);
+                shield.visibility = 0.58;
+                shield.material = game.materials.shield;
+                const shieldHp = enemy.metadata.spec.shieldHp || 5;
+                shield.metadata = {
+                    hp: shieldHp,
+                    maxHp: shieldHp,
+                    radius: 0.34
+                };
+                shield.rotation.y = Math.PI / 2;
+                shield.parent = enemy;
+                enemy.metadata.shields.push(shield);
+            });
+        }
+
+        function disposeEnemy() {
+            if (state.enemy) {
+                state.enemy.dispose();
+                state.enemy = null;
+            }
+            playerBullets.splice(0).forEach((bullet) => bullet.dispose());
+            enemyBullets.splice(0).forEach((bullet) => bullet.dispose());
+        }
+
+        function clearEnemyOnly() {
+            if (!state.enemy) {
+                return;
+            }
+            state.enemy.dispose();
+            state.enemy = null;
+            state.enemySpec = null;
+            state.enemySpinAngle = 0;
+            enemyBullets.splice(0).forEach((bullet) => bullet.dispose());
+        }
+
+        function radiansToDegrees(value) {
+            return Math.round(BABYLON.Tools.ToDegrees(value || 0));
+        }
+
+        function degreesToRadians(value) {
+            return BABYLON.Tools.ToRadians(Number(value) || 0);
+        }
+
+        function getRotationFromInputs() {
+            return {
+                x: degreesToRadians(ui.rotXInput.value),
+                y: degreesToRadians(ui.rotYInput.value),
+                z: degreesToRadians(ui.rotZInput.value)
+            };
+        }
+
+        function syncRotationInputs(spec) {
+            ui.rotXInput.value = radiansToDegrees(spec.rotationX);
+            ui.rotYInput.value = radiansToDegrees(spec.rotationY);
+            ui.rotZInput.value = radiansToDegrees(spec.rotationZ);
+        }
+
+        function applyEnemyRotation() {
+            if (!state.enemy) {
+                return;
+            }
+            const rotation = getRotationFromInputs();
+            state.enemy.rotation.x = rotation.x;
+            state.enemy.rotation.y = rotation.y;
+            state.enemy.rotation.z = rotation.z + state.enemySpinAngle;
+        }
+
+        function applyEnemyBank(bankZ) {
+            if (!state.enemy) {
+                return;
+            }
+            const rotation = getRotationFromInputs();
+            state.enemy.rotation.x = rotation.x;
+            state.enemy.rotation.y = rotation.y;
+            state.enemy.rotation.z = rotation.z + state.enemySpinAngle + bankZ;
+        }
+
+        function syncSizeInput(spec) {
+            ui.sizeRange.value = spec.size;
+            ui.sizeValue.textContent = Number(spec.size).toFixed(2);
+        }
+
+        function syncMotionInputs(spec) {
+            ui.motionSelect.value = spec.motion || "sine";
+            ui.speedRange.value = spec.speed === undefined ? 2.4 : spec.speed;
+            ui.ampRange.value = spec.waveAmount === undefined ? 0.45 : spec.waveAmount;
+            ui.freqRange.value = spec.waveSpeed === undefined ? 2.2 : spec.waveSpeed;
+            ui.shotRange.value = spec.shotInterval === undefined ? 1 : spec.shotInterval;
+            ui.speedRange.dispatchEvent(new Event("input"));
+            ui.ampRange.dispatchEvent(new Event("input"));
+            ui.freqRange.dispatchEvent(new Event("input"));
+            ui.shotRange.dispatchEvent(new Event("input"));
+        }
+
+        function applyEnemySize() {
+            if (!state.enemy || !state.enemySpec) {
+                return;
+            }
+            const size = Number(ui.sizeRange.value);
+            const scale = size / state.enemySpec.size;
+            state.enemy.scaling.setAll(scale);
+            state.enemy.metadata.radius = state.enemySpec.radius * scale;
+            if (state.enemy.metadata.shields) {
+                state.enemy.metadata.shields.forEach((shield) => {
+                    if (shield && !shield.isDisposed()) {
+                        shield.metadata.radius = 0.34 * scale;
+                    }
+                });
+            }
+        }
+
+        function distance2D(a, b) {
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function spawnEnemy(key) {
+            disposeEnemy();
+            const spec = enemyTypes.find((item) => item.key === key) || enemyTypes[0];
+            const enemy = cloneTemplate(spec.key, `${spec.key}Enemy`);
+            if (!enemy) {
+                ui.readout.textContent = `${spec.label} のGLB読み込み待ちです。`;
+                return;
+            }
+            enemy.position.set(world.maxX - 2.0, 0, 0);
+            enemy.metadata = {
+                spec,
+                hp: spec.hp,
+                radius: spec.radius,
+                shields: []
+            };
+            if (spec.shield) {
+                addWorkerShields(enemy);
+            }
+            state.selectedKey = key;
+            state.enemy = enemy;
+            state.enemySpec = spec;
+            state.baseY = 0;
+            state.enemySpinAngle = 0;
+            syncMotionInputs(spec);
+            state.shootTimer = Number(ui.shotRange.value);
+            syncRotationInputs(spec);
+            syncSizeInput(spec);
+            applyEnemyRotation();
+            applyEnemySize();
+            updateActiveButton();
+        }
+
+        function updateActiveButton() {
+            [...ui.enemyButtons.children].forEach((button) => {
+                button.classList.toggle("isActive", button.dataset.key === state.selectedKey);
+            });
+        }
+
+        function fireAimBullet(x, y, speed = 4.4, radius = 0.14, diameter = 0.16) {
+            const bullet = BABYLON.MeshBuilder.CreateSphere("enemyBullet", {
+                diameter,
+                segments: 12
+            }, game.scene);
+            bullet.position.set(x, y, -0.06);
+            const direction = new BABYLON.Vector2(
+                game.player.position.x - bullet.position.x,
+                game.player.position.y - bullet.position.y
+            );
+            if (direction.lengthSquared() > 0.0001) {
+                direction.normalize();
+            } else {
+                direction.set(-1, 0);
+            }
+            bullet.metadata = {
+                vx: direction.x * speed,
+                vy: direction.y * speed,
+                radius
+            };
+            bullet.material = game.materials.bullet;
+            enemyBullets.push(bullet);
+        }
+
+        function fireRing(enemy) {
+            const center = new BABYLON.Vector2(enemy.position.x - 0.5, enemy.position.y);
+            const direction = new BABYLON.Vector2(game.player.position.x - center.x, game.player.position.y - center.y);
+            if (direction.lengthSquared() > 0.0001) {
+                direction.normalize();
+            } else {
+                direction.set(-1, 0);
+            }
+            const speed = 3.5;
+            const ringRx = enemy.metadata.radius * 0.45;
+            const ringRy = enemy.metadata.radius * 0.34;
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8;
+                const bullet = BABYLON.MeshBuilder.CreateSphere("enemyRingBullet", {
+                    diameter: 0.13,
+                    segments: 10
+                }, game.scene);
+                bullet.position.set(center.x + Math.cos(angle) * ringRx, center.y + Math.sin(angle) * ringRy, -0.06);
+                bullet.metadata = {
+                    vx: direction.x * speed,
+                    vy: direction.y * speed,
+                    radius: 0.12,
+                    ringCenterX: center.x,
+                    ringCenterY: center.y,
+                    ringAngle: angle,
+                    ringRx,
+                    ringRy,
+                    ringSpin: 1.4
+                };
+                bullet.material = game.materials.bullet;
+                enemyBullets.push(bullet);
+            }
+        }
+
+        function fireBoss(enemy) {
+            [
+                new BABYLON.Vector2(-1.28, 0.88),
+                new BABYLON.Vector2(-1.42, 0.38),
+                new BABYLON.Vector2(-1.48, -0.18),
+                new BABYLON.Vector2(-1.18, -0.78)
+            ].forEach((offset) => {
+                fireAimBullet(enemy.position.x + offset.x, enemy.position.y + offset.y, 4.2, 0.15, 0.18);
+            });
+        }
+
+        function fireEnemy(enemy) {
+            const spec = enemy.metadata.spec;
+            if (spec.ringShot) {
+                fireRing(enemy);
+                return;
+            }
+            if (spec.bossShot) {
+                fireBoss(enemy);
+                return;
+            }
+            fireAimBullet(enemy.position.x - 0.36, enemy.position.y, 4.6);
+        }
+
+        function firePlayerBullet() {
+            const activeBullets = playerBullets.filter((bullet) => !bullet.isDisposed()).length;
+            if (activeBullets >= 3) {
+                return;
+            }
+            const bullet = BABYLON.MeshBuilder.CreateSphere("playerBullet", {
+                diameter: 0.16,
+                segments: 12
+            }, game.scene);
+            bullet.position.set(game.player.position.x + 0.72, game.player.position.y, -0.05);
+            bullet.metadata = {
+                speed: 7.8,
+                radius: 0.1,
+                damage: 0.5
+            };
+            bullet.material = game.materials.playerBullet;
+            playerBullets.push(bullet);
+        }
+
+        function hitEnemyShield(enemy, bullet) {
+            if (!enemy.metadata.shields || enemy.metadata.shields.length === 0) {
+                return false;
+            }
+            for (let i = enemy.metadata.shields.length - 1; i >= 0; i--) {
+                const shield = enemy.metadata.shields[i];
+                if (!shield || shield.isDisposed()) {
+                    enemy.metadata.shields.splice(i, 1);
+                    continue;
+                }
+                if (distance2D(shield.getAbsolutePosition(), bullet.position) < shield.metadata.radius + bullet.metadata.radius) {
+                    shield.metadata.hp = Math.max(0, shield.metadata.hp - bullet.metadata.damage);
+                    const hpRatio = shield.metadata.hp / shield.metadata.maxHp;
+                    shield.visibility = 0.14 + hpRatio * 0.44;
+                    shield.scaling.set(0.65 + hpRatio * 0.35, 0.65 + hpRatio * 0.35, 1);
+                    if (shield.metadata.hp <= 0) {
+                        shield.dispose();
+                        enemy.metadata.shields.splice(i, 1);
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function damageEnemyBody(enemy, damage) {
+            enemy.metadata.hp = Math.max(0, enemy.metadata.hp - damage);
+            if (enemy.metadata.hp <= 0) {
+                clearEnemyOnly();
+            }
+        }
+
+        function updatePlayer(delta) {
+            const speed = 4.8;
+            const dx = (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0);
+            const dy = (keys.has("ArrowUp") || keys.has("KeyW") ? 1 : 0) - (keys.has("ArrowDown") || keys.has("KeyS") ? 1 : 0);
+            game.player.position.x = BABYLON.Scalar.Clamp(game.player.position.x + dx * speed * delta, world.minX + 0.5, world.maxX - 0.5);
+            game.player.position.y = BABYLON.Scalar.Clamp(game.player.position.y + dy * speed * delta, world.minY + 0.5, world.maxY - 0.5);
+            state.playerFireCooldown = Math.max(0, state.playerFireCooldown - delta);
+            if ((keys.has("Space") || keys.has("KeyZ")) && state.playerFireCooldown <= 0) {
+                firePlayerBullet();
+                state.playerFireCooldown = 0.16;
+            }
+        }
+
+        function updateEnemy(delta) {
+            if (!state.enemy) {
+                return;
+            }
+            const enemy = state.enemy;
+            const motion = ui.motionSelect.value;
+            const speed = Number(ui.speedRange.value);
+            const amp = Number(ui.ampRange.value);
+            const freq = Number(ui.freqRange.value);
+            const spin = Number(ui.spinRange.value);
+            let wavePhase = state.elapsed * freq;
+
+            if (motion === "hover") {
+                enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, world.maxX - 2, 0.05);
+                enemy.position.y = state.baseY + Math.sin(wavePhase) * amp * 0.35;
+            } else if (motion === "dash") {
+                enemy.position.x -= speed * delta;
+                enemy.position.y = state.baseY + Math.sin(wavePhase) * amp * 0.25;
+                if (enemy.position.x < world.minX - 1) {
+                    enemy.position.x = world.maxX + 1;
+                }
+            } else if (motion === "zigzag") {
+                enemy.position.x -= speed * delta;
+                enemy.position.y = Math.sin(wavePhase) * amp;
+                if (enemy.position.x < world.minX - 1) {
+                    enemy.position.x = world.maxX + 1;
+                }
+            } else if (motion === "boss") {
+                enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, world.maxX - 2.4, 0.025);
+                wavePhase = state.elapsed * Math.max(0.2, freq * 0.35);
+                enemy.position.y = Math.sin(wavePhase) * amp;
+            } else {
+                enemy.position.x -= speed * delta;
+                enemy.position.y = state.baseY + Math.sin(wavePhase) * amp;
+                if (enemy.position.x < world.minX - 1) {
+                    enemy.position.x = world.maxX + 1;
+                }
+            }
+
+            state.enemySpinAngle += spin * delta;
+            const effectiveFreq = motion === "boss" ? Math.max(0.2, freq * 0.35) : freq;
+            const bankZ = BABYLON.Scalar.Clamp(
+                Math.cos(wavePhase) * amp * effectiveFreq * 0.16,
+                BABYLON.Tools.ToRadians(-20),
+                BABYLON.Tools.ToRadians(20)
+            );
+            applyEnemyBank(bankZ);
+            if (state.fireEnabled) {
+                state.shootTimer -= delta;
+                if (state.shootTimer <= 0) {
+                    fireEnemy(enemy);
+                    state.shootTimer = Number(ui.shotRange.value);
+                }
+            }
+        }
+
+        function updateBullets(delta) {
+            for (let i = playerBullets.length - 1; i >= 0; i--) {
+                const bullet = playerBullets[i];
+                bullet.position.x += bullet.metadata.speed * delta;
+                if (state.enemy && hitEnemyShield(state.enemy, bullet)) {
+                    bullet.dispose();
+                    playerBullets.splice(i, 1);
+                    continue;
+                }
+                if (state.enemy && distance2D(bullet.position, state.enemy.position) < bullet.metadata.radius + state.enemy.metadata.radius) {
+                    bullet.dispose();
+                    playerBullets.splice(i, 1);
+                    damageEnemyBody(state.enemy, bullet.metadata.damage);
+                    continue;
+                }
+                if (bullet.position.x > world.maxX + 1) {
+                    bullet.dispose();
+                    playerBullets.splice(i, 1);
+                }
+            }
+
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                const bullet = enemyBullets[i];
+                if (bullet.metadata.ringCenterX !== undefined) {
+                    bullet.metadata.ringCenterX += bullet.metadata.vx * delta;
+                    bullet.metadata.ringCenterY += bullet.metadata.vy * delta;
+                    bullet.metadata.ringAngle += bullet.metadata.ringSpin * delta;
+                    bullet.position.x = bullet.metadata.ringCenterX + Math.cos(bullet.metadata.ringAngle) * bullet.metadata.ringRx;
+                    bullet.position.y = bullet.metadata.ringCenterY + Math.sin(bullet.metadata.ringAngle) * bullet.metadata.ringRy;
+                } else {
+                    bullet.position.x += bullet.metadata.vx * delta;
+                    bullet.position.y += bullet.metadata.vy * delta;
+                }
+                bullet.rotation.z += delta * 7;
+                if (
+                    bullet.position.x < world.minX - 1
+                    || bullet.position.x > world.maxX + 1
+                    || bullet.position.y < world.minY - 1
+                    || bullet.position.y > world.maxY + 1
+                ) {
+                    bullet.dispose();
+                    enemyBullets.splice(i, 1);
+                }
+            }
+        }
+
+        function updateStars(delta) {
+            game.stars.forEach((star) => {
+                star.position.x -= star.metadata.speed * delta;
+                if (star.position.x < world.minX) {
+                    star.position.x = world.maxX;
+                    star.position.y = world.minY + Math.random() * (world.maxY - world.minY);
+                }
+            });
+        }
+
+        function updateReadout() {
+            const spec = state.enemySpec;
+            ui.readout.textContent = [
+                `enemy: ${state.enemy ? spec.key : "none"}`,
+                `hp: ${state.enemy ? state.enemy.metadata.hp.toFixed(1) : "-"}`,
+                `shields: ${state.enemy && state.enemy.metadata.shields ? state.enemy.metadata.shields.length : 0}`,
+                `points: ${spec ? spec.points : "-"}`,
+                `size: ${ui.sizeRange.value}`,
+                `radius: ${state.enemy ? state.enemy.metadata.radius.toFixed(2) : spec ? spec.radius : "-"}`,
+                `player bullets: ${playerBullets.length}`,
+                `enemy bullets: ${enemyBullets.length}`,
+                `motion: ${ui.motionSelect.value}`,
+                `rotation deg: X ${ui.rotXInput.value} / Y ${ui.rotYInput.value} / Z ${ui.rotZInput.value}`,
+                `invincible player: true`
+            ].join("\n");
+        }
+
+        function bindUi() {
+            enemyTypes.forEach((spec) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.textContent = spec.label;
+                button.dataset.key = spec.key;
+                button.addEventListener("click", () => spawnEnemy(spec.key));
+                ui.enemyButtons.appendChild(button);
+            });
+
+            [
+                [ui.speedRange, ui.speedValue, 1],
+                [ui.ampRange, ui.ampValue, 2],
+                [ui.freqRange, ui.freqValue, 1],
+                [ui.spinRange, ui.spinValue, 1],
+                [ui.shotRange, ui.shotValue, 2],
+                [ui.sizeRange, ui.sizeValue, 2]
+            ].forEach(([range, value, digits]) => {
+                const sync = () => {
+                    value.textContent = Number(range.value).toFixed(digits);
+                };
+                range.addEventListener("input", sync);
+                sync();
+            });
+
+            ui.sizeRange.addEventListener("input", applyEnemySize);
+
+            [ui.rotXInput, ui.rotYInput, ui.rotZInput].forEach((input) => {
+                input.addEventListener("input", () => {
+                    state.enemySpinAngle = 0;
+                    applyEnemyRotation();
+                });
+            });
+
+            ui.motionSelect.addEventListener("change", () => {
+                if (ui.motionSelect.value === "dash") {
+                    ui.speedRange.value = "5.2";
+                } else if (ui.motionSelect.value === "boss") {
+                    ui.speedRange.value = "0.8";
+                    ui.ampRange.value = "0.5";
+                    ui.freqRange.value = "1.4";
+                }
+                ui.speedRange.dispatchEvent(new Event("input"));
+                ui.ampRange.dispatchEvent(new Event("input"));
+                ui.freqRange.dispatchEvent(new Event("input"));
+            });
+
+            ui.toggleFireButton.addEventListener("click", () => {
+                state.fireEnabled = !state.fireEnabled;
+                ui.toggleFireButton.classList.toggle("isActive", state.fireEnabled);
+                ui.toggleFireButton.textContent = state.fireEnabled ? "敵弾 ON" : "敵弾 OFF";
+            });
+
+            ui.resetButton.addEventListener("click", () => {
+                spawnEnemy(state.selectedKey);
+            });
+        }
+
+        bindUi();
+        Promise.all(enemyTypes.map((spec) => loadModelTemplate(game.scene, spec))).then(() => {
+            spawnEnemy(state.selectedKey);
+        });
+
+        engine.runRenderLoop(() => {
+            const delta = Math.min(engine.getDeltaTime() / 1000, 0.033);
+            state.elapsed += delta;
+            updatePlayer(delta);
+            updateEnemy(delta);
+            updateBullets(delta);
+            updateStars(delta);
+            updateReadout();
+            game.scene.render();
+        });
+
+        window.addEventListener("resize", () => {
+            engine.resize();
+        });
+    </script>
+</body>
+</html>

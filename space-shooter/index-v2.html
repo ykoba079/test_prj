@@ -144,12 +144,237 @@
             font-size: clamp(15px, 2.2vw, 20px);
             color: #ccf2ff;
         }
+
+        .titleScreen {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            display: grid;
+            align-items: end;
+            justify-items: start;
+            box-sizing: border-box;
+            padding: clamp(28px, 6vw, 72px);
+            color: #f8fbff;
+            background:
+                linear-gradient(90deg, rgba(2, 5, 14, 0.9) 0%, rgba(3, 6, 16, 0.54) 42%, rgba(3, 6, 16, 0.08) 100%),
+                linear-gradient(0deg, rgba(2, 5, 14, 0.86) 0%, rgba(2, 5, 14, 0.16) 54%, rgba(2, 5, 14, 0.36) 100%),
+                url("./img/title-escape-karaage-empire.png") center / cover no-repeat;
+            user-select: none;
+        }
+
+        .titleScreen.isHidden {
+            display: none;
+        }
+
+        .titleContent {
+            width: min(760px, 100%);
+            text-shadow: 0 0 22px rgba(76, 214, 255, 0.7), 0 2px 8px rgba(0, 0, 0, 0.8);
+        }
+
+        .titleContent h1 {
+            margin: 0 0 14px;
+            font-size: clamp(38px, 8vw, 92px);
+            line-height: 0.98;
+            letter-spacing: 0;
+        }
+
+        .titleContent p {
+            max-width: 620px;
+            margin: 0 0 22px;
+            color: #d9f7ff;
+            font-size: clamp(15px, 2.1vw, 21px);
+            font-weight: 700;
+            line-height: 1.55;
+        }
+
+        .titleActions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .startButton {
+            border: 1px solid rgba(255, 235, 112, 0.9);
+            border-radius: 6px;
+            background: rgba(255, 213, 48, 0.92);
+            box-shadow: 0 0 22px rgba(255, 225, 72, 0.48);
+            color: #191207;
+            padding: 12px 18px;
+            font: inherit;
+            font-size: 15px;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .titleHint {
+            color: #aeefff;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .dialogue {
+            position: fixed;
+            left: 50%;
+            bottom: 94px;
+            z-index: 12;
+            display: none;
+            width: min(760px, calc(100vw - 32px));
+            box-sizing: border-box;
+            border: 1px solid rgba(131, 230, 255, 0.42);
+            border-radius: 8px;
+            background: rgba(4, 10, 26, 0.86);
+            box-shadow: 0 0 28px rgba(35, 180, 255, 0.22);
+            padding: 14px 16px;
+            transform: translateX(-50%);
+            color: #eafcff;
+            text-shadow: 0 0 12px rgba(80, 220, 255, 0.42);
+            pointer-events: none;
+        }
+
+        .dialogue.isVisible {
+            display: block;
+        }
+
+        .dialogueSpeaker {
+            margin-bottom: 6px;
+            color: #fff07a;
+            font-size: 13px;
+            font-weight: 900;
+        }
+
+        .dialogueText {
+            font-size: clamp(15px, 2vw, 19px);
+            font-weight: 800;
+            line-height: 1.55;
+        }
+
+        .powerSlot.isLocked {
+            border-color: rgba(130, 150, 170, 0.18);
+            background: rgba(8, 14, 24, 0.58);
+            color: rgba(190, 215, 225, 0.32);
+        }
+
+        .intermission {
+            position: fixed;
+            inset: 0;
+            z-index: 18;
+            display: none;
+            place-items: center;
+            box-sizing: border-box;
+            padding: 24px;
+            background: rgba(1, 4, 13, 0.78);
+            color: #f5fbff;
+            text-align: center;
+            text-shadow: 0 0 18px rgba(79, 213, 255, 0.68);
+            user-select: none;
+        }
+
+        .intermission.isVisible {
+            display: grid;
+        }
+
+        .intermissionPanel {
+            width: min(760px, 100%);
+            border: 1px solid rgba(128, 230, 255, 0.42);
+            border-radius: 8px;
+            background: rgba(5, 12, 30, 0.84);
+            box-shadow: 0 0 34px rgba(48, 190, 255, 0.28);
+            padding: clamp(22px, 5vw, 42px);
+        }
+
+        .intermissionImage {
+            display: none;
+            width: 100%;
+            max-height: min(46vh, 390px);
+            object-fit: cover;
+            border: 1px solid rgba(144, 232, 255, 0.24);
+            border-radius: 8px;
+            margin-bottom: 18px;
+            box-shadow: 0 0 24px rgba(33, 170, 255, 0.18);
+        }
+
+        .intermissionImage.isVisible {
+            display: block;
+        }
+
+        .intermissionPanel h2 {
+            margin: 0 0 12px;
+            font-size: clamp(30px, 5vw, 58px);
+            letter-spacing: 0;
+        }
+
+        .intermissionPanel p {
+            margin: 8px 0;
+            color: #d9f7ff;
+            font-size: clamp(15px, 2.1vw, 20px);
+            font-weight: 800;
+            line-height: 1.55;
+        }
+
+        .intermissionHint {
+            display: block;
+            margin-top: 18px;
+            color: #fff07a;
+            font-size: 13px;
+            font-weight: 900;
+        }
+
+        .bossHud {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            z-index: 8;
+            display: none;
+            width: min(620px, calc(100vw - 32px));
+            transform: translateX(-50%);
+            color: #ffeef5;
+            text-shadow: 0 0 14px rgba(255, 92, 160, 0.7);
+            user-select: none;
+        }
+
+        .bossHud.isVisible {
+            display: block;
+        }
+
+        .bossName {
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 900;
+            text-align: center;
+        }
+
+        .bossBar {
+            height: 14px;
+            border: 1px solid rgba(255, 172, 208, 0.6);
+            border-radius: 6px;
+            overflow: hidden;
+            background: rgba(32, 5, 20, 0.72);
+            box-shadow: 0 0 22px rgba(255, 80, 150, 0.24);
+        }
+
+        .bossFill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff467f, #ffe66a);
+        }
     </style>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
 </head>
 <body>
     <canvas id="renderCanvas"></canvas>
+    <div id="titleScreen" class="titleScreen" aria-label="title screen">
+        <div class="titleContent">
+            <h1>からあげ帝国からの脱出</h1>
+            <p>事故で迷い込んだ帝国空域。背後から迫るからあげの大群を振り切り、レモンジの導きで故郷の惑星を目指せ。</p>
+            <div class="titleActions">
+                <button id="startButton" class="startButton" type="button">START</button>
+                <span class="titleHint">Z / ENTER / SPACE</span>
+            </div>
+        </div>
+    </div>
     <div class="hud" aria-label="game status">
         <span id="score">SCORE 0</span>
         <span id="lives">LIFE 3</span>
@@ -165,6 +390,22 @@
         <div class="powerSlot" data-power-index="4">LEMON</div>
     </div>
     <div class="help">WASD / ARROWS: MOVE<br>Z: FIRE<br>X: POWER UP<br>R: RESTART</div>
+    <div id="dialogue" class="dialogue" aria-live="polite">
+        <div id="dialogueSpeaker" class="dialogueSpeaker"></div>
+        <div id="dialogueText" class="dialogueText"></div>
+    </div>
+    <div id="bossHud" class="bossHud" aria-label="boss status">
+        <div id="bossName" class="bossName">KARAAGE EMPEROR</div>
+        <div class="bossBar"><div id="bossFill" class="bossFill"></div></div>
+    </div>
+    <div id="intermission" class="intermission" aria-live="polite">
+        <div class="intermissionPanel">
+            <img id="intermissionImage" class="intermissionImage" alt="">
+            <h2 id="intermissionTitle"></h2>
+            <p id="intermissionText"></p>
+            <span class="intermissionHint">CLICK / Z / ENTER / SPACE</span>
+        </div>
+    </div>
     <div id="message" class="centerMessage">
         <div>
             <h1>GAME OVER</h1>
@@ -182,6 +423,18 @@
         const powerEl = document.getElementById("power");
         const weaponEl = document.getElementById("weapon");
         const powerSlots = Array.from(document.querySelectorAll(".powerSlot"));
+        const titleScreenEl = document.getElementById("titleScreen");
+        const startButtonEl = document.getElementById("startButton");
+        const dialogueEl = document.getElementById("dialogue");
+        const dialogueSpeakerEl = document.getElementById("dialogueSpeaker");
+        const dialogueTextEl = document.getElementById("dialogueText");
+        const bossHudEl = document.getElementById("bossHud");
+        const bossNameEl = document.getElementById("bossName");
+        const bossFillEl = document.getElementById("bossFill");
+        const intermissionEl = document.getElementById("intermission");
+        const intermissionImageEl = document.getElementById("intermissionImage");
+        const intermissionTitleEl = document.getElementById("intermissionTitle");
+        const intermissionTextEl = document.getElementById("intermissionText");
         const messageEl = document.getElementById("message");
         const finalScoreEl = document.getElementById("finalScore");
 
@@ -193,8 +446,22 @@
         const modelAssetFiles = {
             missileLemon: "model/reference_lemon_with_leaf.glb",
             laserLemon: "model/cut_lemon_1_8.glb",
-            enemyKaraage: "model/からあげ先生.glb"
+            enemyKaraage: "model/からあげ先生.glb",
+            enemyWorker: "model/からあげワーカー.glb",
+            enemyDisk: "model/からあげ円盤.glb",
+            enemyBattleship: "model/からあげ大戦艦.glb",
+            enemyFighter: "model/からあげ戦闘機.glb"
         };
+
+        const stageDefinitions = [
+            { stage: 1, duration: Infinity, title: "迷い込んだ帝国空域" },
+            { stage: 2, duration: 54, title: "小惑星地帯とレモンジ" },
+            { stage: 3, duration: Infinity, title: "巨大からあげ戦艦包囲網" }
+        ];
+
+        const storyEvents = [
+            { id: "stage3", stage: 3, at: 0.8, speaker: "からあげ皇帝", text: "巨大戦艦接近。" }
+        ];
 
         const world = {
             minX: -8.6,
@@ -203,9 +470,133 @@
             maxY: 4.8
         };
 
+        const enemyFacingY = Math.PI * 1.5;
+        const enemyConfigs = {
+            teacherSmall: {
+                template: "enemyTeacherSmall",
+                spawnName: "karaageTeacherSmall",
+                motion: "sine",
+                speed: [2.0, 3.0],
+                waveAmount: [1.0, 2.5],
+                waveSpeed: 1.0,
+                rotation: { x: 0, y: BABYLON.Tools.ToRadians(180), z: 0 },
+                shotInterval: 300,
+                size: 0.62,
+                hp: 0.5,
+                points: 50,
+                radius: 0.3,
+                randomSpin: true,
+                canShoot: false
+            },
+            teacherMedium: {
+                template: "enemyTeacherMedium",
+                spawnName: "karaageTeacherMedium",
+                motion: "sine",
+                speed: [2.0, 3.0],
+                waveAmount: [1.0, 2.5],
+                waveSpeed: 1.0,
+                rotation: { x: 0, y: BABYLON.Tools.ToRadians(180), z: 0 },
+                shotInterval: [5, 30],
+                size: 0.9,
+                hp: 1,
+                points: 100,
+                radius: 0.38,
+                randomSpin: true
+            },
+            teacherLarge: {
+                template: "enemyTeacherLarge",
+                spawnName: "karaageTeacherLarge",
+                motion: "sine",
+                speed: [2.0, 3.0],
+                waveAmount: [1.0, 2.5],
+                waveSpeed: 1.0,
+                rotation: { x: 0, y: BABYLON.Tools.ToRadians(180), z: 0 },
+                shotInterval: [5, 15],
+                size: 1.25,
+                hp: 2,
+                points: 200,
+                radius: 0.56
+            },
+            worker: {
+                template: "enemyWorker",
+                spawnName: "karaageWorker",
+                motion: "hover",
+                speed: 1.0,
+                waveAmount: 0.8,
+                waveSpeed: 1.0,
+                rotation: { x: 0, y: BABYLON.Tools.ToRadians(250), z: BABYLON.Tools.ToRadians(10) },
+                shotInterval: [5, 10],
+                size: 1.8,
+                hp: 10,
+                shieldHp: 4,
+                points: 500,
+                radius: 0.98
+            },
+            diskA: {
+                template: "enemyDiskA",
+                spawnName: "karaageDiskA",
+                motion: "hover",
+                speed: 1.5,
+                waveAmount: 2.8,
+                waveSpeed: 0.5,
+                rotation: { x: 0, y: BABYLON.Tools.ToRadians(240), z: BABYLON.Tools.ToRadians(10) },
+                shotInterval: [5, 8],
+                size: 4.5,
+                hp: 15,
+                points: 1000,
+                radius: 1.8,
+                ringShot: true
+            },
+            diskB: {
+                template: "enemyDiskB",
+                spawnName: "karaageDiskB",
+                motion: "zigzag",
+                speed: 1.0,
+                waveAmount: 0.8,
+                waveSpeed: 0.8,
+                rotation: { x: 0, y: BABYLON.Tools.ToRadians(240), z: BABYLON.Tools.ToRadians(10) },
+                shotInterval: [8, 20],
+                size: 4.5,
+                hp: 15,
+                points: 1000,
+                radius: 1.8,
+                ringShot: true
+            },
+            fighter: {
+                template: "enemyFighter",
+                spawnName: "karaageFighter",
+                motion: "dash",
+                speed: 2.8,
+                waveAmount: 0.7,
+                waveSpeed: 1.4,
+                rotation: { x: 0, y: BABYLON.Tools.ToRadians(240), z: BABYLON.Tools.ToRadians(10) },
+                shotInterval: [3, 20],
+                size: 2.2,
+                hp: 1,
+                points: 150,
+                radius: 0.84
+            },
+            battleship: {
+                template: "enemyBattleship",
+                spawnName: "karaageBattleship",
+                motion: "boss",
+                speed: [2.0, 3.0],
+                waveAmount: [1.0, 2.5],
+                waveSpeed: 1.0,
+                rotation: { x: 0, y: BABYLON.Tools.ToRadians(240), z: BABYLON.Tools.ToRadians(10) },
+                shotInterval: 4,
+                size: 6.5,
+                hp: 150,
+                points: 19800,
+                radius: 3.3
+            }
+        };
+
         const state = {
             score: 0,
             lives: 3,
+            stage: 1,
+            stageElapsed: 0,
             wave: 1,
             elapsed: 0,
             fireCooldown: 0,
@@ -213,13 +604,26 @@
             formationTimer: 1.6,
             terrainTimer: 2,
             kills: 0,
+            stageKills: 0,
             enemiesSinceCapsule: 0,
             powerCursor: -1,
             speedLevel: 0,
             missileLevel: 0,
             hasLaser: false,
             shield: 0,
-            gameOver: false
+            gameOver: false,
+            hasStarted: false,
+            isIntermission: false,
+            intermissionStep: null,
+            lemonUnlocked: false,
+            stage1GuideShown: false,
+            stage1BossSpawned: false,
+            stage3BossSpawned: false,
+            stageBossCount: 0,
+            bossEnemy: null,
+            bossMaxHp: 1,
+            dialogueTimer: 0,
+            triggeredStories: new Set()
         };
 
         const keys = new Set();
@@ -235,13 +639,23 @@
 
         window.addEventListener("keydown", (event) => {
             keys.add(event.code);
+            if (!state.hasStarted && (event.code === "Enter" || event.code === "Space" || event.code === "KeyZ")) {
+                event.preventDefault();
+                startGame();
+                return;
+            }
+            if (state.isIntermission && (event.code === "Enter" || event.code === "Space" || event.code === "KeyZ")) {
+                event.preventDefault();
+                advanceIntermission();
+                return;
+            }
             if (event.code === "KeyZ" || event.code === "KeyX") {
                 event.preventDefault();
             }
             if (event.code === "KeyX" && !event.repeat) {
                 activatePower();
             }
-            if (event.code === "KeyR") {
+            if (event.code === "KeyR" && state.hasStarted) {
                 resetGame();
             }
         });
@@ -249,6 +663,21 @@
         window.addEventListener("keyup", (event) => {
             keys.delete(event.code);
         });
+
+        startButtonEl.addEventListener("click", () => {
+            startGame();
+        });
+
+        intermissionEl.addEventListener("click", () => {
+            advanceIntermission();
+        });
+
+        function randomRange(value) {
+            if (Array.isArray(value)) {
+                return value[0] + Math.random() * (value[1] - value[0]);
+            }
+            return value;
+        }
 
         function createGlowMaterial(scene, name, color, emissiveStrength) {
             const material = new BABYLON.StandardMaterial(name, scene);
@@ -494,7 +923,11 @@
                 spark: createGlowMaterial(scene, "sparkMat", new BABYLON.Color3(0.75, 0.95, 1), 1.3),
                 star: createGlowMaterial(scene, "starMat", new BABYLON.Color3(0.65, 0.9, 1), 0.9),
                 terrain: createGlowMaterial(scene, "terrainMat", new BABYLON.Color3(0.35, 0.45, 0.68), 0.22),
-                enemyBullet: createGlowMaterial(scene, "enemyBulletMat", new BABYLON.Color3(1, 0.36, 0.72), 1.15)
+                enemyBullet: createGlowMaterial(scene, "enemyBulletMat", new BABYLON.Color3(1, 0.36, 0.72), 1.15),
+                corvetteArmor: createGlowMaterial(scene, "corvetteArmorMat", new BABYLON.Color3(1, 0.58, 0.16), 0.82),
+                gunnerCannon: createGlowMaterial(scene, "gunnerCannonMat", new BABYLON.Color3(0.13, 0.15, 0.2), 0.24),
+                guardShield: createGlowMaterial(scene, "guardShieldMat", new BABYLON.Color3(0.34, 0.9, 1), 0.75),
+                dartBooster: createGlowMaterial(scene, "dartBoosterMat", new BABYLON.Color3(1, 0.35, 0.1), 1.15)
             };
 
             const player = createPlayerShip(scene, materials);
@@ -502,12 +935,34 @@
                 missileLemon: null,
                 laserLemon: null,
                 enemyKaraage: null,
-                enemyKaraageHeavy: null
+                enemyKaraageMini: null,
+                enemyKaraageCorvette: null,
+                enemyKaraageHeavy: null,
+                enemyTeacherSmall: null,
+                enemyTeacherMedium: null,
+                enemyTeacherLarge: null,
+                enemyWorker: null,
+                enemyDisk: null,
+                enemyDiskA: null,
+                enemyDiskB: null,
+                enemyBattleship: null,
+                enemyFighter: null
             };
             loadModelTemplate(scene, modelTemplates, "missileLemon", modelAssetFiles.missileLemon, 0.93, new BABYLON.Vector3(0, Math.PI / 2, 0));
             loadModelTemplate(scene, modelTemplates, "laserLemon", modelAssetFiles.laserLemon, 1.44, new BABYLON.Vector3(0, Math.PI / 2, BABYLON.Tools.ToRadians(80)), new BABYLON.Vector3(2, 0.5, 1));
             loadModelTemplate(scene, modelTemplates, "enemyKaraage", modelAssetFiles.enemyKaraage, 0.92, new BABYLON.Vector3(0, Math.PI / 2, 0));
+            loadModelTemplate(scene, modelTemplates, "enemyKaraageMini", modelAssetFiles.enemyKaraage, 0.62, new BABYLON.Vector3(0, Math.PI / 2, 0));
+            loadModelTemplate(scene, modelTemplates, "enemyKaraageCorvette", modelAssetFiles.enemyKaraage, 1.04, new BABYLON.Vector3(0, Math.PI / 2, 0));
             loadModelTemplate(scene, modelTemplates, "enemyKaraageHeavy", modelAssetFiles.enemyKaraage, 1.38, new BABYLON.Vector3(0, Math.PI, 0));
+            loadModelTemplate(scene, modelTemplates, "enemyTeacherSmall", modelAssetFiles.enemyKaraage, enemyConfigs.teacherSmall.size, new BABYLON.Vector3(enemyConfigs.teacherSmall.rotation.x, enemyConfigs.teacherSmall.rotation.y, enemyConfigs.teacherSmall.rotation.z));
+            loadModelTemplate(scene, modelTemplates, "enemyTeacherMedium", modelAssetFiles.enemyKaraage, enemyConfigs.teacherMedium.size, new BABYLON.Vector3(enemyConfigs.teacherMedium.rotation.x, enemyConfigs.teacherMedium.rotation.y, enemyConfigs.teacherMedium.rotation.z));
+            loadModelTemplate(scene, modelTemplates, "enemyTeacherLarge", modelAssetFiles.enemyKaraage, enemyConfigs.teacherLarge.size, new BABYLON.Vector3(enemyConfigs.teacherLarge.rotation.x, enemyConfigs.teacherLarge.rotation.y, enemyConfigs.teacherLarge.rotation.z));
+            loadModelTemplate(scene, modelTemplates, "enemyWorker", modelAssetFiles.enemyWorker, enemyConfigs.worker.size, new BABYLON.Vector3(enemyConfigs.worker.rotation.x, enemyConfigs.worker.rotation.y, enemyConfigs.worker.rotation.z));
+            loadModelTemplate(scene, modelTemplates, "enemyDisk", modelAssetFiles.enemyDisk, 1.34, new BABYLON.Vector3(0, Math.PI / 2, 0));
+            loadModelTemplate(scene, modelTemplates, "enemyDiskA", modelAssetFiles.enemyDisk, enemyConfigs.diskA.size, new BABYLON.Vector3(enemyConfigs.diskA.rotation.x, enemyConfigs.diskA.rotation.y, enemyConfigs.diskA.rotation.z));
+            loadModelTemplate(scene, modelTemplates, "enemyDiskB", modelAssetFiles.enemyDisk, enemyConfigs.diskB.size, new BABYLON.Vector3(enemyConfigs.diskB.rotation.x, enemyConfigs.diskB.rotation.y, enemyConfigs.diskB.rotation.z));
+            loadModelTemplate(scene, modelTemplates, "enemyBattleship", modelAssetFiles.enemyBattleship, enemyConfigs.battleship.size, new BABYLON.Vector3(enemyConfigs.battleship.rotation.x, enemyConfigs.battleship.rotation.y, enemyConfigs.battleship.rotation.z));
+            loadModelTemplate(scene, modelTemplates, "enemyFighter", modelAssetFiles.enemyFighter, enemyConfigs.fighter.size, new BABYLON.Vector3(enemyConfigs.fighter.rotation.x, enemyConfigs.fighter.rotation.y, enemyConfigs.fighter.rotation.z));
 
             const stars = [];
             for (let i = 0; i < 115; i++) {
@@ -541,7 +996,7 @@
         function updateHud() {
             scoreEl.textContent = `SCORE ${state.score}`;
             livesEl.textContent = `LIFE ${state.lives}`;
-            waveEl.textContent = `WAVE ${state.wave}`;
+            waveEl.textContent = `STAGE ${state.stage}`;
             powerEl.textContent = state.powerCursor >= 0 ? `READY ${powerItems[state.powerCursor]}` : "READY -";
             const mainWeapon = state.hasLaser ? "LEMON" : "SHOT";
             const missileText = state.missileLevel > 0 ? ` + MSL${state.missileLevel}` : "";
@@ -550,6 +1005,7 @@
                 const disabled = isPowerMaxed(index);
                 slot.classList.toggle("isActive", index === state.powerCursor);
                 slot.classList.toggle("isDisabled", disabled);
+                slot.classList.toggle("isLocked", index === 4 && !state.lemonUnlocked);
                 slot.classList.toggle("isOwned",
                     (index === 0 && state.speedLevel > 0)
                     || (index === 1 && state.missileLevel > 0)
@@ -565,16 +1021,26 @@
                 case 0:
                     return state.speedLevel >= 3;
                 case 1:
-                    return state.missileLevel >= 4;
+                    return state.missileLevel >= (state.lemonUnlocked ? 4 : 1);
                 case 2:
                     return options.length >= 2;
                 case 3:
                     return state.shield > 0;
                 case 4:
-                    return state.hasLaser;
+                    return !state.lemonUnlocked || state.hasLaser;
                 default:
                     return true;
             }
+        }
+
+        function advancePowerCursor() {
+            for (let i = 0; i < powerItems.length; i++) {
+                state.powerCursor = (state.powerCursor + 1) % powerItems.length;
+                if (!isPowerMaxed(state.powerCursor)) {
+                    return;
+                }
+            }
+            state.powerCursor = -1;
         }
 
         function resetGame() {
@@ -589,6 +1055,8 @@
             playerTrail.splice(0);
             state.score = 0;
             state.lives = 3;
+            state.stage = 1;
+            state.stageElapsed = 0;
             state.wave = 1;
             state.elapsed = 0;
             state.fireCooldown = 0;
@@ -596,6 +1064,7 @@
             state.formationTimer = 1.6;
             state.terrainTimer = 2;
             state.kills = 0;
+            state.stageKills = 0;
             state.enemiesSinceCapsule = 0;
             state.powerCursor = -1;
             state.speedLevel = 0;
@@ -603,9 +1072,310 @@
             state.hasLaser = false;
             state.shield = 0;
             state.gameOver = false;
+            state.isIntermission = false;
+            state.intermissionStep = null;
+            state.lemonUnlocked = false;
+            state.stage1GuideShown = false;
+            state.stage1BossSpawned = false;
+            state.stage3BossSpawned = false;
+            state.stageBossCount = 0;
+            state.bossEnemy = null;
+            state.bossMaxHp = 1;
+            state.dialogueTimer = 0;
+            state.triggeredStories = new Set();
             game.player.position.set(world.minX + 1.3, 0, 0);
             messageEl.classList.remove("isVisible");
+            dialogueEl.classList.remove("isVisible");
+            bossHudEl.classList.remove("isVisible");
+            intermissionEl.classList.remove("isVisible");
             updateHud();
+        }
+
+        function startGame() {
+            state.hasStarted = true;
+            titleScreenEl.classList.add("isHidden");
+            resetGame();
+            showIntermission(
+                "UNKNOWN SPACE",
+                "航路事故により、所属不明の空域へ突入した。通信不能。背後から謎のからあげ型反応が接近している。",
+                "introStart",
+                "img/event-unknown-space.png"
+            );
+        }
+
+        function showDialogue(speaker, text, duration = 4.2) {
+            dialogueSpeakerEl.textContent = speaker;
+            dialogueTextEl.textContent = text;
+            dialogueEl.classList.add("isVisible");
+            state.dialogueTimer = duration;
+        }
+
+        function updateDialogue(delta) {
+            if (state.dialogueTimer <= 0) {
+                return;
+            }
+            state.dialogueTimer -= delta;
+            if (state.dialogueTimer <= 0) {
+                dialogueEl.classList.remove("isVisible");
+            }
+        }
+
+        function clearActiveGameObjects() {
+            bullets.splice(0).forEach((item) => item.dispose());
+            enemyBullets.splice(0).forEach((item) => item.dispose());
+            enemies.splice(0).forEach((item) => item.dispose());
+            capsules.splice(0).forEach((item) => item.dispose());
+            terrain.splice(0).forEach((item) => item.dispose());
+            shockwaves.splice(0).forEach((item) => item.dispose());
+            sparks.splice(0).forEach((item) => item.dispose());
+        }
+
+        function updateStage(delta) {
+            storyEvents.forEach((event) => {
+                if (
+                    event.stage === state.stage
+                    && state.stageElapsed >= event.at
+                    && !state.triggeredStories.has(event.id)
+                ) {
+                    state.triggeredStories.add(event.id);
+                    showDialogue(event.speaker, event.text, 4.8);
+                }
+            });
+
+            if (state.stage === 1 && !state.stage1GuideShown && state.stageElapsed >= 20) {
+                state.stage1GuideShown = true;
+                showIntermission(
+                    "レモンジ",
+                    "こっちだ。からあげを振り切ってアステロイドベルトまで来い。追っ手はそこで散らせる。",
+                    "resumeStage1",
+                    "img/event-lemonji-portrait.png"
+                );
+                return;
+            }
+
+            if (state.stage === 1 && state.stage1GuideShown && !state.stage1BossSpawned && state.stageElapsed >= 42) {
+                spawnStageOneBoss();
+                return;
+            }
+
+            if (state.stage === 3 && !state.stage3BossSpawned && state.stageElapsed >= 18) {
+                spawnFinalBoss();
+                return;
+            }
+
+            const current = stageDefinitions[state.stage - 1];
+            if (current && state.stageElapsed >= current.duration) {
+                triggerStageClear();
+            }
+        }
+
+        function spawnStageOneBoss() {
+            state.stage1BossSpawned = true;
+            state.stageBossCount = 3;
+            showDialogue("WARNING", "大型からあげ編隊、接近。", 2.4);
+            const yPositions = [1.9, 0, -1.9];
+            yPositions.forEach((y, index) => {
+                const boss = cloneModelTemplate("enemyKaraageHeavy", "stage1KaraageBoss") || createEnemyShip(game.scene, game.materials, false);
+                boss.position.set(world.maxX + 1.5 + index * 1.15, y, 0);
+                boss.rotation.z = 0;
+                boss.metadata = {
+                    speed: 1.6,
+                    radius: 0.72,
+                    hp: 5,
+                    points: 650,
+                    spin: 0,
+                    waveY: y,
+                    wavePhase: index * 1.1,
+                    carriesCapsule: false,
+                    canShoot: true,
+                    shootTimer: 0.8 + index * 0.35,
+                    isStageBoss: true
+                };
+                enemies.push(boss);
+            });
+        }
+
+        function spawnFinalBoss() {
+            state.stage3BossSpawned = true;
+            showDialogue("WARNING", "巨大からあげ皇帝、出現。", 2.8);
+            const boss = cloneModelTemplate("enemyBattleship", "karaageEmperorBattleship") || cloneModelTemplate("enemyKaraageHeavy", "karaageEmperorBoss") || createEnemyShip(game.scene, game.materials, false);
+            const config = enemyConfigs.battleship;
+            boss.position.set(world.maxX + 2.4, 0, 0);
+            boss.rotation.z = 0;
+            boss.metadata = {
+                speed: randomRange(config.speed),
+                radius: config.radius,
+                hp: config.hp,
+                points: config.points,
+                spin: 0,
+                waveY: 0,
+                waveAmount: randomRange(config.waveAmount),
+                waveSpeed: randomRange(config.waveSpeed),
+                wavePhase: 0,
+                motion: config.motion,
+                enemyType: "battleship",
+                enemyConfig: config,
+                carriesCapsule: false,
+                canShoot: true,
+                shotInterval: config.shotInterval,
+                shootTimer: config.shotInterval,
+                turretOffsets: [
+                    new BABYLON.Vector2(-1.28, 0.88),
+                    new BABYLON.Vector2(-1.42, 0.38),
+                    new BABYLON.Vector2(-1.48, -0.18),
+                    new BABYLON.Vector2(-1.18, -0.78)
+                ],
+                isFinalBoss: true
+            };
+            state.bossEnemy = boss;
+            state.bossMaxHp = boss.metadata.hp;
+            bossNameEl.textContent = "KARAAGE BATTLESHIP";
+            bossFillEl.style.width = "100%";
+            bossHudEl.classList.add("isVisible");
+            enemies.push(boss);
+        }
+
+        function completeGame() {
+            state.isIntermission = true;
+            state.intermissionStep = "ending";
+            bossHudEl.classList.remove("isVisible");
+            showIntermission(
+                "ESCAPE COMPLETE",
+                `SCORE ${state.score}。巨大からあげ戦艦を撃破した。レモンジは次のクーデターへ、あなたは故郷の惑星へ進路を取った。`,
+                "ending",
+                "img/event-karaage-emperor.png"
+            );
+        }
+
+        function showIntermission(title, text, step, imageSrc = "") {
+            state.isIntermission = true;
+            state.intermissionStep = step;
+            intermissionTitleEl.textContent = title;
+            intermissionTextEl.textContent = text;
+            if (imageSrc) {
+                intermissionImageEl.src = imageSrc;
+                intermissionImageEl.classList.add("isVisible");
+            } else {
+                intermissionImageEl.removeAttribute("src");
+                intermissionImageEl.classList.remove("isVisible");
+            }
+            intermissionEl.classList.add("isVisible");
+            dialogueEl.classList.remove("isVisible");
+            clearActiveGameObjects();
+            updateHud();
+        }
+
+        function triggerStageClear() {
+            if (state.isIntermission) {
+                return;
+            }
+            if (state.stage === 1) {
+                showIntermission(
+                    "STAGE 1 CLEAR",
+                    `SCORE ${state.score} / 撃破 ${state.stageKills}。小惑星地帯への進路を確保した。`,
+                    "stage1Result"
+                );
+                return;
+            }
+            if (state.stage === 2) {
+                showIntermission(
+                    "STAGE 2 CLEAR",
+                    `SCORE ${state.score} / 撃破 ${state.stageKills}。レモンリキッドで包囲部隊を押し返した。`,
+                    "stage2Result"
+                );
+            }
+        }
+
+        function beginStage(stageNumber) {
+            const definition = stageDefinitions[stageNumber - 1];
+            state.stage = stageNumber;
+            state.stageElapsed = 0;
+            state.enemyTimer = 0.4;
+            state.formationTimer = 1.4;
+            state.terrainTimer = stageNumber >= 2 ? 0.8 : 2;
+            state.enemiesSinceCapsule = 0;
+            state.stageKills = 0;
+            state.isIntermission = false;
+            state.intermissionStep = null;
+            intermissionEl.classList.remove("isVisible");
+            showDialogue("STAGE " + stageNumber, definition.title, 3);
+            updateHud();
+        }
+
+        function advanceIntermission() {
+            if (!state.isIntermission) {
+                return;
+            }
+            switch (state.intermissionStep) {
+                case "introStart":
+                    beginStage(1);
+                    break;
+                case "resumeStage1":
+                    state.isIntermission = false;
+                    state.intermissionStep = null;
+                    intermissionEl.classList.remove("isVisible");
+                    showDialogue("STAGE 1", "アステロイドベルトへ向かえ。", 2.2);
+                    break;
+                case "stage1Result":
+                    showIntermission(
+                        "レモンジの基地",
+                        "よく来た。ここは小惑星帯の反体制派基地だ。俺たちは定期的にクーデターを起こしている。",
+                        "baseTalkPlayer",
+                        "img/event-lemonji-base.png"
+                    );
+                    break;
+                case "baseTalkPlayer":
+                    showIntermission(
+                        "PLAYER",
+                        "悪いが、クーデターに参加する気はない。こっちは故郷に帰りたいだけだ。",
+                        "baseTalkDeal",
+                        "img/event-lemonji-base.png"
+                    );
+                    break;
+                case "baseTalkDeal":
+                    showIntermission(
+                        "レモンジ",
+                        "なら取引だ。からあげの戦力を減らしてくれ。代わりにレモンリキッドを提供する。",
+                        "lemonLiquid",
+                        "img/event-lemonji-base.png"
+                    );
+                    break;
+                case "lemonLiquid":
+                    state.lemonUnlocked = true;
+                    showIntermission(
+                        "LEMON LIQUID",
+                        "レモンリキッドを受け取った。LEMONバレットとレモンミサイルの段階強化が解禁された。",
+                        "startStage2",
+                        "img/event-lemonji-base.png"
+                    );
+                    break;
+                case "startStage2":
+                    beginStage(2);
+                    break;
+                case "stage2Result":
+                    showIntermission(
+                        "からあげ皇帝",
+                        "憲法第1条、からあげにレモンをかけた者は許さぬ。巨大戦艦、出撃。",
+                        "startStage3",
+                        "img/event-karaage-emperor.png"
+                    );
+                    break;
+                case "startStage3":
+                    beginStage(3);
+                    break;
+                case "ending":
+                    state.hasStarted = false;
+                    state.isIntermission = false;
+                    state.intermissionStep = null;
+                    intermissionEl.classList.remove("isVisible");
+                    titleScreenEl.classList.remove("isHidden");
+                    resetGame();
+                    break;
+                default:
+                    state.isIntermission = false;
+                    intermissionEl.classList.remove("isVisible");
+                    break;
+            }
         }
 
         function fireOneShot(origin, forceNormal = false, shotOwner = "player") {
@@ -625,7 +1395,7 @@
                 kind: isLaser ? "laser" : "normal",
                 speed: isLaser ? 15 : 12,
                 radius: isLaser ? 0.32 : 0.16,
-                damage: isLaser ? 2 : 1,
+                damage: isLaser ? 2 : 0.5,
                 spin: isLaser ? 9.5 : 0,
                 shotOwner
             };
@@ -672,33 +1442,133 @@
             });
         }
 
+        function addEnemyPart(enemy, part) {
+            part.parent = enemy;
+            enemy.metadata.parts.push(part);
+            return part;
+        }
+
+        function decorateEnemy(enemy, enemyType) {
+            enemy.metadata.parts = [];
+            if (enemyType === "corvette") {
+                const count = 8;
+                for (let i = 0; i < count; i++) {
+                    const angle = (Math.PI * 2 * i) / count;
+                    const orb = BABYLON.MeshBuilder.CreateSphere("corvetteArmorOrb", {
+                        diameter: 0.16,
+                        segments: 12
+                    }, game.scene);
+                    orb.position.set(Math.cos(angle) * 0.58, Math.sin(angle) * 0.58, -0.03);
+                    orb.material = game.materials.corvetteArmor;
+                    addEnemyPart(enemy, orb);
+                }
+            } else if (enemyType === "gunner") {
+                [-0.22, 0.22].forEach((y) => {
+                    const cannon = BABYLON.MeshBuilder.CreateCylinder("gunnerCannon", {
+                        diameter: 0.07,
+                        height: 0.48,
+                        tessellation: 12
+                    }, game.scene);
+                    cannon.rotation.z = Math.PI / 2;
+                    cannon.position.set(-0.28, y, -0.08);
+                    cannon.material = game.materials.gunnerCannon;
+                    addEnemyPart(enemy, cannon);
+                });
+            } else if (enemyType === "worker") {
+                enemy.metadata.shields = [];
+                const shieldHp = enemy.metadata.enemyConfig ? enemy.metadata.enemyConfig.shieldHp : 5;
+                [-0.42, 0, 0.42].forEach((y, index) => {
+                    const shield = BABYLON.MeshBuilder.CreateCylinder("workerHexShield", {
+                        diameter: 0.54,
+                        height: 0.035,
+                        tessellation: 6
+                    }, game.scene);
+                    shield.rotation.x = Math.PI / 2;
+                    shield.rotation.z = Math.PI / 6;
+                    shield.position.set(-0.94, y, -0.49);
+                    shield.material = game.materials.guardShield;
+                    shield.visibility = 0.58;
+                    shield.metadata = {
+                        hp: shieldHp,
+                        maxHp: shieldHp,
+                        radius: 0.29,
+                        index
+                    };
+                    shield.rotation.y = Math.PI / 2;
+                    shield.parent = enemy;
+                    enemy.metadata.shields.push(shield);
+                    enemy.metadata.parts.push(shield);
+                });
+            }
+        }
+
         function spawnEnemyAt(x, y, delayOffset) {
-            const isAsteroid = Math.random() < 0.22;
+            const asteroidChance = state.stage === 1 ? 0.12 : state.stage === 2 ? 0.38 : 0.2;
+            const isAsteroid = Math.random() < asteroidChance;
             const carriesCapsule = state.enemiesSinceCapsule >= 4 || Math.random() < 0.08;
-            const isHeavyKaraage = !carriesCapsule && state.elapsed >= 30 && Math.random() < 0.2;
+            const isHeavyKaraage = !carriesCapsule && state.stage >= 3 && Math.random() < 0.24;
+            let enemyType = carriesCapsule ? "carrier" : isAsteroid ? "asteroid" : "teacherMedium";
+            if (!carriesCapsule && !isAsteroid && !isHeavyKaraage) {
+                const roll = Math.random();
+                if (state.stage === 1) {
+                    enemyType = roll < 0.3 ? "teacherSmall" : roll < 0.56 ? "fighter" : roll < 0.82 ? "teacherMedium" : "teacherLarge";
+                } else if (state.stage === 2) {
+                    enemyType = roll < 0.16 ? "diskA" : roll < 0.32 ? "diskB" : roll < 0.5 ? "worker" : roll < 0.72 ? "fighter" : roll < 0.86 ? "teacherSmall" : "teacherMedium";
+                } else {
+                    enemyType = roll < 0.18 ? "diskA" : roll < 0.36 ? "diskB" : roll < 0.58 ? "worker" : roll < 0.76 ? "fighter" : "teacherLarge";
+                }
+            }
+            if (isHeavyKaraage) {
+                enemyType = "teacherLarge";
+            }
+            const config = enemyConfigs[enemyType] || null;
+            const templateKey = config ? config.template : "enemyKaraage";
             const karaageEnemy = carriesCapsule
                 ? null
-                : cloneModelTemplate(isHeavyKaraage ? "enemyKaraageHeavy" : "enemyKaraage", isHeavyKaraage ? "karaageHeavy" : isAsteroid ? "karaageAsteroid" : "karaageEnemy");
+                : cloneModelTemplate(templateKey, config ? config.spawnName : isAsteroid ? "karaageAsteroid" : "karaageEnemy");
             const mesh = carriesCapsule
                 ? createEnemyShip(game.scene, game.materials, false)
                 : karaageEnemy || createEnemyShip(game.scene, game.materials, isAsteroid);
             mesh.position.set(x + delayOffset, y, 0);
-            mesh.rotation.z = isHeavyKaraage ? 0 : Math.random() * Math.PI;
+            mesh.rotation.z = 0;
             if (isAsteroid && !carriesCapsule && !isHeavyKaraage && mesh.name !== "asteroid") {
                 mesh.scaling.scaleInPlace(1.16);
             }
-            mesh.metadata = {
-                speed: 2.8 + state.wave * 0.38 + Math.random() * 0.65,
-                radius: isHeavyKaraage ? 0.68 : carriesCapsule ? 0.38 : isAsteroid ? 0.45 : 0.38,
-                hp: isHeavyKaraage ? 4 : carriesCapsule ? 1 : isAsteroid ? 2 + Math.floor(state.wave / 3) : 1,
-                points: isHeavyKaraage ? 420 : carriesCapsule ? 120 : isAsteroid ? 150 : 100,
-                spin: isHeavyKaraage ? 0 : (Math.random() - 0.5) * 3.8,
-                waveY: y,
-                wavePhase: Math.random() * Math.PI * 2,
-                carriesCapsule,
-                canShoot: !!karaageEnemy,
-                shootTimer: 0.7 + Math.random() * 1.6
+            const speedByType = {
+                carrier: 2.7,
+                asteroid: 2.3
             };
+            const hpByType = {
+                carrier: 0.5,
+                asteroid: 2 + Math.floor(state.wave / 3)
+            };
+            const pointsByType = {
+                carrier: 120,
+                asteroid: 150
+            };
+            const speed = config ? randomRange(config.speed) : speedByType[enemyType];
+            const waveAmount = config ? randomRange(config.waveAmount) : 0.28;
+            const waveSpeed = config ? randomRange(config.waveSpeed) : 2.2;
+            const shotInterval = config ? randomRange(config.shotInterval) : 1.05 + Math.random() * 1.7;
+            mesh.metadata = {
+                speed: (speed || 2.6) + (config ? 0 : state.stage * 0.22 + state.wave * 0.08 + Math.random() * 0.42),
+                radius: config ? config.radius : carriesCapsule ? 0.38 : isAsteroid ? 0.45 : 0.38,
+                hp: config ? config.hp : hpByType[enemyType],
+                points: config ? config.points : pointsByType[enemyType],
+                spin: config && config.randomSpin ? (Math.random() - 0.5) * 3.8 : 0,
+                waveY: y,
+                waveAmount,
+                waveSpeed,
+                wavePhase: Math.random() * Math.PI * 2,
+                enemyType,
+                motion: config ? config.motion : "sine",
+                enemyConfig: config,
+                carriesCapsule,
+                canShoot: !!karaageEnemy && config && config.canShoot !== false && state.stage >= 2,
+                shotInterval,
+                shootTimer: shotInterval
+            };
+            decorateEnemy(mesh, enemyType);
             if (mesh.getTotalVertices) {
                 mesh.material = isAsteroid ? game.materials.asteroid : game.materials.enemy;
             }
@@ -770,7 +1640,7 @@
         }
 
         function collectCapsule(capsule) {
-            state.powerCursor = (state.powerCursor + 1) % powerItems.length;
+            advancePowerCursor();
             state.score += 250;
             addSparks(capsule.position, 20);
             updateHud();
@@ -783,13 +1653,16 @@
             if (isPowerMaxed(state.powerCursor)) {
                 return;
             }
+            if (state.powerCursor === 4 && !state.lemonUnlocked) {
+                return;
+            }
 
             switch (state.powerCursor) {
                 case 0:
                     state.speedLevel = Math.min(3, state.speedLevel + 1);
                     break;
                 case 1:
-                    state.missileLevel = Math.min(4, state.missileLevel + 1);
+                    state.missileLevel = Math.min(state.lemonUnlocked ? 4 : 1, state.missileLevel + 1);
                     break;
                 case 2:
                     addOption();
@@ -830,6 +1703,14 @@
             const dx = a.x - b.x;
             const dy = a.y - b.y;
             return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function disposeEnemy(enemy) {
+            if (enemy.metadata && enemy.metadata.parts) {
+                enemy.metadata.parts.forEach((part) => part.dispose());
+                enemy.metadata.parts.length = 0;
+            }
+            enemy.dispose();
         }
 
         function damagePlayer() {
@@ -949,6 +1830,14 @@
         }
 
         function fireEnemyBullet(enemy) {
+            if (enemy.metadata.isFinalBoss) {
+                fireBossTurrets(enemy);
+                return;
+            }
+            if (enemy.metadata.enemyConfig && enemy.metadata.enemyConfig.ringShot) {
+                fireEnemyRing(enemy);
+                return;
+            }
             const bullet = BABYLON.MeshBuilder.CreateSphere("enemyBullet", {
                 diameter: 0.16,
                 segments: 12
@@ -973,6 +1862,76 @@
             enemyBullets.push(bullet);
         }
 
+        function createEnemyAimBullet(x, y, speed = 4.6 + state.wave * 0.18, radius = 0.14, diameter = 0.16) {
+            const bullet = BABYLON.MeshBuilder.CreateSphere("enemyBullet", {
+                diameter,
+                segments: 12
+            }, game.scene);
+            bullet.position.set(x, y, -0.06);
+            const direction = new BABYLON.Vector2(
+                game.player.position.x - bullet.position.x,
+                game.player.position.y - bullet.position.y
+            );
+            if (direction.lengthSquared() > 0.0001) {
+                direction.normalize();
+            } else {
+                direction.set(-1, 0);
+            }
+            bullet.metadata = {
+                vx: direction.x * speed,
+                vy: direction.y * speed,
+                radius
+            };
+            bullet.material = game.materials.enemyBullet;
+            enemyBullets.push(bullet);
+            return bullet;
+        }
+
+        function fireBossTurrets(enemy) {
+            const offsets = enemy.metadata.turretOffsets || [
+                new BABYLON.Vector2(-1.0, 0.62),
+                new BABYLON.Vector2(-1.12, 0),
+                new BABYLON.Vector2(-1.0, -0.62)
+            ];
+            offsets.forEach((offset) => {
+                createEnemyAimBullet(enemy.position.x + offset.x, enemy.position.y + offset.y, 4.2 + state.wave * 0.12, 0.15, 0.18);
+            });
+        }
+
+        function fireEnemyRing(enemy) {
+            const center = new BABYLON.Vector2(enemy.position.x - 0.5, enemy.position.y);
+            const direction = new BABYLON.Vector2(game.player.position.x - center.x, game.player.position.y - center.y);
+            if (direction.lengthSquared() > 0.0001) {
+                direction.normalize();
+            } else {
+                direction.set(-1, 0);
+            }
+            const speed = 3.5 + state.wave * 0.12;
+            const ringRx = enemy.metadata.radius * 0.45;
+            const ringRy = enemy.metadata.radius * 0.34;
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8;
+                const bullet = BABYLON.MeshBuilder.CreateSphere("enemyRingBullet", {
+                    diameter: 0.13,
+                    segments: 10
+                }, game.scene);
+                bullet.position.set(center.x + Math.cos(angle) * ringRx, center.y + Math.sin(angle) * ringRy, -0.06);
+                bullet.metadata = {
+                    vx: direction.x * speed,
+                    vy: direction.y * speed,
+                    radius: 0.12,
+                    ringCenterX: center.x,
+                    ringCenterY: center.y,
+                    ringAngle: angle,
+                    ringRx,
+                    ringRy,
+                    ringSpin: 1.4
+                };
+                bullet.material = game.materials.enemyBullet;
+                enemyBullets.push(bullet);
+            }
+        }
+
         function destroyEnemyAt(index, position) {
             const enemy = enemies[index];
             if (!enemy) {
@@ -980,12 +1939,25 @@
             }
             state.score += enemy.metadata.points;
             state.kills += 1;
+            state.stageKills += 1;
+            const wasStageBoss = enemy.metadata.isStageBoss;
+            const wasFinalBoss = enemy.metadata.isFinalBoss;
             if (enemy.metadata.carriesCapsule) {
                 spawnCapsule(position);
             }
             addSparks(position, 22);
-            enemy.dispose();
+            disposeEnemy(enemy);
             enemies.splice(index, 1);
+            if (wasStageBoss) {
+                state.stageBossCount = Math.max(0, state.stageBossCount - 1);
+                if (state.stage === 1 && state.stageBossCount === 0) {
+                    triggerStageClear();
+                }
+            }
+            if (wasFinalBoss) {
+                state.bossEnemy = null;
+                completeGame();
+            }
             updateHud();
         }
 
@@ -1032,6 +2004,10 @@
                     if (distance <= radius + enemy.metadata.radius) {
                         shockwave.metadata.damagedEnemies.add(enemy);
                         enemy.metadata.hp -= shockwave.metadata.damage;
+                        if (enemy.metadata.isFinalBoss) {
+                            const hpRatio = Math.max(0, enemy.metadata.hp / state.bossMaxHp);
+                            bossFillEl.style.width = `${hpRatio * 100}%`;
+                        }
                         addSparks(enemy.position, 10);
                         if (enemy.metadata.hp <= 0) {
                             destroyEnemyAt(k, enemy.position.clone());
@@ -1044,6 +2020,34 @@
                     shockwaves.splice(i, 1);
                 }
             }
+        }
+
+        function tryDamageEnemyShield(enemy, bullet, damage) {
+            if (!enemy.metadata || !enemy.metadata.shields || enemy.metadata.shields.length === 0) {
+                return false;
+            }
+            for (let i = enemy.metadata.shields.length - 1; i >= 0; i--) {
+                const shield = enemy.metadata.shields[i];
+                if (!shield || shield.isDisposed()) {
+                    enemy.metadata.shields.splice(i, 1);
+                    continue;
+                }
+                const shieldPosition = shield.getAbsolutePosition();
+                if (distance2D(shieldPosition, bullet.position) < shield.metadata.radius + bullet.metadata.radius) {
+                    shield.metadata.hp -= damage;
+                    const hpRatio = Math.max(0, shield.metadata.hp / shield.metadata.maxHp);
+                    shield.visibility = 0.18 + hpRatio * 0.4;
+                    shield.scaling.set(0.65 + hpRatio * 0.35, 0.65 + hpRatio * 0.35, 1);
+                    addSparks(shieldPosition, 8);
+                    if (shield.metadata.hp <= 0) {
+                        addSparks(shieldPosition, 16);
+                        shield.dispose();
+                        enemy.metadata.shields.splice(i, 1);
+                    }
+                    return true;
+                }
+            }
+            return false;
         }
 
         function updateLists(delta) {
@@ -1067,35 +2071,75 @@
 
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const enemy = enemies[i];
-                enemy.position.x -= enemy.metadata.speed * delta;
-                enemy.position.y = enemy.metadata.waveY + Math.sin(state.elapsed * 2.2 + enemy.metadata.wavePhase) * 0.28;
+                const motion = enemy.metadata.motion || "sine";
+                if (motion === "hover") {
+                    enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, world.maxX - 2.0, 0.018);
+                } else if (motion === "boss") {
+                    enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, world.maxX - 2.4, 0.02);
+                } else {
+                    enemy.position.x -= enemy.metadata.speed * delta;
+                }
+                if (enemy.metadata.isStageBoss) {
+                    enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, world.maxX - 1.3, 0.025);
+                }
+                if (enemy.metadata.isFinalBoss) {
+                    enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, world.maxX - 1.8, 0.02);
+                    enemy.metadata.waveY = 0;
+                }
+                const waveAmount = enemy.metadata.waveAmount === undefined ? 0.28 : enemy.metadata.waveAmount;
+                const waveSpeed = enemy.metadata.waveSpeed === undefined ? 2.2 : enemy.metadata.waveSpeed;
+                enemy.position.y = enemy.metadata.waveY + Math.sin(state.elapsed * waveSpeed + enemy.metadata.wavePhase) * waveAmount;
+                const bankZ = BABYLON.Scalar.Clamp(
+                    Math.cos(state.elapsed * waveSpeed + enemy.metadata.wavePhase) * waveAmount * waveSpeed * 0.16,
+                    BABYLON.Tools.ToRadians(-20),
+                    BABYLON.Tools.ToRadians(20)
+                );
                 enemy.rotation.z += enemy.metadata.spin * delta;
+                const modelRoot = enemy.getChildren().find((child) => child.name && child.name.indexOf("Model") >= 0);
+                if (modelRoot && enemy.metadata.enemyConfig) {
+                    modelRoot.rotation.z = enemy.metadata.enemyConfig.rotation.z + bankZ;
+                }
+                if (enemy.metadata.enemyType === "corvette" && enemy.metadata.parts) {
+                    enemy.metadata.parts.forEach((part, partIndex) => {
+                        const angle = state.elapsed * 1.8 + (Math.PI * 2 * partIndex) / enemy.metadata.parts.length;
+                        part.position.x = Math.cos(angle) * 0.58;
+                        part.position.y = Math.sin(angle) * 0.58;
+                    });
+                }
                 if (enemy.metadata.canShoot && enemy.position.x < world.maxX - 0.2 && enemy.position.x > game.player.position.x + 1.2) {
                     enemy.metadata.shootTimer -= delta;
                     if (enemy.metadata.shootTimer <= 0) {
-                        if (Math.random() < 0.42) {
+                        const shotChance = enemy.metadata.isFinalBoss ? 0.95 : 1;
+                        if (Math.random() < shotChance) {
                             fireEnemyBullet(enemy);
                         }
-                        enemy.metadata.shootTimer = 1.05 + Math.random() * 1.7;
+                        enemy.metadata.shootTimer = enemy.metadata.isFinalBoss
+                            ? randomRange(enemy.metadata.shotInterval || 4)
+                            : randomRange(enemy.metadata.shotInterval || 8);
                     }
                 }
 
                 if (distance2D(enemy.position, game.player.position) < enemy.metadata.radius + 0.38) {
                     addSparks(enemy.position, 14);
-                    enemy.dispose();
+                    disposeEnemy(enemy);
                     enemies.splice(i, 1);
                     damagePlayer();
                     continue;
                 }
 
-                if (enemy.position.x < world.minX - 1) {
-                    enemy.dispose();
+                if (!enemy.metadata.isStageBoss && !enemy.metadata.isFinalBoss && enemy.position.x < world.minX - 1) {
+                    disposeEnemy(enemy);
                     enemies.splice(i, 1);
                     continue;
                 }
 
                 for (let j = bullets.length - 1; j >= 0; j--) {
                     const bullet = bullets[j];
+                    if (tryDamageEnemyShield(enemy, bullet, bullet.metadata.damage)) {
+                        bullet.dispose();
+                        bullets.splice(j, 1);
+                        break;
+                    }
                     if (distance2D(enemy.position, bullet.position) < enemy.metadata.radius + bullet.metadata.radius) {
                         const hitPosition = bullet.position.clone();
                         const enemyPosition = enemy.position.clone();
@@ -1104,6 +2148,10 @@
                         bullet.dispose();
                         bullets.splice(j, 1);
                         enemy.metadata.hp -= bulletDamage;
+                        if (enemy.metadata.isFinalBoss) {
+                            const hpRatio = Math.max(0, enemy.metadata.hp / state.bossMaxHp);
+                            bossFillEl.style.width = `${hpRatio * 100}%`;
+                        }
                         addSparks(hitPosition, 8);
                         if (isExplosiveMissile) {
                             explodeMissile(hitPosition, enemy);
@@ -1121,8 +2169,16 @@
 
             for (let i = enemyBullets.length - 1; i >= 0; i--) {
                 const bullet = enemyBullets[i];
-                bullet.position.x += bullet.metadata.vx * delta;
-                bullet.position.y += bullet.metadata.vy * delta;
+                if (bullet.metadata.ringCenterX !== undefined) {
+                    bullet.metadata.ringCenterX += bullet.metadata.vx * delta;
+                    bullet.metadata.ringCenterY += bullet.metadata.vy * delta;
+                    bullet.metadata.ringAngle += bullet.metadata.ringSpin * delta;
+                    bullet.position.x = bullet.metadata.ringCenterX + Math.cos(bullet.metadata.ringAngle) * bullet.metadata.ringRx;
+                    bullet.position.y = bullet.metadata.ringCenterY + Math.sin(bullet.metadata.ringAngle) * bullet.metadata.ringRy;
+                } else {
+                    bullet.position.x += bullet.metadata.vx * delta;
+                    bullet.position.y += bullet.metadata.vy * delta;
+                }
                 bullet.rotation.z += delta * 7;
 
                 if (distance2D(bullet.position, game.player.position) < bullet.metadata.radius + 0.38) {
@@ -1204,28 +2260,43 @@
             const delta = Math.min(engine.getDeltaTime() / 1000, 0.033);
             updateStars(delta);
 
+            if (!state.hasStarted) {
+                return;
+            }
+
+            if (state.isIntermission) {
+                return;
+            }
+
             if (state.gameOver) {
                 return;
             }
 
             state.elapsed += delta;
-            state.wave = 1 + Math.floor(state.elapsed / 22);
+            state.stageElapsed += delta;
+            updateStage(delta);
+            updateDialogue(delta);
+            if (state.isIntermission) {
+                return;
+            }
+            state.wave = 1 + Math.floor(state.elapsed / 24) + Math.max(0, state.stage - 1);
             state.enemyTimer -= delta;
             state.formationTimer -= delta;
             state.terrainTimer -= delta;
 
-            const spawnDelay = Math.max(0.42, 1.08 - state.wave * 0.08);
-            if (state.enemyTimer <= 0) {
+            const spawnDelay = Math.max(0.36, 1.16 - state.stage * 0.16 - state.wave * 0.04);
+            const isBossActive = (state.stage === 1 && state.stage1BossSpawned) || (state.stage === 3 && state.stage3BossSpawned);
+            if (state.enemyTimer <= 0 && !isBossActive) {
                 spawnEnemy();
                 state.enemyTimer = spawnDelay;
             }
-            if (state.formationTimer <= 0) {
+            if (state.formationTimer <= 0 && !isBossActive) {
                 spawnFormation();
-                state.formationTimer = Math.max(4.5, 8.2 - state.wave * 0.4);
+                state.formationTimer = Math.max(3.8, 8.8 - state.stage * 1.1 - state.wave * 0.18);
             }
             if (state.terrainTimer <= 0) {
                 spawnTerrainBlock();
-                state.terrainTimer = Math.max(2.6, 5.2 - state.wave * 0.2);
+                state.terrainTimer = state.stage >= 2 ? Math.max(1.9, 4.2 - state.wave * 0.16) : Math.max(3.2, 6.4 - state.wave * 0.1);
             }
 
             updatePlayer(delta);
