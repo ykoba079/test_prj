@@ -118,6 +118,120 @@
             user-select: none;
         }
 
+        .mobileControls {
+            position: fixed;
+            inset: auto 0 0;
+            z-index: 14;
+            display: none;
+            align-items: end;
+            justify-content: space-between;
+            box-sizing: border-box;
+            padding: 0 18px 18px;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .movePad {
+            position: relative;
+            width: 118px;
+            height: 118px;
+            border: 1px solid rgba(132, 230, 255, 0.38);
+            border-radius: 50%;
+            background: rgba(5, 13, 30, 0.48);
+            box-shadow: inset 0 0 24px rgba(82, 212, 255, 0.16), 0 0 22px rgba(15, 160, 255, 0.16);
+            pointer-events: auto;
+            touch-action: none;
+        }
+
+        .movePadKnob {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 44px;
+            height: 44px;
+            border: 1px solid rgba(255, 242, 120, 0.72);
+            border-radius: 50%;
+            background: rgba(255, 225, 78, 0.3);
+            box-shadow: 0 0 18px rgba(255, 225, 78, 0.38);
+            transform: translate(-50%, -50%);
+        }
+
+        .mobileActions {
+            display: grid;
+            grid-template-columns: 72px 92px;
+            gap: 12px;
+            align-items: end;
+            pointer-events: auto;
+        }
+
+        .controlButton {
+            display: grid;
+            place-items: center;
+            height: 64px;
+            border: 1px solid rgba(132, 230, 255, 0.42);
+            border-radius: 50%;
+            background: rgba(5, 13, 30, 0.58);
+            box-shadow: inset 0 0 18px rgba(82, 212, 255, 0.14), 0 0 20px rgba(15, 160, 255, 0.16);
+            color: #e9fbff;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0;
+            touch-action: none;
+        }
+
+        .controlButton.isPrimary {
+            height: 92px;
+            background: rgba(255, 215, 54, 0.24);
+            border-color: rgba(255, 238, 118, 0.72);
+            color: #fff7a8;
+            box-shadow: inset 0 0 22px rgba(255, 225, 78, 0.15), 0 0 24px rgba(255, 225, 78, 0.22);
+        }
+
+        .controlButton.isPressed,
+        .movePad.isActive {
+            filter: brightness(1.25);
+        }
+
+        @media (hover: none), (pointer: coarse), (max-width: 760px) {
+            .mobileControls {
+                display: flex;
+            }
+
+            .help {
+                display: none;
+            }
+
+            .hud {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                gap: 6px;
+                font-size: 12px;
+            }
+
+            .hud span,
+            .powerBar {
+                padding: 6px 7px;
+            }
+
+            .powerBar {
+                bottom: 142px;
+                grid-template-columns: repeat(5, minmax(48px, 1fr));
+                width: calc(100vw - 20px);
+                gap: 4px;
+            }
+
+            .powerSlot {
+                padding: 6px 4px;
+                font-size: 11px;
+            }
+
+            .dialogue {
+                bottom: 216px;
+            }
+        }
+
         .centerMessage {
             position: fixed;
             inset: 0;
@@ -158,7 +272,7 @@
             background:
                 linear-gradient(90deg, rgba(2, 5, 14, 0.9) 0%, rgba(3, 6, 16, 0.54) 42%, rgba(3, 6, 16, 0.08) 100%),
                 linear-gradient(0deg, rgba(2, 5, 14, 0.86) 0%, rgba(2, 5, 14, 0.16) 54%, rgba(2, 5, 14, 0.36) 100%),
-                url("./img/title-escape-karaage-empire.png") center / cover no-repeat;
+                url("./img/title-escape-karaage-empire.jpg") center / cover no-repeat;
             user-select: none;
         }
 
@@ -245,9 +359,10 @@
         }
 
         .dialogueText {
-            font-size: clamp(15px, 2vw, 19px);
+            font-size: clamp(23px, 3vw, 29px);
             font-weight: 800;
             line-height: 1.55;
+            white-space: pre-line;
         }
 
         .powerSlot.isLocked {
@@ -308,9 +423,10 @@
         .intermissionPanel p {
             margin: 8px 0;
             color: #d9f7ff;
-            font-size: clamp(15px, 2.1vw, 20px);
+            font-size: clamp(23px, 3.15vw, 30px);
             font-weight: 800;
             line-height: 1.55;
+            white-space: pre-line;
         }
 
         .intermissionHint {
@@ -368,7 +484,6 @@
     <div id="titleScreen" class="titleScreen" aria-label="title screen">
         <div class="titleContent">
             <h1>からあげ帝国からの脱出</h1>
-            <p>事故で迷い込んだ帝国空域。背後から迫るからあげの大群を振り切り、レモンジの導きで故郷の惑星を目指せ。</p>
             <div class="titleActions">
                 <button id="startButton" class="startButton" type="button">START</button>
                 <span class="titleHint">Z / ENTER / SPACE</span>
@@ -390,6 +505,15 @@
         <div class="powerSlot" data-power-index="4">LEMON</div>
     </div>
     <div class="help">WASD / ARROWS: MOVE<br>Z: FIRE<br>X: POWER UP<br>R: RESTART</div>
+    <div id="mobileControls" class="mobileControls" aria-label="mobile controls">
+        <div id="movePad" class="movePad" aria-label="move pad">
+            <div id="movePadKnob" class="movePadKnob"></div>
+        </div>
+        <div class="mobileActions">
+            <button id="powerButton" class="controlButton" type="button">POWER</button>
+            <button id="fireButton" class="controlButton isPrimary" type="button">FIRE</button>
+        </div>
+    </div>
     <div id="dialogue" class="dialogue" aria-live="polite">
         <div id="dialogueSpeaker" class="dialogueSpeaker"></div>
         <div id="dialogueText" class="dialogueText"></div>
@@ -437,6 +561,11 @@
         const intermissionTextEl = document.getElementById("intermissionText");
         const messageEl = document.getElementById("message");
         const finalScoreEl = document.getElementById("finalScore");
+        const mobileControlsEl = document.getElementById("mobileControls");
+        const movePadEl = document.getElementById("movePad");
+        const movePadKnobEl = document.getElementById("movePadKnob");
+        const fireButtonEl = document.getElementById("fireButton");
+        const powerButtonEl = document.getElementById("powerButton");
 
         const powerItems = ["SPEED", "MISSILE", "OPTION", "SHIELD", "LEMON"];
         const playerModelFiles = ["model/シューティング自機白.glb"];
@@ -445,22 +574,25 @@
         const playerModelLeftX = -0.72;
         const modelAssetFiles = {
             missileLemon: "model/reference_lemon_with_leaf.glb",
+            lemonjiSupport: "model/lemonji.glb",
+            lemonSupportMissile: "model/lemonmissile.glb",
             laserLemon: "model/cut_lemon_1_8.glb",
             enemyKaraage: "model/からあげ先生.glb",
             enemyWorker: "model/からあげワーカー.glb",
             enemyDisk: "model/からあげ円盤.glb",
             enemyBattleship: "model/からあげ大戦艦.glb",
-            enemyFighter: "model/からあげ戦闘機.glb"
+            enemyFighter: "model/からあげ戦闘機.glb",
+            bossKaraageMissile: "model/からあげ1ps.glb"
         };
 
         const stageDefinitions = [
-            { stage: 1, duration: Infinity, title: "迷い込んだ帝国空域" },
-            { stage: 2, duration: 54, title: "小惑星地帯とレモンジ" },
-            { stage: 3, duration: Infinity, title: "巨大からあげ戦艦包囲網" }
+            { stage: 1, duration: Infinity, title: "帝国哨戒圏・カリッと包囲網" },
+            { stage: 2, duration: Infinity, title: "アステロイドベルト秘密基地" },
+            { stage: 3, duration: Infinity, title: "帝国大戦艦カリジューシー級" }
         ];
 
         const storyEvents = [
-            { id: "stage3", stage: 3, at: 0.8, speaker: "からあげ皇帝", text: "巨大戦艦接近。" }
+            { id: "stage3", stage: 3, at: 0.8, speaker: "帝国通信", text: "カリジューシー級、主砲展開。" }
         ];
 
         const world = {
@@ -525,7 +657,7 @@
                 waveAmount: 0.8,
                 waveSpeed: 1.0,
                 rotation: { x: 0, y: BABYLON.Tools.ToRadians(250), z: BABYLON.Tools.ToRadians(10) },
-                shotInterval: [5, 10],
+                shotInterval: [3, 7.5],
                 size: 1.8,
                 hp: 10,
                 shieldHp: 4,
@@ -586,11 +718,58 @@
                 rotation: { x: 0, y: BABYLON.Tools.ToRadians(240), z: BABYLON.Tools.ToRadians(10) },
                 shotInterval: 4,
                 size: 6.5,
-                hp: 150,
+                hp: 320,
                 points: 19800,
                 radius: 3.3
             }
         };
+
+        const stageEnemyTables = {
+            1: [
+                ["teacherSmall", 28],
+                ["fighter", 25],
+                ["teacherMedium", 32],
+                ["teacherLarge", 15]
+            ],
+            2: [
+                ["worker", 18],
+                ["fighter", 24],
+                ["teacherMedium", 34],
+                ["teacherLarge", 24]
+            ],
+            "2-late": [
+                ["worker", 18],
+                ["diskA", 14],
+                ["diskB", 16],
+                ["fighter", 22],
+                ["teacherMedium", 24],
+                ["teacherLarge", 18]
+            ],
+            3: [
+                ["worker", 24],
+                ["diskA", 20],
+                ["diskB", 20],
+                ["fighter", 18],
+                ["teacherLarge", 18]
+            ]
+        };
+
+        const stageOnePatterns = [
+            { at: 2.4, kind: "line", enemyType: "teacherSmall", count: 7, y: [-2.4, -1.6, -0.8, 0, 0.8, 1.6, 2.4], gap: 0.34, capsuleIndex: 3 },
+            { at: 5.8, kind: "sparse", enemyType: "teacherMedium", count: 4, y: [-1.9, -0.3, 1.05, 2.35], gap: 0.88 },
+            { at: 7.3, kind: "sparse", enemyTypes: ["teacherSmall", "teacherMedium", "teacherSmall", "teacherLarge"], count: 4, y: [-2.75, -0.95, 0.75, 2.35], gap: 0.72 },
+            { at: 9.0, kind: "wave", enemyType: "teacherSmall", count: 8, baseY: 1.65, gap: 0.36, waveAmount: 1.25, waveSpeed: 1.7, capsuleIndex: 5 },
+            { at: 12.4, kind: "wave", enemyType: "teacherSmall", count: 8, baseY: -1.65, gap: 0.36, waveAmount: 1.25, waveSpeed: 1.7, phase: Math.PI },
+            { at: 14.2, kind: "sparse", enemyTypes: ["teacherMedium", "teacherSmall", "teacherLarge", "teacherSmall", "teacherMedium"], count: 5, y: [-2.4, -1.1, 0.35, 1.55, 2.7], gap: 0.58 },
+            { at: 16.0, kind: "sparse", enemyType: "teacherMedium", count: 5, y: [-2.35, -1.05, 0.25, 1.35, 2.45], gap: 0.68, capsuleIndex: 1 },
+            { at: 22.0, kind: "line", enemyType: "teacherSmall", count: 8, y: [-2.55, -1.8, -1.05, -0.3, 0.45, 1.2, 1.95, 2.6], gap: 0.32, capsuleIndex: 4 },
+            { at: 24.5, kind: "sparse", enemyTypes: ["teacherLarge", "teacherSmall", "teacherMedium", "teacherSmall", "teacherMedium"], count: 5, y: [-2.65, -1.35, -0.1, 1.25, 2.45], gap: 0.62 },
+            { at: 27.0, kind: "wave", enemyType: "teacherMedium", count: 7, baseY: 0, gap: 0.48, waveAmount: 2.0, waveSpeed: 1.35, capsuleIndex: 2 },
+            { at: 31.0, kind: "fighterDive", count: 3, baseY: 1.35, gap: 0.78, waveAmount: 1.15, waveSpeed: 1.9, fromNear: false, capsuleIndex: 1 },
+            { at: 35.2, kind: "fighterDive", count: 3, baseY: -1.35, gap: 0.78, waveAmount: 1.15, waveSpeed: 1.9, fromNear: true, capsuleIndex: 1, phase: Math.PI }
+        ];
+
+        const enemyShotFrequencyMultiplier = 1.5;
 
         const state = {
             score: 0,
@@ -618,11 +797,31 @@
             lemonUnlocked: false,
             stage1GuideShown: false,
             stage1BossSpawned: false,
+            stage1CoreDefeated: false,
+            stage1CoreFallDone: false,
+            stage1ClearTimer: 0,
+            stagePatternIndex: 0,
+            stage2BossSpawned: false,
+            stage2ClearPending: false,
+            stage2ClearTimer: 0,
+            mediumLargeSpawnShotCount: 0,
+            nextMediumLargeOpeningShot: 3,
+            bossCapsuleTimer: 6,
+            stage3IntroActive: false,
+            stage3IntroTimer: 0,
+            stage3IntroLaunched: false,
+            stage3IntroExploded: false,
+            stage3IntroFinished: false,
+            stage3BossMusicCueStarted: false,
             stage3BossSpawned: false,
             stageBossCount: 0,
             bossEnemy: null,
             bossMaxHp: 1,
             dialogueTimer: 0,
+            invincibleTimer: 0,
+            playerDeathTimer: 0,
+            playerDeathNextBurst: 0,
+            playerDeathBursts: 0,
             triggeredStories: new Set()
         };
 
@@ -635,10 +834,684 @@
         const terrain = [];
         const shockwaves = [];
         const sparks = [];
+        const explosions = [];
         const playerTrail = [];
+        const stage3IntroObjects = [];
+        const touchInput = {
+            x: 0,
+            y: 0,
+            firing: false,
+            movePointerId: null
+        };
+        const audioState = {
+            context: null,
+            master: null,
+            musicGain: null,
+            musicTimer: null,
+            noteIndex: 0,
+            noiseBuffer: null,
+            titleMusic: null,
+            titleMusicBaseVolume: 0.24,
+            stage1JourneyMusic: null,
+            stage1JourneyMusicBaseVolume: 0.26,
+            hideoutMusic: null,
+            hideoutMusicBaseVolume: 0.26,
+            stage2Music: null,
+            stage2MusicBaseVolume: 0.27,
+            stage3Music: null,
+            stage3MusicBaseVolume: 0.28,
+            stage3MusicFadeTimer: null,
+            stage3BossMusic: null,
+            stage3BossMusicBaseVolume: 0.28,
+            endingMusic: null,
+            endingMusicBaseVolume: 0.3
+        };
+
+        function initAudio() {
+            if (!audioState.context) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) {
+                    return;
+                }
+                audioState.context = new AudioContext();
+                audioState.master = audioState.context.createGain();
+                audioState.master.gain.value = 0.18;
+                audioState.master.connect(audioState.context.destination);
+                audioState.musicGain = audioState.context.createGain();
+                audioState.musicGain.gain.value = 0.055;
+                audioState.musicGain.connect(audioState.master);
+            }
+            if (audioState.context.state === "suspended") {
+                audioState.context.resume();
+            }
+        }
+
+        function ensureTitleMusic() {
+            if (!audioState.titleMusic) {
+                const music = new Audio("audio/lemonnodanzai.mp3");
+                music.preload = "auto";
+                music.volume = audioState.titleMusicBaseVolume;
+                audioState.titleMusic = music;
+            }
+            return audioState.titleMusic;
+        }
+
+        function playTitleMusic() {
+            if (state.hasStarted || state.isIntermission) {
+                return;
+            }
+            const music = ensureTitleMusic();
+            if (!music.paused) {
+                return;
+            }
+            music.currentTime = 0;
+            music.volume = audioState.titleMusicBaseVolume;
+            const playPromise = music.play();
+            if (playPromise && playPromise.catch) {
+                playPromise.catch(() => {});
+            }
+        }
+
+        function stopTitleMusic() {
+            if (!audioState.titleMusic) {
+                return;
+            }
+            audioState.titleMusic.pause();
+            audioState.titleMusic.currentTime = 0;
+            audioState.titleMusic.volume = audioState.titleMusicBaseVolume;
+        }
+
+        function updateTitleMusic() {
+            const music = audioState.titleMusic;
+            if (!music || music.paused) {
+                return;
+            }
+            if (music.currentTime >= 30) {
+                music.currentTime = 0;
+                music.volume = audioState.titleMusicBaseVolume;
+                return;
+            }
+            if (music.currentTime >= 26) {
+                const fade = BABYLON.Scalar.Clamp((30 - music.currentTime) / 4, 0, 1);
+                music.volume = audioState.titleMusicBaseVolume * fade;
+            } else {
+                music.volume = audioState.titleMusicBaseVolume;
+            }
+        }
+
+        function setProceduralMusicMuted(muted) {
+            if (audioState.musicGain) {
+                audioState.musicGain.gain.value = muted ? 0.0001 : 0.055;
+            }
+        }
+
+        function ensureStage1JourneyMusic() {
+            if (!audioState.stage1JourneyMusic) {
+                const music = new Audio("audio/hyperdrive-sector.mp3");
+                music.preload = "auto";
+                music.loop = true;
+                music.volume = audioState.stage1JourneyMusicBaseVolume;
+                audioState.stage1JourneyMusic = music;
+            }
+            return audioState.stage1JourneyMusic;
+        }
+
+        function playStage1JourneyMusic() {
+            const music = ensureStage1JourneyMusic();
+            music.currentTime = 0;
+            music.volume = audioState.stage1JourneyMusicBaseVolume;
+            setProceduralMusicMuted(true);
+            const playPromise = music.play();
+            if (playPromise && playPromise.catch) {
+                playPromise.catch(() => {});
+            }
+        }
+
+        function stopStage1JourneyMusic() {
+            if (!audioState.stage1JourneyMusic) {
+                return;
+            }
+            audioState.stage1JourneyMusic.pause();
+            audioState.stage1JourneyMusic.currentTime = 0;
+            audioState.stage1JourneyMusic.volume = audioState.stage1JourneyMusicBaseVolume;
+            if (!audioState.hideoutMusic || audioState.hideoutMusic.paused) {
+                setProceduralMusicMuted(false);
+            }
+        }
+
+        function ensureHideoutMusic() {
+            if (!audioState.hideoutMusic) {
+                const music = new Audio("audio/asteroid-hideout.mp3");
+                music.preload = "auto";
+                music.loop = true;
+                music.volume = audioState.hideoutMusicBaseVolume;
+                audioState.hideoutMusic = music;
+            }
+            return audioState.hideoutMusic;
+        }
+
+        function playHideoutMusic() {
+            const music = ensureHideoutMusic();
+            if (music.paused) {
+                music.currentTime = 0;
+            }
+            music.volume = audioState.hideoutMusicBaseVolume;
+            setProceduralMusicMuted(true);
+            const playPromise = music.play();
+            if (playPromise && playPromise.catch) {
+                playPromise.catch(() => {});
+            }
+        }
+
+        function stopHideoutMusic() {
+            if (!audioState.hideoutMusic) {
+                return;
+            }
+            audioState.hideoutMusic.pause();
+            audioState.hideoutMusic.currentTime = 0;
+            audioState.hideoutMusic.volume = audioState.hideoutMusicBaseVolume;
+            if (!audioState.stage1JourneyMusic || audioState.stage1JourneyMusic.paused) {
+                setProceduralMusicMuted(false);
+            }
+        }
+
+        function ensureStage2Music() {
+            if (!audioState.stage2Music) {
+                const music = new Audio("audio/Fleet Breaker_ Lemon Counterstrike.mp3");
+                music.preload = "auto";
+                music.loop = true;
+                music.volume = audioState.stage2MusicBaseVolume;
+                audioState.stage2Music = music;
+            }
+            return audioState.stage2Music;
+        }
+
+        function playStage2Music() {
+            const music = ensureStage2Music();
+            if (music.paused) {
+                music.currentTime = 0;
+            }
+            music.volume = audioState.stage2MusicBaseVolume;
+            setProceduralMusicMuted(true);
+            const playPromise = music.play();
+            if (playPromise && playPromise.catch) {
+                playPromise.catch(() => {});
+            }
+        }
+
+        function stopStage2Music() {
+            if (!audioState.stage2Music) {
+                return;
+            }
+            audioState.stage2Music.pause();
+            audioState.stage2Music.currentTime = 0;
+            audioState.stage2Music.volume = audioState.stage2MusicBaseVolume;
+            setProceduralMusicMuted(false);
+        }
+
+        function ensureStage3Music() {
+            if (!audioState.stage3Music) {
+                const music = new Audio("audio/Lemon Charge_ The Great Fleet War.mp3");
+                music.preload = "auto";
+                music.loop = true;
+                music.volume = audioState.stage3MusicBaseVolume;
+                audioState.stage3Music = music;
+            }
+            return audioState.stage3Music;
+        }
+
+        function playStage3Music() {
+            const music = ensureStage3Music();
+            if (audioState.stage3MusicFadeTimer) {
+                window.clearInterval(audioState.stage3MusicFadeTimer);
+                audioState.stage3MusicFadeTimer = null;
+            }
+            if (music.paused) {
+                music.currentTime = 0;
+            }
+            music.volume = audioState.stage3MusicBaseVolume;
+            setProceduralMusicMuted(true);
+            const playPromise = music.play();
+            if (playPromise && playPromise.catch) {
+                playPromise.catch(() => {});
+            }
+        }
+
+        function stopStage3Music() {
+            if (audioState.stage3MusicFadeTimer) {
+                window.clearInterval(audioState.stage3MusicFadeTimer);
+                audioState.stage3MusicFadeTimer = null;
+            }
+            if (!audioState.stage3Music) {
+                return;
+            }
+            audioState.stage3Music.pause();
+            audioState.stage3Music.currentTime = 0;
+            audioState.stage3Music.volume = audioState.stage3MusicBaseVolume;
+            setProceduralMusicMuted(false);
+        }
+
+        function fadeOutStage3MusicForBoss(duration = 5) {
+            const music = audioState.stage3Music;
+            if (!music || music.paused || audioState.stage3MusicFadeTimer) {
+                return;
+            }
+            const startVolume = music.volume;
+            const startedAt = Date.now();
+            audioState.stage3MusicFadeTimer = window.setInterval(() => {
+                const progress = Math.min(1, (Date.now() - startedAt) / (duration * 1000));
+                music.volume = startVolume * (1 - progress);
+                if (progress >= 1) {
+                    window.clearInterval(audioState.stage3MusicFadeTimer);
+                    audioState.stage3MusicFadeTimer = null;
+                    music.pause();
+                    music.currentTime = 0;
+                    music.volume = audioState.stage3MusicBaseVolume;
+                }
+            }, 100);
+        }
+
+        function ensureEndingMusic() {
+            if (!audioState.endingMusic) {
+                const music = new Audio("audio/からあげ帝国国歌狂創の栄光.mp3");
+                music.preload = "auto";
+                music.loop = true;
+                music.volume = audioState.endingMusicBaseVolume;
+                audioState.endingMusic = music;
+            }
+            return audioState.endingMusic;
+        }
+
+        function playEndingMusic() {
+            const music = ensureEndingMusic();
+            music.currentTime = 0;
+            music.volume = audioState.endingMusicBaseVolume;
+            setProceduralMusicMuted(true);
+            const playPromise = music.play();
+            if (playPromise && playPromise.catch) {
+                playPromise.catch(() => {});
+            }
+        }
+
+        function stopEndingMusic() {
+            if (!audioState.endingMusic) {
+                return;
+            }
+            audioState.endingMusic.pause();
+            audioState.endingMusic.currentTime = 0;
+            audioState.endingMusic.volume = audioState.endingMusicBaseVolume;
+            setProceduralMusicMuted(false);
+        }
+
+        function stopAllFileMusic() {
+            stopTitleMusic();
+            stopStage1JourneyMusic();
+            stopHideoutMusic();
+            stopStage2Music();
+            stopStage3Music();
+            stopStage3BossMusic();
+            stopEndingMusic();
+        }
+
+        function getUrlStageSelection() {
+            const params = new URLSearchParams(window.location.search);
+            const stageValue = Number(params.get("stage") || params.get("STAGE") || params.get("s"));
+            if (!Number.isFinite(stageValue)) {
+                return 1;
+            }
+            return BABYLON.Scalar.Clamp(Math.floor(stageValue), 1, 3);
+        }
+
+        function ensureStage3BossMusic() {
+            if (!audioState.stage3BossMusic) {
+                const music = new Audio("audio/lemon-execution-original.mp3");
+                music.preload = "auto";
+                music.volume = audioState.stage3BossMusicBaseVolume;
+                audioState.stage3BossMusic = music;
+            }
+            return audioState.stage3BossMusic;
+        }
+
+        function playStage3BossMusic() {
+            stopStage3Music();
+            const music = ensureStage3BossMusic();
+            music.currentTime = 7.98;
+            music.volume = audioState.stage3BossMusicBaseVolume;
+            setProceduralMusicMuted(true);
+            const playPromise = music.play();
+            if (playPromise && playPromise.catch) {
+                playPromise.catch(() => {});
+            }
+        }
+
+        function stopStage3BossMusic() {
+            if (!audioState.stage3BossMusic) {
+                return;
+            }
+            audioState.stage3BossMusic.pause();
+            audioState.stage3BossMusic.currentTime = 7.98;
+            audioState.stage3BossMusic.volume = audioState.stage3BossMusicBaseVolume;
+            setProceduralMusicMuted(false);
+        }
+
+        function updateStage3BossMusic() {
+            const music = audioState.stage3BossMusic;
+            if (!music || music.paused) {
+                return;
+            }
+            if (music.currentTime >= 28.17) {
+                music.currentTime = 7.98;
+                music.volume = audioState.stage3BossMusicBaseVolume;
+            }
+        }
+
+        function playTone(frequency, duration, type = "square", volume = 0.2, slide = 0) {
+            const context = audioState.context;
+            if (!context || context.state !== "running") {
+                return;
+            }
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            const now = context.currentTime;
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(frequency, now);
+            if (slide !== 0) {
+                oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, frequency + slide), now + duration);
+            }
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(volume, now + 0.012);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+            oscillator.connect(gain);
+            gain.connect(audioState.master);
+            oscillator.start(now);
+            oscillator.stop(now + duration + 0.02);
+        }
+
+        function playNoise(duration, volume = 0.18) {
+            const context = audioState.context;
+            if (!context || context.state !== "running") {
+                return;
+            }
+            const length = Math.max(1, Math.floor(context.sampleRate * duration));
+            const buffer = context.createBuffer(1, length, context.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < length; i++) {
+                data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+            }
+            const source = context.createBufferSource();
+            const gain = context.createGain();
+            const now = context.currentTime;
+            source.buffer = buffer;
+            gain.gain.setValueAtTime(volume, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+            source.connect(gain);
+            gain.connect(audioState.master);
+            source.start(now);
+        }
+
+        function getSfxNoiseBuffer(context) {
+            if (!audioState.noiseBuffer || audioState.noiseBuffer.sampleRate !== context.sampleRate) {
+                audioState.noiseBuffer = context.createBuffer(1, context.sampleRate, context.sampleRate);
+                const data = audioState.noiseBuffer.getChannelData(0);
+                for (let index = 0; index < data.length; index += 1) {
+                    data[index] = Math.random() * 2 - 1;
+                }
+            }
+            return audioState.noiseBuffer;
+        }
+
+        function scheduleSfxTone(context, options) {
+            const {
+                start,
+                duration,
+                frequency,
+                endFrequency = frequency,
+                type = "sine",
+                volume = 0.15,
+                attack = 0.003
+            } = options;
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(frequency, start);
+            oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
+            gain.gain.setValueAtTime(0.0001, start);
+            gain.gain.linearRampToValueAtTime(volume, start + Math.min(attack, duration * 0.35));
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+            oscillator.connect(gain);
+            gain.connect(audioState.master);
+            oscillator.start(start);
+            oscillator.stop(start + duration + 0.01);
+        }
+
+        function scheduleSfxNoise(context, options) {
+            const {
+                start,
+                duration,
+                filterType = "bandpass",
+                frequency = 1200,
+                endFrequency = frequency,
+                q = 1,
+                volume = 0.15,
+                attack = 0.002
+            } = options;
+            const source = context.createBufferSource();
+            const filter = context.createBiquadFilter();
+            const gain = context.createGain();
+            source.buffer = getSfxNoiseBuffer(context);
+            filter.type = filterType;
+            filter.frequency.setValueAtTime(frequency, start);
+            filter.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
+            filter.Q.setValueAtTime(q, start);
+            gain.gain.setValueAtTime(0.0001, start);
+            gain.gain.linearRampToValueAtTime(volume, start + Math.min(attack, duration * 0.35));
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+            source.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioState.master);
+            source.start(start);
+            source.stop(start + duration + 0.01);
+        }
+
+        function synthesizeSfx(type, context, start) {
+            if (type === "normal-shot") {
+                scheduleSfxTone(context, { start, duration: 0.085, frequency: 1180, endFrequency: 260, type: "sawtooth", volume: 0.15 });
+                scheduleSfxTone(context, { start: start + 0.002, duration: 0.045, frequency: 1850, endFrequency: 880, type: "square", volume: 0.055 });
+                scheduleSfxNoise(context, { start, duration: 0.035, filterType: "highpass", frequency: 2600, volume: 0.055 });
+                return;
+            }
+            if (type === "missile-shot") {
+                scheduleSfxTone(context, { start, duration: 0.18, frequency: 190, endFrequency: 72, type: "sawtooth", volume: 0.12, attack: 0.01 });
+                scheduleSfxNoise(context, { start, duration: 0.12, filterType: "lowpass", frequency: 900, endFrequency: 180, volume: 0.08, attack: 0.006 });
+                return;
+            }
+            if (type === "hit-normal") {
+                scheduleSfxNoise(context, { start, duration: 0.06, filterType: "bandpass", frequency: 1450, q: 0.8, volume: 0.14 });
+                scheduleSfxTone(context, { start, duration: 0.075, frequency: 250, endFrequency: 165, type: "triangle", volume: 0.13 });
+                scheduleSfxTone(context, { start: start + 0.004, duration: 0.04, frequency: 920, endFrequency: 610, volume: 0.045 });
+                return;
+            }
+            if (type === "hit-shield") {
+                scheduleSfxNoise(context, { start, duration: 0.025, filterType: "highpass", frequency: 4200, endFrequency: 6500, volume: 0.075 });
+                scheduleSfxTone(context, { start, duration: 0.3, frequency: 2480, endFrequency: 1980, type: "sine", volume: 0.105, attack: 0.001 });
+                scheduleSfxTone(context, { start, duration: 0.22, frequency: 3720, endFrequency: 2860, type: "sine", volume: 0.055, attack: 0.001 });
+                scheduleSfxTone(context, { start: start + 0.045, duration: 0.26, frequency: 1680, endFrequency: 3180, type: "triangle", volume: 0.07, attack: 0.003 });
+                return;
+            }
+            if (type === "destroy-small") {
+                scheduleSfxNoise(context, { start, duration: 0.24, filterType: "lowpass", frequency: 1650, q: 0.7, volume: 0.2 });
+                scheduleSfxTone(context, { start, duration: 0.28, frequency: 150, endFrequency: 48, volume: 0.2 });
+                scheduleSfxNoise(context, { start, duration: 0.065, filterType: "highpass", frequency: 3000, volume: 0.055 });
+                return;
+            }
+            if (type === "destroy-medium") {
+                scheduleSfxNoise(context, { start, duration: 0.92, filterType: "lowpass", frequency: 2500, endFrequency: 130, q: 0.65, volume: 0.31 });
+                scheduleSfxNoise(context, { start, duration: 0.095, filterType: "highpass", frequency: 2400, endFrequency: 5000, volume: 0.12 });
+                scheduleSfxTone(context, { start, duration: 0.96, frequency: 104, endFrequency: 30, type: "sine", volume: 0.265, attack: 0.004 });
+                scheduleSfxNoise(context, { start: start + 0.13, duration: 0.66, filterType: "lowpass", frequency: 1050, endFrequency: 120, q: 0.75, volume: 0.17 });
+                return;
+            }
+            if (type === "destroy-large") {
+                scheduleSfxNoise(context, { start, duration: 1.48, filterType: "lowpass", frequency: 3900, endFrequency: 95, q: 0.6, volume: 0.34 });
+                scheduleSfxNoise(context, { start, duration: 0.11, filterType: "highpass", frequency: 2100, endFrequency: 6200, volume: 0.17 });
+                scheduleSfxTone(context, { start, duration: 1.52, frequency: 86, endFrequency: 22, type: "sine", volume: 0.32, attack: 0.003 });
+                scheduleSfxTone(context, { start: start + 0.012, duration: 1.08, frequency: 55, endFrequency: 24, type: "sawtooth", volume: 0.13, attack: 0.006 });
+                scheduleSfxNoise(context, { start: start + 0.12, duration: 1.18, filterType: "lowpass", frequency: 1500, endFrequency: 80, q: 0.7, volume: 0.22 });
+                return;
+            }
+            if (type === "enemy-shot-small") {
+                scheduleSfxTone(context, { start, duration: 0.11, frequency: 540, endFrequency: 210, type: "square", volume: 0.11 });
+                scheduleSfxTone(context, { start, duration: 0.08, frequency: 270, endFrequency: 145, type: "sawtooth", volume: 0.07 });
+                scheduleSfxNoise(context, { start, duration: 0.035, filterType: "bandpass", frequency: 900, q: 1.4, volume: 0.04 });
+                return;
+            }
+            if (type === "enemy-shot-large") {
+                scheduleSfxTone(context, { start, duration: 0.42, frequency: 260, endFrequency: 72, type: "sawtooth", volume: 0.16, attack: 0.012 });
+                scheduleSfxTone(context, { start: start + 0.015, duration: 0.34, frequency: 130, endFrequency: 48, type: "square", volume: 0.1 });
+                scheduleSfxNoise(context, { start, duration: 0.26, filterType: "lowpass", frequency: 780, q: 1.1, volume: 0.105, attack: 0.01 });
+                return;
+            }
+            if (type === "item-pickup") {
+                [1174.66, 1567.98, 2093.0].forEach((frequency, index) => {
+                    scheduleSfxTone(context, { start: start + index * 0.075, duration: 0.2, frequency, endFrequency: frequency * 1.015, type: "sine", volume: 0.08, attack: 0.006 });
+                });
+                scheduleSfxNoise(context, { start, duration: 0.06, filterType: "highpass", frequency: 5000, volume: 0.025 });
+                return;
+            }
+            if (type === "power-up") {
+                [392.0, 523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+                    const noteStart = start + index * 0.11;
+                    scheduleSfxTone(context, { start: noteStart, duration: 0.34, frequency, endFrequency: frequency * 1.02, type: "square", volume: 0.045, attack: 0.008 });
+                    scheduleSfxTone(context, { start: noteStart, duration: 0.42, frequency: frequency * 2, endFrequency: frequency * 2.01, type: "sine", volume: 0.045, attack: 0.008 });
+                });
+                return;
+            }
+            if (type === "shield-break") {
+                scheduleSfxNoise(context, { start, duration: 0.46, filterType: "highpass", frequency: 2100, q: 0.7, volume: 0.18 });
+                scheduleSfxNoise(context, { start, duration: 0.2, filterType: "bandpass", frequency: 4200, q: 2.3, volume: 0.11 });
+                [1480, 1110, 760, 510].forEach((frequency, index) => {
+                    scheduleSfxTone(context, { start: start + index * 0.055, duration: 0.32, frequency, endFrequency: frequency * 0.58, type: "triangle", volume: 0.055 });
+                });
+                scheduleSfxTone(context, { start, duration: 0.58, frequency: 380, endFrequency: 85, type: "sawtooth", volume: 0.075 });
+                return;
+            }
+            if (type === "stage-clear") {
+                const melody = [
+                    [0.0, 523.25, 0.24], [0.2, 659.25, 0.24], [0.4, 783.99, 0.36],
+                    [0.82, 1046.5, 0.5], [1.35, 987.77, 0.27], [1.62, 880.0, 0.27],
+                    [1.9, 783.99, 0.52], [2.55, 880.0, 0.27], [2.82, 987.77, 0.27],
+                    [3.09, 1046.5, 0.3], [3.4, 1318.51, 1.48]
+                ];
+                melody.forEach(([offset, frequency, duration]) => {
+                    scheduleSfxTone(context, { start: start + offset, duration, frequency, endFrequency: frequency * 1.002, type: "square", volume: 0.04, attack: 0.008 });
+                    scheduleSfxTone(context, { start: start + offset, duration: duration + 0.12, frequency: frequency / 2, endFrequency: frequency / 2, type: "sine", volume: 0.06, attack: 0.01 });
+                });
+                [[0.0, 261.63, 0.72], [0.82, 349.23, 1.05], [1.9, 392.0, 1.15], [3.4, 261.63, 1.5]].forEach(([offset, frequency, duration]) => {
+                    scheduleSfxTone(context, { start: start + offset, duration, frequency, endFrequency: frequency, type: "triangle", volume: 0.07, attack: 0.018 });
+                });
+                scheduleSfxNoise(context, { start, duration: 0.09, filterType: "highpass", frequency: 4800, endFrequency: 7200, volume: 0.025 });
+                return;
+            }
+            if (type === "game-start") {
+                [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+                    const noteStart = start + index * 0.14;
+                    scheduleSfxTone(context, { start: noteStart, duration: 0.25, frequency, endFrequency: frequency * 1.01, type: "square", volume: 0.055, attack: 0.008 });
+                    scheduleSfxTone(context, { start: noteStart, duration: 0.32, frequency: frequency / 2, endFrequency: frequency / 2, type: "sine", volume: 0.075, attack: 0.008 });
+                });
+            }
+        }
+
+        function playSound(name) {
+            try {
+                initAudio();
+                const context = audioState.context;
+                if (!context || context.state !== "running") {
+                    return;
+                }
+                const sfxMap = {
+                    start: "game-start",
+                    shot: "normal-shot",
+                    missile: "missile-shot",
+                    pickup: "item-pickup",
+                    power: "power-up",
+                    hit: "hit-normal",
+                    impact: "hit-normal",
+                    shield: "hit-shield",
+                    shieldBreak: "shield-break",
+                    explosion: "destroy-small",
+                    boss: "destroy-large",
+                    gameover: "destroy-large",
+                    enemyShotSmall: "enemy-shot-small",
+                    enemyShotLarge: "enemy-shot-large",
+                    stageClear: "stage-clear"
+                };
+                const type = sfxMap[name];
+                if (type) {
+                    synthesizeSfx(type, context, context.currentTime + 0.008);
+                }
+            } catch (error) {
+                console.warn("Audio playback skipped", error);
+            }
+        }
+
+        function startMusic() {
+            initAudio();
+            if (!audioState.context || audioState.musicTimer) {
+                return;
+            }
+            const notes = [110, 146.83, 164.81, 196, 164.81, 146.83, 130.81, 98];
+            audioState.musicTimer = window.setInterval(() => {
+                if (!state.hasStarted || state.gameOver || state.isIntermission) {
+                    return;
+                }
+                const context = audioState.context;
+                if (!context || context.state !== "running") {
+                    return;
+                }
+                const note = notes[audioState.noteIndex % notes.length];
+                audioState.noteIndex += 1;
+                const oscillator = context.createOscillator();
+                const gain = context.createGain();
+                const now = context.currentTime;
+                oscillator.type = "triangle";
+                oscillator.frequency.setValueAtTime(note, now);
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.26);
+                oscillator.connect(gain);
+                gain.connect(audioState.musicGain);
+                oscillator.start(now);
+                oscillator.stop(now + 0.28);
+            }, 320);
+        }
+
+        function setTouchMoveFromEvent(event) {
+            const rect = movePadEl.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const maxDistance = rect.width * 0.36;
+            const dx = event.clientX - centerX;
+            const dy = event.clientY - centerY;
+            const distance = Math.min(maxDistance, Math.sqrt(dx * dx + dy * dy));
+            const angle = Math.atan2(dy, dx);
+            const knobX = Math.cos(angle) * distance;
+            const knobY = Math.sin(angle) * distance;
+            touchInput.x = maxDistance > 0 ? knobX / maxDistance : 0;
+            touchInput.y = maxDistance > 0 ? -knobY / maxDistance : 0;
+            movePadKnobEl.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
+        }
+
+        function resetTouchMove() {
+            touchInput.x = 0;
+            touchInput.y = 0;
+            touchInput.movePointerId = null;
+            movePadKnobEl.style.transform = "translate(-50%, -50%)";
+            movePadEl.classList.remove("isActive");
+        }
 
         window.addEventListener("keydown", (event) => {
             keys.add(event.code);
+            playTitleMusic();
             if (!state.hasStarted && (event.code === "Enter" || event.code === "Space" || event.code === "KeyZ")) {
                 event.preventDefault();
                 startGame();
@@ -668,8 +1541,78 @@
             startGame();
         });
 
+        titleScreenEl.addEventListener("pointerdown", () => {
+            playTitleMusic();
+        });
+
         intermissionEl.addEventListener("click", () => {
+            playSound("pickup");
             advanceIntermission();
+        });
+
+        mobileControlsEl.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            initAudio();
+        });
+
+        movePadEl.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            initAudio();
+            touchInput.movePointerId = event.pointerId;
+            movePadEl.setPointerCapture(event.pointerId);
+            movePadEl.classList.add("isActive");
+            setTouchMoveFromEvent(event);
+        });
+
+        movePadEl.addEventListener("pointermove", (event) => {
+            if (touchInput.movePointerId !== event.pointerId) {
+                return;
+            }
+            event.preventDefault();
+            setTouchMoveFromEvent(event);
+        });
+
+        ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
+            movePadEl.addEventListener(type, (event) => {
+                if (touchInput.movePointerId !== null && event.pointerId !== touchInput.movePointerId) {
+                    return;
+                }
+                resetTouchMove();
+            });
+        });
+
+        fireButtonEl.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            initAudio();
+            fireButtonEl.setPointerCapture(event.pointerId);
+            fireButtonEl.classList.add("isPressed");
+            if (state.isIntermission) {
+                playSound("pickup");
+                advanceIntermission();
+                return;
+            }
+            touchInput.firing = true;
+        });
+
+        ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
+            fireButtonEl.addEventListener(type, () => {
+                touchInput.firing = false;
+                fireButtonEl.classList.remove("isPressed");
+            });
+        });
+
+        powerButtonEl.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            initAudio();
+            powerButtonEl.setPointerCapture(event.pointerId);
+            powerButtonEl.classList.add("isPressed");
+            activatePower();
+        });
+
+        ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
+            powerButtonEl.addEventListener(type, () => {
+                powerButtonEl.classList.remove("isPressed");
+            });
         });
 
         function randomRange(value) {
@@ -677,6 +1620,30 @@
                 return value[0] + Math.random() * (value[1] - value[0]);
             }
             return value;
+        }
+
+        function scaleEnemyShotInterval(value) {
+            const interval = randomRange(value);
+            return interval / enemyShotFrequencyMultiplier;
+        }
+
+        function chooseWeighted(entries) {
+            const total = entries.reduce((sum, entry) => sum + entry[1], 0);
+            let roll = Math.random() * total;
+            for (const [key, weight] of entries) {
+                roll -= weight;
+                if (roll <= 0) {
+                    return key;
+                }
+            }
+            return entries[entries.length - 1][0];
+        }
+
+        function getStageEnemyTable(stageNumber) {
+            if (stageNumber === 2 && state.stageElapsed >= 24) {
+                return stageEnemyTables["2-late"];
+            }
+            return stageEnemyTables[stageNumber] || stageEnemyTables[1];
         }
 
         function createGlowMaterial(scene, name, color, emissiveStrength) {
@@ -911,14 +1878,21 @@
                 playerCore: createGlowMaterial(scene, "playerCoreMat", new BABYLON.Color3(0.78, 1, 0.96), 1.25),
                 engine: createGlowMaterial(scene, "engineMat", new BABYLON.Color3(1, 0.42, 0.12), 1.25),
                 bullet: createGlowMaterial(scene, "bulletMat", new BABYLON.Color3(1, 0.92, 0.28), 1.2),
+                lemonBullet: createGlowMaterial(scene, "lemonBulletMat", new BABYLON.Color3(1, 0.98, 0.18), 1.55),
                 missile: createGlowMaterial(scene, "missileMat", new BABYLON.Color3(1, 0.48, 0.15), 1.05),
                 laser: createGlowMaterial(scene, "laserMat", new BABYLON.Color3(0.34, 1, 0.42), 1.1),
                 shockwave: createGlowMaterial(scene, "shockwaveMat", new BABYLON.Color3(0.7, 0.95, 1), 1.2),
+                explosionCore: createGlowMaterial(scene, "explosionCoreMat", new BABYLON.Color3(1, 0.72, 0.18), 1.9),
+                explosionHot: createGlowMaterial(scene, "explosionHotMat", new BABYLON.Color3(1, 0.22, 0.08), 1.55),
                 enemy: createGlowMaterial(scene, "enemyMat", new BABYLON.Color3(1, 0.18, 0.34), 0.85),
                 enemyWing: createGlowMaterial(scene, "enemyWingMat", new BABYLON.Color3(0.8, 0.08, 0.18), 0.55),
                 enemyCore: createGlowMaterial(scene, "enemyCoreMat", new BABYLON.Color3(1, 0.62, 0.86), 1.05),
                 asteroid: createGlowMaterial(scene, "asteroidMat", new BABYLON.Color3(0.65, 0.54, 0.43), 0.25),
-                capsule: createGlowMaterial(scene, "capsuleMat", new BABYLON.Color3(1, 0.34, 0.95), 1.1),
+                asteroidBg: createGlowMaterial(scene, "asteroidBgMat", new BABYLON.Color3(0.33, 0.3, 0.27), 0.08),
+                capsule: createGlowMaterial(scene, "capsuleMat", new BABYLON.Color3(1, 0.9, 0.12), 1.25),
+                capsuleRing: createGlowMaterial(scene, "capsuleRingMat", new BABYLON.Color3(1, 0.72, 0.08), 1.22),
+                capsuleCarrier: createGlowMaterial(scene, "capsuleCarrierMat", new BABYLON.Color3(0.14, 0.88, 0.34), 1.02),
+                capsuleCarrierCore: createGlowMaterial(scene, "capsuleCarrierCoreMat", new BABYLON.Color3(1, 0.86, 0.14), 1.28),
                 option: createGlowMaterial(scene, "optionMat", new BABYLON.Color3(0.42, 1, 0.72), 1.05),
                 spark: createGlowMaterial(scene, "sparkMat", new BABYLON.Color3(0.75, 0.95, 1), 1.3),
                 star: createGlowMaterial(scene, "starMat", new BABYLON.Color3(0.65, 0.9, 1), 0.9),
@@ -927,12 +1901,19 @@
                 corvetteArmor: createGlowMaterial(scene, "corvetteArmorMat", new BABYLON.Color3(1, 0.58, 0.16), 0.82),
                 gunnerCannon: createGlowMaterial(scene, "gunnerCannonMat", new BABYLON.Color3(0.13, 0.15, 0.2), 0.24),
                 guardShield: createGlowMaterial(scene, "guardShieldMat", new BABYLON.Color3(0.34, 0.9, 1), 0.75),
-                dartBooster: createGlowMaterial(scene, "dartBoosterMat", new BABYLON.Color3(1, 0.35, 0.1), 1.15)
+                dartBooster: createGlowMaterial(scene, "dartBoosterMat", new BABYLON.Color3(1, 0.35, 0.1), 1.15),
+                bossBeamWarning: createGlowMaterial(scene, "bossBeamWarningMat", new BABYLON.Color3(1, 0.2, 0.06), 1.35),
+                bossBeam: createGlowMaterial(scene, "bossBeamMat", new BABYLON.Color3(1, 0.72, 0.08), 1.7)
             };
+            materials.capsuleCarrierCore.alpha = 0.62;
+            materials.bossBeamWarning.alpha = 0.48;
+            materials.bossBeam.alpha = 0.74;
 
             const player = createPlayerShip(scene, materials);
             const modelTemplates = {
                 missileLemon: null,
+                lemonjiSupport: null,
+                lemonSupportMissile: null,
                 laserLemon: null,
                 enemyKaraage: null,
                 enemyKaraageMini: null,
@@ -946,9 +1927,12 @@
                 enemyDiskA: null,
                 enemyDiskB: null,
                 enemyBattleship: null,
-                enemyFighter: null
+                enemyFighter: null,
+                bossKaraageMissile: null
             };
             loadModelTemplate(scene, modelTemplates, "missileLemon", modelAssetFiles.missileLemon, 0.93, new BABYLON.Vector3(0, Math.PI / 2, 0));
+            loadModelTemplate(scene, modelTemplates, "lemonjiSupport", modelAssetFiles.lemonjiSupport, 0.72, new BABYLON.Vector3(0, Math.PI, 0));
+            loadModelTemplate(scene, modelTemplates, "lemonSupportMissile", modelAssetFiles.lemonSupportMissile, 1.15, new BABYLON.Vector3(0, Math.PI / 2, 0), new BABYLON.Vector3(1.55, 0.34, 0.34));
             loadModelTemplate(scene, modelTemplates, "laserLemon", modelAssetFiles.laserLemon, 1.44, new BABYLON.Vector3(0, Math.PI / 2, BABYLON.Tools.ToRadians(80)), new BABYLON.Vector3(2, 0.5, 1));
             loadModelTemplate(scene, modelTemplates, "enemyKaraage", modelAssetFiles.enemyKaraage, 0.92, new BABYLON.Vector3(0, Math.PI / 2, 0));
             loadModelTemplate(scene, modelTemplates, "enemyKaraageMini", modelAssetFiles.enemyKaraage, 0.62, new BABYLON.Vector3(0, Math.PI / 2, 0));
@@ -963,6 +1947,7 @@
             loadModelTemplate(scene, modelTemplates, "enemyDiskB", modelAssetFiles.enemyDisk, enemyConfigs.diskB.size, new BABYLON.Vector3(enemyConfigs.diskB.rotation.x, enemyConfigs.diskB.rotation.y, enemyConfigs.diskB.rotation.z));
             loadModelTemplate(scene, modelTemplates, "enemyBattleship", modelAssetFiles.enemyBattleship, enemyConfigs.battleship.size, new BABYLON.Vector3(enemyConfigs.battleship.rotation.x, enemyConfigs.battleship.rotation.y, enemyConfigs.battleship.rotation.z));
             loadModelTemplate(scene, modelTemplates, "enemyFighter", modelAssetFiles.enemyFighter, enemyConfigs.fighter.size, new BABYLON.Vector3(enemyConfigs.fighter.rotation.x, enemyConfigs.fighter.rotation.y, enemyConfigs.fighter.rotation.z));
+            loadModelTemplate(scene, modelTemplates, "bossKaraageMissile", modelAssetFiles.bossKaraageMissile, 0.82, new BABYLON.Vector3(0, Math.PI / 2, BABYLON.Tools.ToRadians(90)));
 
             const stars = [];
             for (let i = 0; i < 115; i++) {
@@ -982,10 +1967,36 @@
                 stars.push(star);
             }
 
+            const backgroundAsteroids = [];
+            for (let i = 0; i < 28; i++) {
+                const asteroid = createEnemyShip(scene, materials, true);
+                const size = 0.22 + Math.random() * 0.62;
+                asteroid.name = "backgroundAsteroid";
+                asteroid.position.set(
+                    world.minX + Math.random() * (world.maxX - world.minX),
+                    world.minY + Math.random() * (world.maxY - world.minY),
+                    1.6 + Math.random() * 1.9
+                );
+                asteroid.scaling.setAll(size);
+                asteroid.metadata = {
+                    speed: 0.18 + Math.random() * 0.55,
+                    spinX: (Math.random() - 0.5) * 0.55,
+                    spinY: (Math.random() - 0.5) * 0.55,
+                    spinZ: (Math.random() - 0.5) * 0.55
+                };
+                asteroid.getChildMeshes(false).forEach((mesh) => {
+                    mesh.material = materials.asteroidBg;
+                });
+                asteroid.setEnabled(false);
+                backgroundAsteroids.push(asteroid);
+            }
+
             return {
                 scene,
+                camera,
                 player,
                 stars,
+                backgroundAsteroids,
                 modelTemplates,
                 materials
             };
@@ -1044,14 +2055,18 @@
         }
 
         function resetGame() {
+            touchInput.firing = false;
+            resetTouchMove();
             bullets.splice(0).forEach((item) => item.dispose());
             enemyBullets.splice(0).forEach((item) => item.dispose());
-            enemies.splice(0).forEach((item) => item.dispose());
+            enemies.splice(0).forEach((item) => disposeEnemy(item));
             capsules.splice(0).forEach((item) => item.dispose());
             options.splice(0).forEach((item) => item.dispose());
             terrain.splice(0).forEach((item) => item.dispose());
             shockwaves.splice(0).forEach((item) => item.dispose());
             sparks.splice(0).forEach((item) => item.dispose());
+            explosions.splice(0).forEach((item) => item.dispose());
+            clearStage3IntroObjects();
             playerTrail.splice(0);
             state.score = 0;
             state.lives = 3;
@@ -1071,19 +2086,44 @@
             state.missileLevel = 0;
             state.hasLaser = false;
             state.shield = 0;
+            state.invincibleTimer = 0;
             state.gameOver = false;
             state.isIntermission = false;
             state.intermissionStep = null;
             state.lemonUnlocked = false;
             state.stage1GuideShown = false;
             state.stage1BossSpawned = false;
+            state.stage1CoreDefeated = false;
+            state.stage1CoreFallDone = false;
+            state.stage1ClearTimer = 0;
+            state.stagePatternIndex = 0;
+            state.stage2BossSpawned = false;
+            state.stage2ClearPending = false;
+            state.stage2ClearTimer = 0;
+            state.mediumLargeSpawnShotCount = 0;
+            state.nextMediumLargeOpeningShot = 3 + Math.floor(Math.random() * 6);
+            state.bossCapsuleTimer = 6;
+            state.stage3IntroActive = false;
+            state.stage3IntroTimer = 0;
+            state.stage3IntroLaunched = false;
+            state.stage3IntroExploded = false;
+            state.stage3IntroFinished = false;
+            state.stage3BossMusicCueStarted = false;
             state.stage3BossSpawned = false;
             state.stageBossCount = 0;
             state.bossEnemy = null;
             state.bossMaxHp = 1;
             state.dialogueTimer = 0;
+            state.playerDeathTimer = 0;
+            state.playerDeathNextBurst = 0;
+            state.playerDeathBursts = 0;
             state.triggeredStories = new Set();
             game.player.position.set(world.minX + 1.3, 0, 0);
+            game.player.rotation.set(0, 0, 0);
+            game.player.scaling.set(1, 1, 1);
+            game.player.setEnabled(true);
+            resetCameraToGameplay();
+            stopAllFileMusic();
             messageEl.classList.remove("isVisible");
             dialogueEl.classList.remove("isVisible");
             bossHudEl.classList.remove("isVisible");
@@ -1092,14 +2132,25 @@
         }
 
         function startGame() {
+            initAudio();
+            stopTitleMusic();
+            startMusic();
+            playSound("start");
+            resetGame();
             state.hasStarted = true;
             titleScreenEl.classList.add("isHidden");
-            resetGame();
+            const startStage = getUrlStageSelection();
+            if (startStage > 1) {
+                state.lemonUnlocked = true;
+                beginStage(startStage);
+                return;
+            }
+            playStage1JourneyMusic();
             showIntermission(
                 "UNKNOWN SPACE",
-                "航路事故により、所属不明の空域へ突入した。通信不能。背後から謎のからあげ型反応が接近している。",
+                "航路事故により、所属不明の空域へ突入してしまった。通信不能。前方から謎のからあげ型反応が接近している。",
                 "introStart",
-                "img/event-unknown-space.png"
+                "img/event-unknown-space.jpg"
             );
         }
 
@@ -1120,14 +2171,244 @@
             }
         }
 
-        function clearActiveGameObjects() {
+        function clearActiveGameObjects(options = {}) {
+            const keepEnemies = !!options.keepEnemies;
+            const keepCapsules = !!options.keepCapsules;
             bullets.splice(0).forEach((item) => item.dispose());
             enemyBullets.splice(0).forEach((item) => item.dispose());
-            enemies.splice(0).forEach((item) => item.dispose());
-            capsules.splice(0).forEach((item) => item.dispose());
+            if (!keepEnemies) {
+                enemies.splice(0).forEach((item) => disposeEnemy(item));
+            }
+            if (!keepCapsules) {
+                capsules.splice(0).forEach((item) => item.dispose());
+            }
             terrain.splice(0).forEach((item) => item.dispose());
             shockwaves.splice(0).forEach((item) => item.dispose());
             sparks.splice(0).forEach((item) => item.dispose());
+            explosions.splice(0).forEach((item) => item.dispose());
+        }
+
+        function clearStage3IntroObjects() {
+            stage3IntroObjects.splice(0).forEach((item) => {
+                if (item.mesh && !item.mesh.isDisposed()) {
+                    item.mesh.dispose();
+                } else if (item.dispose && !item.isDisposed()) {
+                    item.dispose();
+                }
+            });
+        }
+
+        function resetCameraToGameplay() {
+            if (!game || !game.camera) {
+                return;
+            }
+            game.camera.position.set(0, 0, -14);
+            game.camera.rotation.set(0, 0, 0);
+            game.camera.setTarget(BABYLON.Vector3.Zero());
+            game.camera.orthoLeft = -9.6;
+            game.camera.orthoRight = 9.6;
+            game.camera.orthoTop = 5.4;
+            game.camera.orthoBottom = -5.4;
+        }
+
+        function createStage3FallbackSupportShip(name) {
+            const root = new BABYLON.TransformNode(name, game.scene);
+            const body = BABYLON.MeshBuilder.CreateBox(`${name}Body`, {
+                width: 0.52,
+                height: 0.28,
+                depth: 0.18
+            }, game.scene);
+            body.material = game.materials.capsuleCarrier;
+            body.parent = root;
+            const core = BABYLON.MeshBuilder.CreateSphere(`${name}Core`, {
+                diameter: 0.18,
+                segments: 10
+            }, game.scene);
+            core.position.z = -0.12;
+            core.material = game.materials.capsuleCarrierCore;
+            core.parent = root;
+            return root;
+        }
+
+        function createStage3FleetSilhouette(x, y, scale) {
+            const ship = BABYLON.MeshBuilder.CreateBox("stage3FleetSilhouette", {
+                width: 0.7 * scale,
+                height: 0.18 * scale,
+                depth: 0.08
+            }, game.scene);
+            ship.position.set(x, y, 0.8);
+            ship.material = game.materials.enemyWing;
+            ship.visibility = 0.38;
+            stage3IntroObjects.push(ship);
+        }
+
+        function addSmokePuff(position, scale = 1) {
+            const smoke = BABYLON.MeshBuilder.CreateSphere("missileSmoke", {
+                diameter: 0.18 + Math.random() * 0.12,
+                segments: 8
+            }, game.scene);
+            smoke.position.set(
+                position.x - 0.38 - Math.random() * 0.18,
+                position.y + (Math.random() - 0.5) * 0.12,
+                position.z + 0.02
+            );
+            smoke.material = game.materials.terrain;
+            smoke.visibility = 0.34;
+            smoke.metadata = {
+                age: 0,
+                duration: 0.95 + Math.random() * 0.35,
+                maxScale: (1.35 + Math.random() * 0.75) * scale,
+                spin: (Math.random() - 0.5) * 2.4
+            };
+            explosions.push(smoke);
+        }
+
+        function startStage3IntroCutscene() {
+            clearActiveGameObjects();
+            clearStage3IntroObjects();
+            state.stageElapsed = 0;
+            state.stage3IntroActive = true;
+            state.stage3IntroTimer = 0;
+            state.stage3IntroLaunched = false;
+            state.stage3IntroExploded = false;
+            state.stage3IntroFinished = false;
+            game.player.position.set(-1.2, 0, 0);
+            game.player.rotation.set(0, 0, 0);
+            game.player.setEnabled(true);
+            game.camera.position.set(8.2, 2.3, -2.0);
+            game.camera.setTarget(new BABYLON.Vector3(-1.2, 0.15, 0));
+
+            for (let i = 0; i < 20; i++) {
+                const ship = cloneModelTemplate("lemonjiSupport", `stage3LemonjiSupport${i}`) || createStage3FallbackSupportShip(`stage3LemonjiSupport${i}`);
+                const depth = Math.random();
+                ship.position.set(
+                    game.player.position.x - 2.2 - Math.random() * 4.6,
+                    world.minY + 0.75 + Math.random() * (world.maxY - world.minY - 1.5),
+                    1.0 + depth * 2.2
+                );
+                ship.scaling.setAll(0.64 + depth * 0.34);
+                ship.metadata = {
+                    baseX: ship.position.x,
+                    baseY: ship.position.y,
+                    baseZ: ship.position.z,
+                    phase: Math.random() * Math.PI * 2,
+                    launched: false
+                };
+                stage3IntroObjects.push({ mesh: ship, kind: "supportShip" });
+
+                const missile = cloneModelTemplate("lemonSupportMissile", `stage3SupportMissile${i}`)
+                    || BABYLON.MeshBuilder.CreateBox(`stage3SupportMissile${i}`, { width: 1.1, height: 0.13, depth: 0.12 }, game.scene);
+                missile.position.set(ship.position.x, ship.position.y - 0.34, ship.position.z - 0.2);
+                missile.rotation.z = 0;
+                missile.metadata = {
+                    carrier: ship,
+                    index: i,
+                    launched: false,
+                    launchDelay: 1.35 + Math.random() * 0.95,
+                    speed: 1.35 + Math.random() * 0.45,
+                    acceleration: 3.8 + Math.random() * 1.8,
+                    maxSpeed: 12.0 + Math.random() * 2.6,
+                    trailTimer: 0,
+                    smokeBurst: 0,
+                    offsetY: BABYLON.Scalar.Clamp((Math.random() - 0.5) * 4.6, world.minY + 0.6, world.maxY - 0.6),
+                    targetY: world.minY + 0.65 + Math.random() * (world.maxY - world.minY - 1.3)
+                };
+                stage3IntroObjects.push({ mesh: missile, kind: "supportMissile" });
+            }
+
+            for (let i = 0; i < 26; i++) {
+                createStage3FleetSilhouette(world.maxX + 3.5 + Math.random() * 5.5, world.minY + 0.7 + Math.random() * (world.maxY - world.minY - 1.4), 0.7 + Math.random() * 1.4);
+            }
+            showDialogue("レモンジ", "援護する。全機、超長レモンカートリッジミサイル、発射！", 4.2);
+        }
+
+        function updateStage3IntroCutscene(delta) {
+            state.stage3IntroTimer += delta;
+            const t = state.stage3IntroTimer;
+            if (t <= 3.1) {
+                game.camera.position.set(
+                    BABYLON.Scalar.Lerp(game.camera.position.x, 8.2, Math.min(1, delta * 2)),
+                    BABYLON.Scalar.Lerp(game.camera.position.y, 2.3, Math.min(1, delta * 2)),
+                    BABYLON.Scalar.Lerp(game.camera.position.z, -2.0, Math.min(1, delta * 2))
+                );
+                game.camera.setTarget(new BABYLON.Vector3(-1.2, 0.15, 0));
+            } else {
+                const cameraProgress = Math.min(1, (t - 3.1) / 2.2);
+                game.camera.position.x = BABYLON.Scalar.Lerp(8.2, -5.4, cameraProgress);
+                game.camera.position.y = BABYLON.Scalar.Lerp(2.3, 1.15, cameraProgress);
+                game.camera.position.z = BABYLON.Scalar.Lerp(-2.0, -10.8, cameraProgress);
+                game.camera.setTarget(new BABYLON.Vector3(BABYLON.Scalar.Lerp(-1.2, world.maxX + 4.0, cameraProgress), 0, 0.7));
+            }
+
+            stage3IntroObjects.forEach((item) => {
+                const mesh = item.mesh || item;
+                if (!mesh || mesh.isDisposed()) {
+                    return;
+                }
+                if (item.kind === "supportShip") {
+                    mesh.position.x = mesh.metadata.baseX + Math.sin(t * 1.8 + mesh.metadata.phase) * 0.08;
+                    mesh.position.y = mesh.metadata.baseY + Math.cos(t * 1.6 + mesh.metadata.phase) * 0.06;
+                    mesh.position.z = mesh.metadata.baseZ + Math.sin(t * 1.2 + mesh.metadata.phase) * 0.05;
+                    if (t > 8.0) {
+                        mesh.position.x -= delta * 4.4;
+                        mesh.position.y += delta * (mesh.position.y > 0 ? 0.55 : -0.55);
+                    }
+                } else if (item.kind === "supportMissile") {
+                    if (!mesh.metadata.launched && t > mesh.metadata.launchDelay) {
+                        mesh.metadata.launched = true;
+                        mesh.metadata.smokeBurst = 0.18;
+                    }
+                    if (!mesh.metadata.launched && mesh.metadata.carrier) {
+                        mesh.position.x = mesh.metadata.carrier.position.x;
+                        mesh.position.y = mesh.metadata.carrier.position.y - 0.34;
+                        mesh.position.z = mesh.metadata.carrier.position.z - 0.2;
+                    } else {
+                        const passProgress = Math.min(1, Math.max(0, (t - mesh.metadata.launchDelay) / 2.4));
+                        mesh.metadata.speed = Math.min(mesh.metadata.maxSpeed, mesh.metadata.speed + mesh.metadata.acceleration * delta);
+                        mesh.position.x += mesh.metadata.speed * delta;
+                        mesh.position.y = BABYLON.Scalar.Lerp(mesh.position.y, mesh.metadata.offsetY, Math.min(1, delta * 1.35));
+                        mesh.position.z = BABYLON.Scalar.Lerp(mesh.position.z, -0.06, Math.min(1, delta * 1.1));
+                        if (mesh.position.x > game.player.position.x + 0.55) {
+                            mesh.position.y = BABYLON.Scalar.Lerp(mesh.position.y, mesh.metadata.targetY, Math.min(1, delta * 0.7));
+                            mesh.position.z = BABYLON.Scalar.Lerp(mesh.position.z, 0.65, Math.min(1, delta * 0.75));
+                        }
+                        mesh.rotation.z = Math.sin(passProgress * Math.PI) * 0.12;
+                        mesh.metadata.trailTimer -= delta;
+                        if (mesh.metadata.trailTimer <= 0 && mesh.position.x < world.maxX + 8.5) {
+                            addSmokePuff(mesh.position, mesh.metadata.smokeBurst > 0 ? 1.45 : 1);
+                            addSparks(mesh.position, 1);
+                            mesh.metadata.trailTimer = 0.065;
+                        }
+                        mesh.metadata.smokeBurst = Math.max(0, mesh.metadata.smokeBurst - delta);
+                    }
+                }
+            });
+
+            if (!state.stage3IntroExploded && t > 6.4) {
+                state.stage3IntroExploded = true;
+                for (let i = 0; i < 34; i++) {
+                    const position = new BABYLON.Vector3(
+                        world.maxX - 0.3 + Math.random() * 4.2,
+                        world.minY + 0.6 + Math.random() * (world.maxY - world.minY - 1.2),
+                        0.55 + Math.random() * 0.42
+                    );
+                    addExplosionBurst(position, 0.75 + Math.random() * 0.85);
+                    addSparks(position, 18);
+                }
+                playSound("boss");
+                showDialogue("レモンジ", "あとは任せたぜ。全機反転、離脱！Good luck！！", 4.2);
+            }
+
+            if (t > 10.6 && !state.stage3IntroFinished) {
+                state.stage3IntroFinished = true;
+                clearStage3IntroObjects();
+                resetCameraToGameplay();
+                state.stage3IntroActive = false;
+                state.stageElapsed = 0;
+                state.enemyTimer = 0.4;
+                state.formationTimer = 1.4;
+                showDialogue("作戦宙域 3", stageDefinitions[2].title, 3);
+            }
         }
 
         function updateStage(delta) {
@@ -1142,20 +2423,53 @@
                 }
             });
 
+            if (state.stage === 1 && !state.stage1BossSpawned) {
+                updateStageOnePatterns();
+            }
+
+            if (state.stage === 1 && state.stage1CoreDefeated) {
+                if (state.stage1CoreFallDone && state.stageBossCount <= 0) {
+                    state.stage1ClearTimer += delta;
+                }
+                if (state.stage1CoreFallDone && state.stageBossCount <= 0 && state.stage1ClearTimer >= 0.6) {
+                    triggerStageClear();
+                }
+                return;
+            }
+
             if (state.stage === 1 && !state.stage1GuideShown && state.stageElapsed >= 20) {
                 state.stage1GuideShown = true;
                 showIntermission(
                     "レモンジ",
-                    "こっちだ。からあげを振り切ってアステロイドベルトまで来い。追っ手はそこで散らせる。",
+                    "そこの戦闘機！からあげを振り切ってアステロイドベルトまで来い。追っ手はそこで散らせる。",
                     "resumeStage1",
-                    "img/event-lemonji-portrait.png"
+                    "img/event-lemonji-portrait.jpg",
+                    { keepEnemies: true, keepCapsules: true }
                 );
                 return;
             }
 
-            if (state.stage === 1 && state.stage1GuideShown && !state.stage1BossSpawned && state.stageElapsed >= 42) {
+            if (state.stage === 1 && state.stage1GuideShown && !state.stage1BossSpawned && state.stageElapsed >= 37) {
                 spawnStageOneBoss();
                 return;
+            }
+
+            if (state.stage === 2 && state.stage2ClearPending) {
+                state.stage2ClearTimer += delta;
+                if (state.stage2ClearTimer >= 0.6) {
+                    triggerStageClear();
+                }
+                return;
+            }
+
+            if (state.stage === 2 && !state.stage2BossSpawned && state.stageElapsed >= 46) {
+                spawnStageTwoBoss();
+                return;
+            }
+
+            if (state.stage === 3 && !state.stage3BossSpawned && !state.stage3BossMusicCueStarted && state.stageElapsed >= 13) {
+                state.stage3BossMusicCueStarted = true;
+                fadeOutStage3MusicForBoss(5);
             }
 
             if (state.stage === 3 && !state.stage3BossSpawned && state.stageElapsed >= 18) {
@@ -1169,35 +2483,210 @@
             }
         }
 
+        function updateStageOnePatterns() {
+            while (
+                state.stagePatternIndex < stageOnePatterns.length
+                && state.stageElapsed >= stageOnePatterns[state.stagePatternIndex].at
+            ) {
+                spawnStageOnePattern(stageOnePatterns[state.stagePatternIndex]);
+                state.stagePatternIndex += 1;
+            }
+        }
+
+        function spawnStageOnePattern(pattern) {
+            const startX = world.maxX + 0.8;
+            if (pattern.kind === "line" || pattern.kind === "sparse") {
+                for (let i = 0; i < pattern.count; i++) {
+                    const y = Array.isArray(pattern.y)
+                        ? pattern.y[i % pattern.y.length]
+                        : BABYLON.Scalar.Clamp(pattern.y + (i - pattern.count / 2) * 0.72, world.minY + 0.5, world.maxY - 0.5);
+                    spawnEnemyAt(startX, y, i * (pattern.gap || 0.6), {
+                        enemyType: pattern.enemyTypes ? pattern.enemyTypes[i % pattern.enemyTypes.length] : pattern.enemyType,
+                        carriesCapsule: pattern.capsuleIndex === i,
+                        waveAmount: pattern.kind === "sparse" ? 0.38 : 0.18,
+                        waveSpeed: 1.4,
+                        wavePhase: i * 0.6
+                    });
+                }
+                return;
+            }
+
+            if (pattern.kind === "wave") {
+                for (let i = 0; i < pattern.count; i++) {
+                    const phase = (pattern.phase || 0) + i * 0.78;
+                    const y = BABYLON.Scalar.Clamp(
+                        pattern.baseY + Math.sin(phase) * (pattern.waveAmount || 1),
+                        world.minY + 0.5,
+                        world.maxY - 0.5
+                    );
+                    spawnEnemyAt(startX, y, i * (pattern.gap || 0.5), {
+                        enemyType: pattern.enemyType,
+                        carriesCapsule: pattern.capsuleIndex === i,
+                        waveY: pattern.baseY,
+                        waveAmount: pattern.waveAmount || 1,
+                        waveSpeed: pattern.waveSpeed || 1.6,
+                        wavePhase: phase,
+                        speedBonus: 0.1
+                    });
+                }
+                return;
+            }
+
+            if (pattern.kind === "fighterDive") {
+                for (let i = 0; i < pattern.count; i++) {
+                    const phase = (pattern.phase || 0) + i * 0.82;
+                    const y = BABYLON.Scalar.Clamp(
+                        pattern.baseY + Math.sin(phase) * (pattern.waveAmount || 1),
+                        world.minY + 0.5,
+                        world.maxY - 0.5
+                    );
+                    spawnEnemyAt(startX + i * 0.42, y, i * (pattern.gap || 0.42), {
+                        enemyType: "fighter",
+                        carriesCapsule: pattern.capsuleIndex === i,
+                        waveY: pattern.baseY,
+                        waveAmount: pattern.waveAmount || 1,
+                        waveSpeed: pattern.waveSpeed || 1.8,
+                        wavePhase: phase,
+                        speedBonus: 0.45,
+                        depthIntroZ: pattern.fromNear ? -1.35 : 1.15,
+                        depthIntroScale: pattern.fromNear ? 2 : 0.2,
+                        depthIntroDuration: 3,
+                        introRightX: world.maxX - 0.65,
+                        introRotation: pattern.fromNear
+                            ? { x: BABYLON.Tools.ToRadians(6), y: BABYLON.Tools.ToRadians(420), z: BABYLON.Tools.ToRadians(-16) }
+                            : { x: BABYLON.Tools.ToRadians(-6), y: BABYLON.Tools.ToRadians(80), z: BABYLON.Tools.ToRadians(16) },
+                        canShoot: true
+                    });
+                }
+            }
+        }
+
         function spawnStageOneBoss() {
             state.stage1BossSpawned = true;
-            state.stageBossCount = 3;
-            showDialogue("WARNING", "大型からあげ編隊、接近。", 2.4);
-            const yPositions = [1.9, 0, -1.9];
-            yPositions.forEach((y, index) => {
-                const boss = cloneModelTemplate("enemyKaraageHeavy", "stage1KaraageBoss") || createEnemyShip(game.scene, game.materials, false);
-                boss.position.set(world.maxX + 1.5 + index * 1.15, y, 0);
-                boss.rotation.z = 0;
-                boss.metadata = {
-                    speed: 1.6,
-                    radius: 0.72,
-                    hp: 5,
-                    points: 650,
-                    spin: 0,
-                    waveY: y,
-                    wavePhase: index * 1.1,
-                    carriesCapsule: false,
-                    canShoot: true,
-                    shootTimer: 0.8 + index * 0.35,
-                    isStageBoss: true
-                };
-                enemies.push(boss);
+            state.stageBossCount = 4;
+            showDialogue("帝国警報", "哨戒分隊、侵入者の進路を封鎖せよ。", 2.4);
+
+            const config = enemyConfigs.diskA;
+            const diskHoverX = world.maxX - 1.35;
+            const workerHoverX = world.maxX - (world.maxX - world.minX) * 0.31;
+            const disk = cloneModelTemplate("enemyDiskA", "stage1DiskCore") || createEnemyShip(game.scene, game.materials, false);
+            disk.position.set(world.maxX + 2.2, 0, 0);
+            disk.rotation.z = 0;
+            disk.metadata = {
+                speed: randomRange(config.speed),
+                radius: config.radius,
+                hp: 20,
+                maxHp: 20,
+                points: 2500,
+                spin: 0,
+                baseRotationZ: 0,
+                hitKick: 0,
+                hitFlash: 0,
+                hitScale: 1,
+                waveY: 0,
+                waveAmount: 0.36,
+                waveSpeed: 0.9,
+                wavePhase: 0,
+                motion: "hover",
+                hoverX: diskHoverX,
+                enemyType: "diskA",
+                enemyConfig: config,
+                carriesCapsule: false,
+                canShoot: true,
+                shotInterval: 1.5,
+                shootTimer: 1.5,
+                isStageBoss: true,
+                isStageOneCore: true
+            };
+            enemies.push(disk);
+
+            spawnEnemyAt(world.maxX + 2.2, 0, 0, {
+                enemyType: "worker",
+                carriesCapsule: false,
+                motion: "stage1LeftGuard",
+                hoverX: workerHoverX,
+                positionZ: -0.45,
+                waveY: 0,
+                waveAmount: 0.22,
+                waveSpeed: 1.1,
+                wavePhase: 0,
+                canShoot: true,
+                isStageBoss: true
             });
+
+            [-2.15, 2.15].forEach((y, index) => {
+                spawnEnemyAt(world.maxX + 1.4, y, index * 0.42, {
+                    enemyType: "teacherLarge",
+                    carriesCapsule: false,
+                    motion: "hover",
+                    hoverX: world.maxX - 1.65,
+                    waveY: y,
+                    waveAmount: 0.26,
+                    waveSpeed: 1.0,
+                    wavePhase: index * Math.PI,
+                    canShoot: true,
+                    isStageBoss: true
+                });
+            });
+        }
+
+        function spawnStageTwoBoss() {
+            state.stage2BossSpawned = true;
+            state.stageBossCount = 1;
+            showDialogue("レモンジ", "重力反応がでかい。小惑星を引き寄せて盾にしてるぞ。", 3.2);
+            const config = enemyConfigs.diskB;
+            const boss = cloneModelTemplate("enemyDiskB", "stage2GravityKaraage") || cloneModelTemplate("enemyDiskA", "stage2GravityKaraage") || createEnemyShip(game.scene, game.materials, false);
+            boss.position.set(world.maxX + 2.2, 0, -0.08);
+            boss.rotation.z = 0;
+            boss.metadata = {
+                speed: 0.9,
+                radius: 2.15,
+                hp: 42,
+                maxHp: 42,
+                points: 4200,
+                spin: 0,
+                baseRotationZ: 0,
+                hitKick: 0,
+                hitFlash: 0,
+                hitScale: 1,
+                waveY: 0,
+                waveAmount: 1.35,
+                waveSpeed: 0.55,
+                wavePhase: 0,
+                motion: "gravityBoss",
+                hoverX: world.maxX - 2.15,
+                enemyType: "gravityBoss",
+                enemyConfig: config,
+                carriesCapsule: false,
+                canShoot: true,
+                shotInterval: 2.2,
+                shootTimer: 1.2,
+                gravityTimer: 0.4,
+                gravityAngle: 0,
+                isStageBoss: true
+            };
+            const field = BABYLON.MeshBuilder.CreateTorus("gravityField", {
+                diameter: 4.2,
+                thickness: 0.045,
+                tessellation: 72
+            }, game.scene);
+            field.rotation.x = Math.PI / 2;
+            field.position.z = -0.28;
+            field.material = game.materials.guardShield;
+            field.parent = boss;
+            boss.metadata.parts = [field];
+            state.bossEnemy = boss;
+            state.bossMaxHp = boss.metadata.hp;
+            bossNameEl.textContent = "GRAVITY KARAAGE";
+            bossFillEl.style.width = "100%";
+            bossHudEl.classList.add("isVisible");
+            enemies.push(boss);
         }
 
         function spawnFinalBoss() {
             state.stage3BossSpawned = true;
-            showDialogue("WARNING", "巨大からあげ皇帝、出現。", 2.8);
+            playStage3BossMusic();
+            showDialogue("帝国警報", "カリジューシー級大戦艦、戦闘距離へ。", 2.8);
             const boss = cloneModelTemplate("enemyBattleship", "karaageEmperorBattleship") || cloneModelTemplate("enemyKaraageHeavy", "karaageEmperorBoss") || createEnemyShip(game.scene, game.materials, false);
             const config = enemyConfigs.battleship;
             boss.position.set(world.maxX + 2.4, 0, 0);
@@ -1206,8 +2695,13 @@
                 speed: randomRange(config.speed),
                 radius: config.radius,
                 hp: config.hp,
+                maxHp: config.hp,
                 points: config.points,
                 spin: 0,
+                baseRotationZ: 0,
+                hitKick: 0,
+                hitFlash: 0,
+                hitScale: 1,
                 waveY: 0,
                 waveAmount: randomRange(config.waveAmount),
                 waveSpeed: randomRange(config.waveSpeed),
@@ -1217,8 +2711,21 @@
                 enemyConfig: config,
                 carriesCapsule: false,
                 canShoot: true,
-                shotInterval: config.shotInterval,
-                shootTimer: config.shotInterval,
+                shotInterval: scaleEnemyShotInterval(config.shotInterval),
+                shootTimer: scaleEnemyShotInterval(config.shotInterval),
+                finalBossPhase: 1,
+                summonTimer: 3.8,
+                karaageMissileTimer: 1.6,
+                karaageMissileBurstRemaining: 0,
+                karaageMissileBurstGap: 0,
+                karaageMissileLaunchSide: 1,
+                mainCannonCooldown: 1.25,
+                mainCannonCharge: 0,
+                mainCannonBeamAge: 0,
+                mainCannonTargetY: 0,
+                mainCannonHitPlayer: false,
+                mainCannonWarningMesh: null,
+                mainCannonBeamMesh: null,
                 turretOffsets: [
                     new BABYLON.Vector2(-1.28, 0.88),
                     new BABYLON.Vector2(-1.42, 0.38),
@@ -1229,7 +2736,7 @@
             };
             state.bossEnemy = boss;
             state.bossMaxHp = boss.metadata.hp;
-            bossNameEl.textContent = "KARAAGE BATTLESHIP";
+            bossNameEl.textContent = "KARI-JUICY CLASS";
             bossFillEl.style.width = "100%";
             bossHudEl.classList.add("isVisible");
             enemies.push(boss);
@@ -1237,17 +2744,20 @@
 
         function completeGame() {
             state.isIntermission = true;
-            state.intermissionStep = "ending";
+            state.intermissionStep = "endingGogai1";
+            stopStage3Music();
+            stopStage3BossMusic();
+            playEndingMusic();
             bossHudEl.classList.remove("isVisible");
             showIntermission(
-                "ESCAPE COMPLETE",
-                `SCORE ${state.score}。巨大からあげ戦艦を撃破した。レモンジは次のクーデターへ、あなたは故郷の惑星へ進路を取った。`,
-                "ending",
-                "img/event-karaage-emperor.png"
+                "号外",
+                "巨大からあげ戦艦、撃沈。",
+                "endingGogai1",
+                "img/ending-gogai1.jpg"
             );
         }
 
-        function showIntermission(title, text, step, imageSrc = "") {
+        function showIntermission(title, text, step, imageSrc = "", options = {}) {
             state.isIntermission = true;
             state.intermissionStep = step;
             intermissionTitleEl.textContent = title;
@@ -1261,7 +2771,7 @@
             }
             intermissionEl.classList.add("isVisible");
             dialogueEl.classList.remove("isVisible");
-            clearActiveGameObjects();
+            clearActiveGameObjects(options);
             updateHud();
         }
 
@@ -1270,6 +2780,8 @@
                 return;
             }
             if (state.stage === 1) {
+                stopStage1JourneyMusic();
+                playSound("stageClear");
                 showIntermission(
                     "STAGE 1 CLEAR",
                     `SCORE ${state.score} / 撃破 ${state.stageKills}。小惑星地帯への進路を確保した。`,
@@ -1278,9 +2790,11 @@
                 return;
             }
             if (state.stage === 2) {
+                stopStage2Music();
+                playSound("stageClear");
                 showIntermission(
                     "STAGE 2 CLEAR",
-                    `SCORE ${state.score} / 撃破 ${state.stageKills}。レモンリキッドで包囲部隊を押し返した。`,
+                    `SCORE ${state.score} / 撃破 ${state.stageKills}。アステロイドベルトから脱出に成功した。`,
                     "stage2Result"
                 );
             }
@@ -1288,6 +2802,7 @@
 
         function beginStage(stageNumber) {
             const definition = stageDefinitions[stageNumber - 1];
+            resetCameraToGameplay();
             state.stage = stageNumber;
             state.stageElapsed = 0;
             state.enemyTimer = 0.4;
@@ -1295,10 +2810,45 @@
             state.terrainTimer = stageNumber >= 2 ? 0.8 : 2;
             state.enemiesSinceCapsule = 0;
             state.stageKills = 0;
+            state.stagePatternIndex = 0;
+            state.stage1ClearTimer = 0;
+            state.stage1CoreDefeated = false;
+            state.stage1CoreFallDone = false;
+            state.stage2BossSpawned = false;
+            state.stage2ClearPending = false;
+            state.stage2ClearTimer = 0;
+            state.mediumLargeSpawnShotCount = 0;
+            state.nextMediumLargeOpeningShot = 3 + Math.floor(Math.random() * 6);
+            state.bossCapsuleTimer = 5.5;
+            state.stage3IntroActive = false;
+            state.stage3IntroTimer = 0;
+            state.stage3IntroLaunched = false;
+            state.stage3IntroExploded = false;
+            state.stage3IntroFinished = false;
+            state.stage3BossMusicCueStarted = false;
+            state.stageBossCount = 0;
+            state.bossEnemy = null;
+            state.bossMaxHp = 1;
+            bossHudEl.classList.remove("isVisible");
+            if (stageNumber !== 1) {
+                stopStage1JourneyMusic();
+            }
+            stopStage2Music();
+            stopStage3Music();
+            stopEndingMusic();
+            stopStage3BossMusic();
             state.isIntermission = false;
             state.intermissionStep = null;
             intermissionEl.classList.remove("isVisible");
-            showDialogue("STAGE " + stageNumber, definition.title, 3);
+            if (stageNumber === 3) {
+                playStage3Music();
+                startStage3IntroCutscene();
+            } else {
+                if (stageNumber === 2) {
+                    playStage2Music();
+                }
+                showDialogue("作戦宙域 " + stageNumber, definition.title, 3);
+            }
             updateHud();
         }
 
@@ -1314,30 +2864,95 @@
                     state.isIntermission = false;
                     state.intermissionStep = null;
                     intermissionEl.classList.remove("isVisible");
-                    showDialogue("STAGE 1", "アステロイドベルトへ向かえ。", 2.2);
+                    showDialogue("レモンジ通信", "小惑星帯へ抜けろ。帝国の追跡網を岩場で切る。", 2.2);
                     break;
                 case "stage1Result":
+                    playHideoutMusic();
                     showIntermission(
-                        "レモンジの基地",
-                        "よく来た。ここは小惑星帯の反体制派基地だ。俺たちは定期的にクーデターを起こしている。",
-                        "baseTalkPlayer",
-                        "img/event-lemonji-base.png"
+                        "レモンジ",
+                        "よく来たな。ここは俺の秘密基地だ。",
+                        "baseTalkPlayerQuestion",
+                        "img/event-lemonji-base.jpg"
                     );
                     break;
-                case "baseTalkPlayer":
+                case "baseTalkPlayerQuestion":
                     showIntermission(
                         "PLAYER",
-                        "悪いが、クーデターに参加する気はない。こっちは故郷に帰りたいだけだ。",
+                        "あれはいったいなんだ？突然攻撃されたが。",
+                        "baseTalkLemonQuestion",
+                        "img/event-lemonji-base.jpg"
+                    );
+                    break;
+                case "baseTalkLemonQuestion":
+                    showIntermission(
+                        "レモンジ",
+                        "あんた、からあげにレモンをかけたことは？",
+                        "baseTalkPlayerLemon",
+                        "img/event-lemonji-base.jpg"
+                    );
+                    break;
+                case "baseTalkPlayerLemon":
+                    showIntermission(
+                        "PLAYER",
+                        "は？いや、あるが……",
+                        "baseTalkLaw",
+                        "img/event-lemonji-base.jpg"
+                    );
+                    break;
+                case "baseTalkLaw":
+                    showIntermission(
+                        "レモンジ",
+                        "からあげ帝国憲法第1条。からあげにレモンをかけた者は死刑。あんたは帝国では犯罪者だ。",
+                        "baseTalkPlayerShock",
+                        "img/event-lemonji-base.jpg"
+                    );
+                    break;
+                case "baseTalkPlayerShock":
+                    showIntermission(
+                        "PLAYER",
+                        "なん……だと……",
+                        "baseTalkCoup",
+                        "img/event-lemonji-base.jpg"
+                    );
+                    break;
+                case "baseTalkCoup":
+                    showIntermission(
+                        "レモンジ",
+                        "そんな法律を終わらせるために、俺たち反体制派は半期に一度、クーデターを起こしている。どうだ。俺たちと一緒に戦わないか？",
+                        "baseTalkRefuse",
+                        "img/event-lemonji-base.jpg"
+                    );
+                    break;
+                case "baseTalkRefuse":
+                    showIntermission(
+                        "PLAYER",
+                        "悪いが、他国のクーデターに参加するつもりはない。こっちは祖国へ帰りたいだけだ。",
                         "baseTalkDeal",
-                        "img/event-lemonji-base.png"
+                        "img/event-lemonji-base.jpg"
                     );
                     break;
                 case "baseTalkDeal":
                     showIntermission(
                         "レモンジ",
-                        "なら取引だ。からあげの戦力を減らしてくれ。代わりにレモンリキッドを提供する。",
+                        "残念だ。なら取引といこう。通常弾頭ではからあげに効果が薄い。このレモンリキッドを提供しよう。",
+                        "baseTalkMission",
+                        "img/event-lemonji-base.jpg"
+                    );
+                    break;
+                case "baseTalkMission":
+                    showIntermission(
+                        "レモンジ",
+                        "その代わり、アステロイドベルトの外側で待機している帝国艦隊の戦力を減らしてくれ。",
+                        "baseTalkAccept",
+                        "img/event-lemonji-base.jpg"
+                    );
+                    break;
+                case "baseTalkAccept":
+                    showIntermission(
+                        "PLAYER",
+                        "……わかった。",
                         "lemonLiquid",
-                        "img/event-lemonji-base.png"
+                        "img/event-lemonji-base.jpg"
                     );
                     break;
                 case "lemonLiquid":
@@ -1346,10 +2961,11 @@
                         "LEMON LIQUID",
                         "レモンリキッドを受け取った。LEMONバレットとレモンミサイルの段階強化が解禁された。",
                         "startStage2",
-                        "img/event-lemonji-base.png"
+                        "img/event-lemonliquidget.jpg"
                     );
                     break;
                 case "startStage2":
+                    stopHideoutMusic();
                     beginStage(2);
                     break;
                 case "stage2Result":
@@ -1357,19 +2973,45 @@
                         "からあげ皇帝",
                         "憲法第1条、からあげにレモンをかけた者は許さぬ。巨大戦艦、出撃。",
                         "startStage3",
-                        "img/event-karaage-emperor.png"
+                        "img/event-karaage-emperor.jpg"
                     );
                     break;
                 case "startStage3":
                     beginStage(3);
                     break;
+                case "endingGogai1":
+                    showIntermission(
+                        "号外",
+                        "帝国艦隊に甚大な被害。からあげ皇帝、声明を準備中。",
+                        "endingGogai2",
+                        "img/ending-gogai2.jpg"
+                    );
+                    break;
+                case "endingGogai2":
+                    showIntermission(
+                        "号外",
+                        "反体制派、半期恒例クーデターの成功を主張。",
+                        "endingGogai3",
+                        "img/ending-gogai3.jpg"
+                    );
+                    break;
+                case "endingGogai3":
+                    showIntermission(
+                        "ESCAPE COMPLETE",
+                        `SCORE ${state.score}。レモンジは次のクーデターへ、あなたは故郷の惑星へ進路を取った。`,
+                        "ending",
+                        "img/event-karaage-emperor.jpg"
+                    );
+                    break;
                 case "ending":
+                    stopEndingMusic();
                     state.hasStarted = false;
                     state.isIntermission = false;
                     state.intermissionStep = null;
                     intermissionEl.classList.remove("isVisible");
                     titleScreenEl.classList.remove("isHidden");
                     resetGame();
+                    playTitleMusic();
                     break;
                 default:
                     state.isIntermission = false;
@@ -1380,12 +3022,13 @@
 
         function fireOneShot(origin, forceNormal = false, shotOwner = "player") {
             const isLaser = state.hasLaser && !forceNormal;
+            const isLemonBullet = state.lemonUnlocked && !isLaser && !forceNormal && shotOwner === "player";
             const normalShotLimit = shotOwner === "player" ? 3 : 2;
             const activeOwnerShots = bullets.filter((bullet) =>
                 bullet.metadata.kind === "normal" && bullet.metadata.shotOwner === shotOwner
             ).length;
             if (!isLaser && activeOwnerShots >= normalShotLimit) {
-                return;
+                return false;
             }
             const bullet = isLaser
                 ? cloneModelTemplate("laserLemon", "laser") || BABYLON.MeshBuilder.CreateBox("laser", { width: 1.05, height: 0.08, depth: 0.08 }, game.scene)
@@ -1394,20 +3037,22 @@
             bullet.metadata = {
                 kind: isLaser ? "laser" : "normal",
                 speed: isLaser ? 15 : 12,
-                radius: isLaser ? 0.32 : 0.16,
-                damage: isLaser ? 2 : 0.5,
+                radius: isLaser ? 0.34 : isLemonBullet ? 0.18 : 0.16,
+                damage: isLaser ? 3 : isLemonBullet ? 0.85 : 0.5,
                 spin: isLaser ? 9.5 : 0,
+                lemon: isLemonBullet,
                 shotOwner
             };
-            bullet.material = isLaser ? game.materials.laser : game.materials.bullet;
+            bullet.material = isLaser ? game.materials.laser : isLemonBullet ? game.materials.lemonBullet : game.materials.bullet;
             bullets.push(bullet);
+            return true;
         }
 
         function fireMissile(origin) {
             const activeMissiles = bullets.filter((bullet) => bullet.metadata.kind === "missile").length;
             const missileLimit = state.missileLevel >= 4 ? 4 : state.missileLevel >= 3 ? 3 : 2;
             if (activeMissiles >= missileLimit) {
-                return;
+                return false;
             }
             const missile = state.missileLevel >= 2 ? cloneModelTemplate("missileLemon", "missile") : null;
             const missileMesh = missile || BABYLON.MeshBuilder.CreateBox("missile", {
@@ -1423,29 +3068,55 @@
                 vx: 7.6,
                 vy: -3.2,
                 radius: 0.26,
-                damage: 2,
+                damage: state.missileLevel >= 2 ? 3 : 2,
                 explosive: state.missileLevel >= 2
             };
             if (!missile) {
                 missileMesh.material = game.materials.missile;
             }
             bullets.push(missileMesh);
+            playSound("missile");
+            return true;
         }
 
         function fireBullet() {
-            fireOneShot(game.player.position);
+            let didFire = fireOneShot(game.player.position);
             if (state.missileLevel > 0) {
-                fireMissile(game.player.position);
+                didFire = fireMissile(game.player.position) || didFire;
             }
             options.forEach((option) => {
-                fireOneShot(option.position, true, option.metadata.shotOwner);
+                didFire = fireOneShot(option.position, true, option.metadata.shotOwner) || didFire;
             });
+            if (didFire) {
+                playSound("shot");
+            }
         }
 
         function addEnemyPart(enemy, part) {
             part.parent = enemy;
             enemy.metadata.parts.push(part);
             return part;
+        }
+
+        function decorateCapsuleCarrier(enemy) {
+            enemy.metadata.parts = enemy.metadata.parts || [];
+            enemy.getChildMeshes(false).forEach((mesh) => {
+                if (mesh.name === "enemyCore") {
+                    mesh.material = game.materials.capsuleCarrierCore;
+                } else {
+                    mesh.material = game.materials.capsuleCarrier;
+                }
+            });
+            const ring = BABYLON.MeshBuilder.CreateTorus("capsuleCarrierRing", {
+                diameter: 0.9,
+                thickness: 0.035,
+                tessellation: 48
+            }, game.scene);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.set(0, 0, -0.16);
+            ring.material = game.materials.capsuleCarrier;
+            ring.metadata = { pulse: Math.random() * Math.PI * 2 };
+            addEnemyPart(enemy, ring);
         }
 
         function decorateEnemy(enemy, enemyType) {
@@ -1502,21 +3173,29 @@
             }
         }
 
-        function spawnEnemyAt(x, y, delayOffset) {
-            const asteroidChance = state.stage === 1 ? 0.12 : state.stage === 2 ? 0.38 : 0.2;
-            const isAsteroid = Math.random() < asteroidChance;
-            const carriesCapsule = state.enemiesSinceCapsule >= 4 || Math.random() < 0.08;
-            const isHeavyKaraage = !carriesCapsule && state.stage >= 3 && Math.random() < 0.24;
-            let enemyType = carriesCapsule ? "carrier" : isAsteroid ? "asteroid" : "teacherMedium";
-            if (!carriesCapsule && !isAsteroid && !isHeavyKaraage) {
-                const roll = Math.random();
-                if (state.stage === 1) {
-                    enemyType = roll < 0.3 ? "teacherSmall" : roll < 0.56 ? "fighter" : roll < 0.82 ? "teacherMedium" : "teacherLarge";
-                } else if (state.stage === 2) {
-                    enemyType = roll < 0.16 ? "diskA" : roll < 0.32 ? "diskB" : roll < 0.5 ? "worker" : roll < 0.72 ? "fighter" : roll < 0.86 ? "teacherSmall" : "teacherMedium";
-                } else {
-                    enemyType = roll < 0.18 ? "diskA" : roll < 0.36 ? "diskB" : roll < 0.58 ? "worker" : roll < 0.76 ? "fighter" : "teacherLarge";
-                }
+        function applyEnemyHitReaction(enemy, damage, hitPosition) {
+            if (!enemy || !enemy.metadata) {
+                return;
+            }
+            const maxHp = Math.max(0.5, enemy.metadata.maxHp || enemy.metadata.hp || 1);
+            const damageRatio = BABYLON.Scalar.Clamp(damage / maxHp, 0.05, 0.8);
+            const hitSide = hitPosition && hitPosition.y < enemy.position.y ? 1 : -1;
+            enemy.metadata.hitKick = (enemy.metadata.hitKick || 0) + hitSide * damageRatio * 0.7;
+            enemy.metadata.hitFlash = 0.12 + damageRatio * 0.18;
+            enemy.metadata.hitScale = 1 + damageRatio * 0.16;
+        }
+
+        function spawnEnemyAt(x, y, delayOffset, options = {}) {
+            const forcedType = options.enemyType || null;
+            const asteroidChance = state.stage === 1 ? 0.12 : state.stage === 2 ? 0.62 : 0.2;
+            const isAsteroid = forcedType === "asteroid" || (!forcedType && Math.random() < asteroidChance);
+            const carriesCapsule = options.carriesCapsule !== undefined
+                ? options.carriesCapsule
+                : !forcedType && (state.enemiesSinceCapsule >= 4 || Math.random() < 0.08);
+            const isHeavyKaraage = !forcedType && !carriesCapsule && state.stage >= 3 && Math.random() < 0.24;
+            let enemyType = carriesCapsule ? "carrier" : forcedType || (isAsteroid ? "asteroid" : "teacherMedium");
+            if (!forcedType && !carriesCapsule && !isAsteroid && !isHeavyKaraage) {
+                enemyType = chooseWeighted(getStageEnemyTable(state.stage));
             }
             if (isHeavyKaraage) {
                 enemyType = "teacherLarge";
@@ -1525,12 +3204,21 @@
             const templateKey = config ? config.template : "enemyKaraage";
             const karaageEnemy = carriesCapsule
                 ? null
-                : cloneModelTemplate(templateKey, config ? config.spawnName : isAsteroid ? "karaageAsteroid" : "karaageEnemy");
+                : options.forceFallback
+                    ? null
+                    : cloneModelTemplate(templateKey, config ? config.spawnName : isAsteroid ? "karaageAsteroid" : "karaageEnemy");
             const mesh = carriesCapsule
                 ? createEnemyShip(game.scene, game.materials, false)
                 : karaageEnemy || createEnemyShip(game.scene, game.materials, isAsteroid);
             mesh.position.set(x + delayOffset, y, 0);
+            if (options.positionZ !== undefined) {
+                mesh.position.z = options.positionZ;
+            }
             mesh.rotation.z = 0;
+            if (enemyType === "fighter") {
+                mesh.position.z = options.depthIntroZ !== undefined ? options.depthIntroZ : Math.random() < 0.5 ? -0.8 : 0.55;
+                mesh.scaling.setAll(options.depthIntroScale || (mesh.position.z < 0 ? 0.48 : 1.32));
+            }
             if (isAsteroid && !carriesCapsule && !isHeavyKaraage && mesh.name !== "asteroid") {
                 mesh.scaling.scaleInPlace(1.16);
             }
@@ -1538,42 +3226,103 @@
                 carrier: 2.7,
                 asteroid: 2.3
             };
+            const asteroidSize = isAsteroid ? 0.72 + Math.random() * 1.58 : 1;
+            const asteroidHp = isAsteroid ? Math.max(2, Math.min(10, Math.round(asteroidSize * 4.4))) : 0;
+            if (isAsteroid) {
+                mesh.scaling.setAll(asteroidSize);
+                mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+            }
             const hpByType = {
                 carrier: 0.5,
-                asteroid: 2 + Math.floor(state.wave / 3)
+                asteroid: asteroidHp
             };
             const pointsByType = {
                 carrier: 120,
                 asteroid: 150
             };
             const speed = config ? randomRange(config.speed) : speedByType[enemyType];
-            const waveAmount = config ? randomRange(config.waveAmount) : 0.28;
-            const waveSpeed = config ? randomRange(config.waveSpeed) : 2.2;
-            const shotInterval = config ? randomRange(config.shotInterval) : 1.05 + Math.random() * 1.7;
+            const waveAmount = options.waveAmount !== undefined ? options.waveAmount : config ? randomRange(config.waveAmount) : 0.28;
+            const waveSpeed = options.waveSpeed !== undefined ? options.waveSpeed : config ? randomRange(config.waveSpeed) : 2.2;
+            const shotInterval = scaleEnemyShotInterval(config ? config.shotInterval : 1.05 + Math.random() * 1.7);
+            const defaultWorkerHoverX = enemyType === "worker" && state.stage >= 2
+                ? world.maxX - (world.maxX - world.minX) * 0.42
+                : undefined;
             mesh.metadata = {
-                speed: (speed || 2.6) + (config ? 0 : state.stage * 0.22 + state.wave * 0.08 + Math.random() * 0.42),
+                speed: (speed || 2.6) + (config ? 0 : state.stage * 0.22 + state.wave * 0.08 + Math.random() * 0.42) + (options.speedBonus || 0),
                 radius: config ? config.radius : carriesCapsule ? 0.38 : isAsteroid ? 0.45 : 0.38,
                 hp: config ? config.hp : hpByType[enemyType],
+                maxHp: config ? config.hp : hpByType[enemyType],
                 points: config ? config.points : pointsByType[enemyType],
                 spin: config && config.randomSpin ? (Math.random() - 0.5) * 3.8 : 0,
-                waveY: y,
-                waveAmount,
-                waveSpeed,
-                wavePhase: Math.random() * Math.PI * 2,
+                baseRotationZ: 0,
+                hitKick: 0,
+                hitFlash: 0,
+                hitScale: 1,
+                waveY: options.waveY !== undefined ? options.waveY : y,
+                waveAmount: isAsteroid ? 0 : waveAmount,
+                waveSpeed: isAsteroid ? 0 : waveSpeed,
+                wavePhase: options.wavePhase !== undefined ? options.wavePhase : Math.random() * Math.PI * 2,
                 enemyType,
-                motion: config ? config.motion : "sine",
+                motion: isAsteroid ? "drift" : options.motion || (config ? config.motion : "sine"),
+                hoverX: options.hoverX !== undefined ? options.hoverX : defaultWorkerHoverX,
                 enemyConfig: config,
+                driftY: isAsteroid ? (Math.random() - 0.5) * 0.45 : 0,
+                asteroidSpinX: isAsteroid ? (Math.random() - 0.5) * 1.8 : 0,
+                asteroidSpinY: isAsteroid ? (Math.random() - 0.5) * 1.8 : 0,
+                asteroidSpinZ: isAsteroid ? (Math.random() - 0.5) * 1.8 : 0,
+                dodgeCooldown: enemyType === "fighter" ? 0.25 + Math.random() * 0.35 : 0,
+                dodgeTimer: 0,
+                dodgeY: 0,
+                dodgeDirection: 0,
+                depthIntro: enemyType === "fighter" ? 0 : null,
+                depthIntroStartZ: enemyType === "fighter" ? mesh.position.z : null,
+                depthIntroStartScale: enemyType === "fighter" ? mesh.scaling.x : null,
+                depthIntroDuration: options.depthIntroDuration || 0.75,
+                introRightX: options.introRightX,
+                introRotation: options.introRotation || null,
                 carriesCapsule,
-                canShoot: !!karaageEnemy && config && config.canShoot !== false && state.stage >= 2,
+                canShoot: carriesCapsule
+                    ? false
+                    : options.canShoot !== undefined
+                    ? options.canShoot
+                    : !!karaageEnemy && config && config.canShoot !== false && state.stage >= 2,
                 shotInterval,
-                shootTimer: shotInterval
+                shootTimer: shotInterval,
+                openingShotPending: false,
+                isStageBoss: !!options.isStageBoss
             };
+            if ((enemyType === "teacherMedium" || enemyType === "teacherLarge") && !options.isStageBoss) {
+                state.mediumLargeSpawnShotCount += 1;
+                if (state.mediumLargeSpawnShotCount >= state.nextMediumLargeOpeningShot) {
+                    mesh.metadata.openingShotPending = true;
+                    state.mediumLargeSpawnShotCount = 0;
+                    state.nextMediumLargeOpeningShot = 3 + Math.floor(Math.random() * 6);
+                }
+            }
             decorateEnemy(mesh, enemyType);
+            if (carriesCapsule) {
+                mesh.scaling.setAll(1);
+                decorateCapsuleCarrier(mesh);
+            }
             if (mesh.getTotalVertices) {
                 mesh.material = isAsteroid ? game.materials.asteroid : game.materials.enemy;
             }
+            if (options.debugMarker) {
+                const marker = BABYLON.MeshBuilder.CreateTorus("stage1WorkerMarker", {
+                    diameter: 1.35,
+                    thickness: 0.045,
+                    tessellation: 48
+                }, game.scene);
+                marker.rotation.x = Math.PI / 2;
+                marker.position.set(0, 0, -0.35);
+                marker.material = game.materials.capsule;
+                marker.parent = mesh;
+                mesh.metadata.parts = mesh.metadata.parts || [];
+                mesh.metadata.parts.push(marker);
+            }
             state.enemiesSinceCapsule = carriesCapsule ? 0 : state.enemiesSinceCapsule + 1;
             enemies.push(mesh);
+            return mesh;
         }
 
         function spawnEnemy() {
@@ -1596,12 +3345,42 @@
             }, game.scene);
             capsule.position.copyFrom(position);
             capsule.position.z = -0.04;
+            const ring = BABYLON.MeshBuilder.CreateTorus("powerCapsuleRing", {
+                diameter: 0.78,
+                thickness: 0.035,
+                tessellation: 36
+            }, game.scene);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.z = -0.05;
+            ring.parent = capsule;
+            ring.material = game.materials.capsuleRing;
             capsule.metadata = {
                 speed: 2.2,
-                radius: 0.34
+                radius: 0.42,
+                ring
             };
             capsule.material = game.materials.capsule;
             capsules.push(capsule);
+        }
+
+        function updateBossCapsuleSupply(delta, isBossActive) {
+            if (!isBossActive || state.stage2ClearPending || state.isIntermission) {
+                state.bossCapsuleTimer = Math.min(state.bossCapsuleTimer || 6, 6);
+                return;
+            }
+            if (capsules.length >= 2) {
+                return;
+            }
+            state.bossCapsuleTimer -= delta;
+            if (state.bossCapsuleTimer > 0) {
+                return;
+            }
+            spawnCapsule(new BABYLON.Vector3(
+                world.maxX + 0.8,
+                world.minY + 0.8 + Math.random() * (world.maxY - world.minY - 1.6),
+                -0.04
+            ));
+            state.bossCapsuleTimer = 7 + Math.random() * 4;
         }
 
         function spawnTerrainBlock() {
@@ -1619,6 +3398,51 @@
             };
             block.material = game.materials.terrain;
             terrain.push(block);
+        }
+
+        function spawnStageTwoMeteor() {
+            const meteor = createEnemyShip(game.scene, game.materials, true);
+            const size = 1.5 + Math.random() * 1.5;
+            meteor.name = "stage2Meteor";
+            meteor.position.set(
+                world.maxX + 1.2 + Math.random() * 1.8,
+                world.minY + 0.7 + Math.random() * (world.maxY - world.minY - 1.4),
+                0.05 + Math.random() * 0.22
+            );
+            meteor.scaling.setAll(size);
+            meteor.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+            meteor.metadata = {
+                kind: "meteor",
+                speed: 1.35 + Math.random() * 1.35,
+                vx: -(1.35 + Math.random() * 1.35),
+                vy: (Math.random() - 0.5) * 0.55,
+                radius: 0.45 * size,
+                hp: Math.round(10 + Math.random() * 10),
+                maxHp: 20,
+                spinX: (Math.random() - 0.5) * 1.6,
+                spinY: (Math.random() - 0.5) * 1.6,
+                spinZ: (Math.random() - 0.5) * 1.6
+            };
+            terrain.push(meteor);
+        }
+
+        function spawnGravityAsteroid(boss) {
+            const angle = boss.metadata.gravityAngle || 0;
+            boss.metadata.gravityAngle = angle + 1.45;
+            const y = BABYLON.Scalar.Clamp(
+                boss.position.y + Math.sin(angle) * (2.2 + Math.random() * 1.3),
+                world.minY + 0.6,
+                world.maxY - 0.6
+            );
+            const asteroid = spawnEnemyAt(world.maxX + 1.4 + Math.random() * 1.4, y, 0, {
+                enemyType: "asteroid",
+                carriesCapsule: false,
+                speedBonus: -0.45
+            });
+            asteroid.metadata.gravityPulled = true;
+            asteroid.metadata.gravityBoss = boss;
+            asteroid.metadata.driftY = (boss.position.y - y) * 0.32;
+            asteroid.metadata.points = Math.max(40, asteroid.metadata.points);
         }
 
         function addOption() {
@@ -1643,6 +3467,7 @@
             advancePowerCursor();
             state.score += 250;
             addSparks(capsule.position, 20);
+            playSound("pickup");
             updateHud();
         }
 
@@ -1676,6 +3501,7 @@
             }
             state.powerCursor = -1;
             addSparks(game.player.position, 24);
+            playSound("power");
             updateHud();
         }
 
@@ -1706,6 +3532,9 @@
         }
 
         function disposeEnemy(enemy) {
+            if (enemy.metadata && enemy.metadata.isFinalBoss) {
+                disposeFinalBossCannonMeshes(enemy);
+            }
             if (enemy.metadata && enemy.metadata.parts) {
                 enemy.metadata.parts.forEach((part) => part.dispose());
                 enemy.metadata.parts.length = 0;
@@ -1713,11 +3542,56 @@
             enemy.dispose();
         }
 
+        function addPlayerImpactEffect(intensity = 0.55) {
+            const position = game.player.position.clone();
+            addExplosionBurst(position, intensity);
+            addSparks(position, Math.round(18 + intensity * 18));
+        }
+
+        function startPlayerDeathExplosion() {
+            state.playerDeathTimer = 0;
+            state.playerDeathNextBurst = 0;
+            state.playerDeathBursts = 7;
+            game.player.scaling.set(1.35, 1.35, 1.35);
+        }
+
+        function updatePlayerDeathExplosion(delta) {
+            if (!state.gameOver || state.playerDeathBursts <= 0) {
+                return;
+            }
+            state.playerDeathTimer += delta;
+            state.playerDeathNextBurst -= delta;
+            game.player.rotation.z += delta * 7.5;
+            game.player.scaling.scaleInPlace(Math.max(0.96, 1 - delta * 0.42));
+            if (state.playerDeathNextBurst <= 0) {
+                const offset = new BABYLON.Vector3(
+                    (Math.random() - 0.5) * 0.9,
+                    (Math.random() - 0.5) * 0.72,
+                    -0.08
+                );
+                const burstPosition = game.player.position.add(offset);
+                const isFinalBurst = state.playerDeathBursts === 1;
+                addExplosionBurst(burstPosition, isFinalBurst ? 2.4 : 0.85 + Math.random() * 0.65);
+                addSparks(burstPosition, isFinalBurst ? 90 : 30);
+                playSound(isFinalBurst ? "boss" : "explosion");
+                state.playerDeathBursts -= 1;
+                state.playerDeathNextBurst = isFinalBurst ? 0.4 : 0.16 + Math.random() * 0.08;
+                if (isFinalBurst) {
+                    game.player.setEnabled(false);
+                }
+            }
+        }
+
         function damagePlayer() {
+            if (state.invincibleTimer > 0 || state.gameOver) {
+                return;
+            }
             if (state.shield > 0) {
                 state.shield = 0;
+                state.invincibleTimer = 1.2;
                 game.player.scaling.set(1.25, 1.25, 1.25);
-                addSparks(game.player.position, 24);
+                addPlayerImpactEffect(0.45);
+                playSound("hit");
                 updateHud();
                 return;
             }
@@ -1727,22 +3601,30 @@
             state.hasLaser = false;
             state.speedLevel = Math.max(0, state.speedLevel - 1);
             options.splice(0).forEach((option) => option.dispose());
+            state.invincibleTimer = 1.6;
             game.player.scaling.set(1.25, 1.25, 1.25);
-            addSparks(game.player.position, 18);
+            addPlayerImpactEffect(0.58);
+            playSound("hit");
             if (state.lives <= 0) {
                 state.gameOver = true;
                 finalScoreEl.textContent = `SCORE ${state.score}`;
                 messageEl.classList.add("isVisible");
+                stopStage3BossMusic();
+                startPlayerDeathExplosion();
+                playSound("gameover");
             }
             updateHud();
         }
 
         function updatePlayer(delta) {
+            state.invincibleTimer = Math.max(0, state.invincibleTimer - delta);
             const velocity = new BABYLON.Vector2(0, 0);
             if (keys.has("ArrowUp") || keys.has("KeyW")) velocity.y += 1;
             if (keys.has("ArrowDown") || keys.has("KeyS")) velocity.y -= 1;
             if (keys.has("ArrowLeft") || keys.has("KeyA")) velocity.x -= 1;
             if (keys.has("ArrowRight") || keys.has("KeyD")) velocity.x += 1;
+            velocity.x += touchInput.x;
+            velocity.y += touchInput.y;
             const isMoving = velocity.lengthSquared() > 0;
             if (isMoving) {
                 velocity.normalize();
@@ -1760,6 +3642,9 @@
             game.player.scaling.x = BABYLON.Scalar.Lerp(game.player.scaling.x, 1, 0.16);
             game.player.scaling.y = BABYLON.Scalar.Lerp(game.player.scaling.y, 1, 0.16);
             game.player.scaling.z = BABYLON.Scalar.Lerp(game.player.scaling.z, 1, 0.16);
+            game.player.getChildMeshes(false).forEach((mesh) => {
+                mesh.visibility = state.invincibleTimer > 0 && Math.floor(state.elapsed * 18) % 2 === 0 ? 0.34 : 1;
+            });
             if (game.player.metadata.flames) {
                 const pulse = 0.85 + Math.sin(state.elapsed * 22) * 0.2;
                 game.player.metadata.flames.forEach((flame, index) => {
@@ -1785,7 +3670,7 @@
             }
 
             state.fireCooldown -= delta;
-            if (keys.has("KeyZ") && state.fireCooldown <= 0) {
+            if ((keys.has("KeyZ") || touchInput.firing) && state.fireCooldown <= 0) {
                 fireBullet();
                 state.fireCooldown = state.hasLaser ? 0.13 : 0.18;
             }
@@ -1831,10 +3716,12 @@
 
         function fireEnemyBullet(enemy) {
             if (enemy.metadata.isFinalBoss) {
+                playSound("enemyShotLarge");
                 fireBossTurrets(enemy);
                 return;
             }
             if (enemy.metadata.enemyConfig && enemy.metadata.enemyConfig.ringShot) {
+                playSound("enemyShotLarge");
                 fireEnemyRing(enemy);
                 return;
             }
@@ -1860,6 +3747,7 @@
             };
             bullet.material = game.materials.enemyBullet;
             enemyBullets.push(bullet);
+            playSound(enemy.metadata.enemyType === "teacherLarge" || enemy.metadata.enemyType === "worker" ? "enemyShotLarge" : "enemyShotSmall");
         }
 
         function createEnemyAimBullet(x, y, speed = 4.6 + state.wave * 0.18, radius = 0.14, diameter = 0.16) {
@@ -1893,9 +3781,282 @@
                 new BABYLON.Vector2(-1.12, 0),
                 new BABYLON.Vector2(-1.0, -0.62)
             ];
+            const phase = enemy.metadata.finalBossPhase || 1;
+            const aimSpeed = (phase === 3 ? 5.0 : phase === 2 ? 4.55 : 4.2) + state.wave * 0.12;
             offsets.forEach((offset) => {
-                createEnemyAimBullet(enemy.position.x + offset.x, enemy.position.y + offset.y, 4.2 + state.wave * 0.12, 0.15, 0.18);
+                createEnemyAimBullet(enemy.position.x + offset.x, enemy.position.y + offset.y, aimSpeed, 0.15, 0.18);
             });
+            if (phase >= 2) {
+                const spreadSpeed = 3.9 + state.wave * 0.1;
+                [-1.05, 0, 1.05].forEach((dy) => {
+                    const bullet = BABYLON.MeshBuilder.CreateSphere("enemyBossSpreadBullet", {
+                        diameter: 0.15,
+                        segments: 10
+                    }, game.scene);
+                    bullet.position.set(enemy.position.x - 1.55, enemy.position.y + dy, -0.06);
+                    bullet.metadata = {
+                        vx: -spreadSpeed,
+                        vy: dy * 0.24,
+                        radius: 0.13
+                    };
+                    bullet.material = game.materials.enemyBullet;
+                    enemyBullets.push(bullet);
+                });
+            }
+            if (phase >= 3) {
+                const center = new BABYLON.Vector2(enemy.position.x - 1.25, enemy.position.y);
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 * i) / 8 + state.elapsed * 0.35;
+                    const bullet = BABYLON.MeshBuilder.CreateSphere("enemyBossRageBullet", {
+                        diameter: 0.13,
+                        segments: 10
+                    }, game.scene);
+                    bullet.position.set(center.x, center.y, -0.06);
+                    const speed = 3.25 + state.wave * 0.08;
+                    bullet.metadata = {
+                        vx: Math.cos(angle) * speed - 1.5,
+                        vy: Math.sin(angle) * speed,
+                        radius: 0.12
+                    };
+                    bullet.material = game.materials.enemyBullet;
+                    enemyBullets.push(bullet);
+                }
+            }
+        }
+
+        function updateFinalBossPhase(enemy) {
+            const hpRatio = Math.max(0, enemy.metadata.hp / enemy.metadata.maxHp);
+            const nextPhase = hpRatio <= 0.55 ? 3 : hpRatio <= 0.8 ? 2 : 1;
+            if (nextPhase === enemy.metadata.finalBossPhase) {
+                return;
+            }
+            enemy.metadata.finalBossPhase = nextPhase;
+            enemy.metadata.shootTimer = Math.min(enemy.metadata.shootTimer || 0, nextPhase === 3 ? 0.55 : 0.85);
+            enemy.metadata.mainCannonCooldown = Math.min(enemy.metadata.mainCannonCooldown || 0, nextPhase === 3 ? 0.9 : 1.5);
+            addExplosionBurst(enemy.position, nextPhase === 3 ? 1.45 : 1.05);
+            addSparks(enemy.position, nextPhase === 3 ? 86 : 54);
+            playSound("boss");
+        }
+
+        function spawnFinalBossFighters(enemy) {
+            const baseY = BABYLON.Scalar.Clamp(enemy.position.y, world.minY + 1.0, world.maxY - 1.0);
+            [-0.88, 0, 0.88].forEach((offsetY, index) => {
+                const fighter = spawnEnemyAt(world.maxX + 1.9, BABYLON.Scalar.Clamp(baseY + offsetY, world.minY + 0.55, world.maxY - 0.55), index * 0.28, {
+                    enemyType: "fighter",
+                    carriesCapsule: false,
+                    canShoot: true,
+                    depthIntroZ: 0.9,
+                    depthIntroScale: 0.55,
+                    depthIntroDuration: 1.25,
+                    introRightX: world.maxX - 0.35
+                });
+                fighter.metadata.openingShotPending = true;
+                fighter.metadata.shootTimer = 1.1 + index * 0.35;
+            });
+            playSound("enemyShotLarge");
+        }
+
+        function spawnFinalBossKaraageMissile(boss) {
+            const side = boss.metadata.karaageMissileLaunchSide || 1;
+            boss.metadata.karaageMissileLaunchSide = -side;
+            const missile = cloneModelTemplate("bossKaraageMissile", "bossKaraageMissile")
+                || cloneModelTemplate("enemyKaraageMini", "bossKaraageMissile")
+                || createEnemyShip(game.scene, game.materials, false);
+            const offsetX = -0.45 + Math.random() * 0.5;
+            const offsetY = side > 0 ? 1.25 : -1.25;
+            missile.position.set(boss.position.x + offsetX, BABYLON.Scalar.Clamp(boss.position.y + offsetY, world.minY + 0.55, world.maxY - 0.55), -0.02);
+            missile.rotation.z = side > 0 ? BABYLON.Tools.ToRadians(82) : BABYLON.Tools.ToRadians(-82);
+            missile.metadata = {
+                speed: 4.25,
+                radius: 0.42,
+                hp: 4,
+                maxHp: 4,
+                points: 320,
+                spin: 0,
+                baseRotationZ: missile.rotation.z,
+                hitKick: 0,
+                hitFlash: 0,
+                hitScale: 1,
+                waveY: missile.position.y,
+                waveAmount: 0,
+                waveSpeed: 0,
+                wavePhase: 0,
+                motion: "bossKaraageMissile",
+                enemyType: "bossKaraageMissile",
+                enemyConfig: null,
+                vx: -0.35,
+                vy: side * (3.4 + Math.random() * 0.55),
+                armTimer: 0.55 + Math.random() * 0.22,
+                lifeTimer: 0,
+                carriesCapsule: false,
+                canShoot: false,
+                shootTimer: 99,
+                openingShotPending: false,
+                isStageBoss: false
+            };
+            if (missile.getTotalVertices && missile.getTotalVertices() > 0) {
+                missile.material = game.materials.enemy;
+            }
+            enemies.push(missile);
+            addSparks(missile.position, 12);
+            playSound("enemyShotLarge");
+        }
+
+        function updateBossKaraageMissile(missile, delta) {
+            missile.metadata.lifeTimer += delta;
+            missile.metadata.armTimer -= delta;
+            if (missile.metadata.armTimer <= 0) {
+                const direction = new BABYLON.Vector2(
+                    game.player.position.x - missile.position.x,
+                    game.player.position.y - missile.position.y
+                );
+                if (direction.lengthSquared() > 0.0001) {
+                    direction.normalize();
+                    const targetSpeed = 4.1 + Math.min(1.2, missile.metadata.lifeTimer * 0.24);
+                    const turn = Math.min(1, delta * 2.6);
+                    missile.metadata.vx = BABYLON.Scalar.Lerp(missile.metadata.vx, direction.x * targetSpeed, turn);
+                    missile.metadata.vy = BABYLON.Scalar.Lerp(missile.metadata.vy, direction.y * targetSpeed, turn);
+                }
+            }
+            missile.position.x += missile.metadata.vx * delta;
+            missile.position.y += missile.metadata.vy * delta;
+            missile.position.y = BABYLON.Scalar.Clamp(missile.position.y, world.minY + 0.35, world.maxY - 0.35);
+            missile.metadata.baseRotationZ = Math.atan2(missile.metadata.vy, missile.metadata.vx);
+        }
+
+        function updateFinalBossKaraageMissiles(enemy, delta) {
+            if (enemy.position.x > world.maxX - 0.9) {
+                return;
+            }
+            if (enemy.metadata.karaageMissileBurstRemaining > 0) {
+                enemy.metadata.karaageMissileBurstGap -= delta;
+                if (enemy.metadata.karaageMissileBurstGap <= 0) {
+                    spawnFinalBossKaraageMissile(enemy);
+                    enemy.metadata.karaageMissileBurstRemaining -= 1;
+                    enemy.metadata.karaageMissileBurstGap = 0.22 + Math.random() * 0.18;
+                }
+                return;
+            }
+            enemy.metadata.karaageMissileTimer -= delta;
+            if (enemy.metadata.karaageMissileTimer <= 0) {
+                const phase = enemy.metadata.finalBossPhase || 1;
+                if (phase >= 3) {
+                    const minBurst = state.hasLaser ? 4 : 2;
+                    const maxBurst = state.hasLaser ? 8 : 4;
+                    enemy.metadata.karaageMissileBurstRemaining = minBurst + Math.floor(Math.random() * (maxBurst - minBurst + 1));
+                } else {
+                    const maxBurst = phase >= 2 ? 3 : 2;
+                    enemy.metadata.karaageMissileBurstRemaining = 1 + Math.floor(Math.random() * maxBurst);
+                }
+                enemy.metadata.karaageMissileBurstGap = 0;
+                enemy.metadata.karaageMissileTimer = 1 + Math.random() * 2;
+            }
+        }
+
+        function disposeFinalBossCannonMeshes(enemy) {
+            ["mainCannonWarningMesh", "mainCannonBeamMesh"].forEach((key) => {
+                const mesh = enemy.metadata[key];
+                if (mesh && !mesh.isDisposed()) {
+                    mesh.dispose();
+                }
+                enemy.metadata[key] = null;
+            });
+        }
+
+        function startFinalBossMainCannon(enemy) {
+            const startX = world.minX - 0.2;
+            const endX = enemy.position.x - 1.65;
+            const width = Math.max(1, endX - startX);
+            const targetY = BABYLON.Scalar.Clamp(enemy.position.y, world.minY + 0.48, world.maxY - 0.48);
+            const warning = BABYLON.MeshBuilder.CreateBox("bossMainCannonWarning", {
+                width,
+                height: 0.1,
+                depth: 0.05
+            }, game.scene);
+            warning.position.set(startX + width / 2, targetY, -0.16);
+            warning.material = game.materials.bossBeamWarning;
+            enemy.metadata.mainCannonTargetY = targetY;
+            enemy.metadata.mainCannonCharge = 1.15;
+            enemy.metadata.mainCannonBeamAge = 0;
+            enemy.metadata.mainCannonHitPlayer = false;
+            enemy.metadata.mainCannonWarningMesh = warning;
+            playSound("shield");
+        }
+
+        function fireFinalBossMainCannon(enemy) {
+            const startX = world.minX - 0.2;
+            const endX = enemy.position.x - 1.55;
+            const width = Math.max(1, endX - startX);
+            const beamHeight = enemy.metadata.finalBossPhase >= 3 ? 0.64 : 0.5;
+            const beam = BABYLON.MeshBuilder.CreateBox("bossMainCannonBeam", {
+                width,
+                height: beamHeight,
+                depth: 0.08
+            }, game.scene);
+            beam.position.set(startX + width / 2, enemy.metadata.mainCannonTargetY, -0.17);
+            beam.material = game.materials.bossBeam;
+            enemy.metadata.mainCannonBeamAge = 0.36;
+            enemy.metadata.mainCannonBeamMesh = beam;
+            if (enemy.metadata.mainCannonWarningMesh && !enemy.metadata.mainCannonWarningMesh.isDisposed()) {
+                enemy.metadata.mainCannonWarningMesh.dispose();
+            }
+            enemy.metadata.mainCannonWarningMesh = null;
+            playSound("boss");
+        }
+
+        function updateFinalBossMainCannon(enemy, delta) {
+            if (enemy.position.x > world.maxX - 0.9) {
+                return;
+            }
+            if (enemy.metadata.mainCannonBeamAge > 0) {
+                enemy.metadata.mainCannonBeamAge -= delta;
+                const beam = enemy.metadata.mainCannonBeamMesh;
+                if (beam && !beam.isDisposed()) {
+                    const pulse = 1 + Math.sin(state.elapsed * 42) * 0.12;
+                    beam.scaling.y = pulse;
+                    beam.visibility = Math.max(0, enemy.metadata.mainCannonBeamAge / 0.36);
+                }
+                if (!enemy.metadata.mainCannonHitPlayer && Math.abs(game.player.position.y - enemy.metadata.mainCannonTargetY) < 0.5) {
+                    enemy.metadata.mainCannonHitPlayer = true;
+                    damagePlayer();
+                }
+                if (enemy.metadata.mainCannonBeamAge <= 0) {
+                    disposeFinalBossCannonMeshes(enemy);
+                    enemy.metadata.mainCannonCooldown = enemy.metadata.finalBossPhase >= 3 ? 3.2 : 4.4;
+                }
+                return;
+            }
+            if (enemy.metadata.mainCannonCharge > 0) {
+                enemy.metadata.mainCannonCharge -= delta;
+                const warning = enemy.metadata.mainCannonWarningMesh;
+                if (warning && !warning.isDisposed()) {
+                    const pulse = 1 + Math.sin(state.elapsed * 24) * 0.55;
+                    warning.scaling.y = Math.max(0.55, pulse);
+                    warning.visibility = 0.32 + Math.max(0, 1 - enemy.metadata.mainCannonCharge / 1.15) * 0.54;
+                }
+                if (enemy.metadata.mainCannonCharge <= 0) {
+                    fireFinalBossMainCannon(enemy);
+                }
+                return;
+            }
+            enemy.metadata.mainCannonCooldown -= delta;
+            if (enemy.metadata.mainCannonCooldown <= 0) {
+                startFinalBossMainCannon(enemy);
+            }
+        }
+
+        function updateFinalBoss(enemy, delta) {
+            updateFinalBossPhase(enemy);
+            updateFinalBossMainCannon(enemy, delta);
+            updateFinalBossKaraageMissiles(enemy, delta);
+            if ((enemy.metadata.finalBossPhase || 1) < 3 || enemy.position.x > world.maxX - 0.9) {
+                return;
+            }
+            enemy.metadata.summonTimer -= delta;
+            if (enemy.metadata.summonTimer <= 0) {
+                spawnFinalBossFighters(enemy);
+                enemy.metadata.summonTimer = 6.6;
+            }
         }
 
         function fireEnemyRing(enemy) {
@@ -1942,16 +4103,42 @@
             state.stageKills += 1;
             const wasStageBoss = enemy.metadata.isStageBoss;
             const wasFinalBoss = enemy.metadata.isFinalBoss;
+            const wasStageOneCore = enemy.metadata.isStageOneCore;
+            if (wasStageOneCore && !state.stage1CoreDefeated) {
+                addDestructionEffect(enemy, position);
+                playSound("boss");
+                state.stage1CoreDefeated = true;
+                state.stage1ClearTimer = 0;
+                state.stageBossCount = Math.max(0, state.stageBossCount - 1);
+                enemy.metadata.isStageBoss = false;
+                enemy.metadata.isStageOneCore = false;
+                enemy.metadata.isStageOneCoreFalling = true;
+                enemy.metadata.canShoot = false;
+                enemy.metadata.hp = 9999;
+                enemy.metadata.fallTimer = 0;
+                enemy.metadata.nextFallBurst = 0.18;
+                enemy.metadata.motion = "stage1CoreFall";
+                enemy.metadata.points = 0;
+                updateHud();
+                return;
+            }
             if (enemy.metadata.carriesCapsule) {
                 spawnCapsule(position);
             }
-            addSparks(position, 22);
+            addDestructionEffect(enemy, position);
+            playSound(wasFinalBoss || wasStageBoss ? "boss" : "explosion");
             disposeEnemy(enemy);
             enemies.splice(index, 1);
             if (wasStageBoss) {
                 state.stageBossCount = Math.max(0, state.stageBossCount - 1);
-                if (state.stage === 1 && state.stageBossCount === 0) {
+                if (state.stage === 1 && state.stageBossCount === 0 && state.stage1CoreFallDone) {
                     triggerStageClear();
+                }
+                if (state.stage === 2 && state.stageBossCount === 0) {
+                    state.bossEnemy = null;
+                    bossHudEl.classList.remove("isVisible");
+                    state.stage2ClearPending = true;
+                    state.stage2ClearTimer = 0;
                 }
             }
             if (wasFinalBoss) {
@@ -1986,6 +4173,85 @@
             addShockwave(position, directEnemy);
         }
 
+        function addExplosionBurst(position, intensity = 1) {
+            const core = BABYLON.MeshBuilder.CreateSphere("explosionCore", {
+                diameter: 0.38,
+                segments: 18
+            }, game.scene);
+            core.position.set(position.x, position.y, -0.12);
+            core.material = game.materials.explosionCore;
+            core.metadata = {
+                age: 0,
+                duration: 0.34,
+                maxScale: 2.3 * intensity,
+                spin: 0
+            };
+            explosions.push(core);
+
+            const ring = BABYLON.MeshBuilder.CreateTorus("explosionRing", {
+                diameter: 0.45,
+                thickness: 0.06,
+                tessellation: 64
+            }, game.scene);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.set(position.x, position.y, -0.14);
+            ring.material = game.materials.explosionHot;
+            ring.metadata = {
+                age: 0,
+                duration: 0.42,
+                maxScale: 3.2 * intensity,
+                spin: 8
+            };
+            explosions.push(ring);
+
+            for (let i = 0; i < Math.ceil(5 * intensity); i++) {
+                const ember = BABYLON.MeshBuilder.CreateSphere("explosionEmber", {
+                    diameter: 0.13 + Math.random() * 0.09,
+                    segments: 10
+                }, game.scene);
+                ember.position.set(position.x, position.y, -0.13);
+                const angle = Math.random() * Math.PI * 2;
+                const speed = (1.2 + Math.random() * 2.8) * intensity;
+                ember.material = Math.random() < 0.5 ? game.materials.explosionCore : game.materials.explosionHot;
+                ember.metadata = {
+                    age: 0,
+                    duration: 0.38 + Math.random() * 0.18,
+                    maxScale: 0.12,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    spin: (Math.random() - 0.5) * 9
+                };
+                explosions.push(ember);
+            }
+        }
+
+        function addDestructionEffect(enemy, position) {
+            const type = enemy.metadata.enemyType;
+            const config = enemy.metadata.enemyConfig;
+            const intensity = enemy.metadata.isFinalBoss ? 3.2 : enemy.metadata.isStageBoss ? 1.8 : type === "teacherLarge" || type === "worker" ? 1.45 : 1;
+            addExplosionBurst(position, intensity);
+            if (type === "worker") {
+                addSparks(position, 54);
+                if (enemy.metadata.shields) {
+                    enemy.metadata.shields.forEach((shield) => {
+                        if (shield && !shield.isDisposed()) {
+                            addSparks(shield.getAbsolutePosition(), 14);
+                        }
+                    });
+                }
+            } else if (config && config.ringShot) {
+                addSparks(position, 70);
+                addShockwave(position, enemy);
+            } else if (type === "fighter") {
+                addSparks(position, 30);
+            } else if (enemy.metadata.isFinalBoss) {
+                addSparks(position, 140);
+                addShockwave(position, enemy);
+            } else {
+                addSparks(position, type === "teacherLarge" ? 52 : 34);
+            }
+        }
+
         function updateShockwaves(delta) {
             for (let i = shockwaves.length - 1; i >= 0; i--) {
                 const shockwave = shockwaves[i];
@@ -2004,13 +4270,15 @@
                     if (distance <= radius + enemy.metadata.radius) {
                         shockwave.metadata.damagedEnemies.add(enemy);
                         enemy.metadata.hp -= shockwave.metadata.damage;
-                        if (enemy.metadata.isFinalBoss) {
+                        if (enemy.metadata.isFinalBoss || state.bossEnemy === enemy) {
                             const hpRatio = Math.max(0, enemy.metadata.hp / state.bossMaxHp);
                             bossFillEl.style.width = `${hpRatio * 100}%`;
                         }
-                        addSparks(enemy.position, 10);
                         if (enemy.metadata.hp <= 0) {
                             destroyEnemyAt(k, enemy.position.clone());
+                        } else {
+                            addSparks(enemy.position, 10);
+                            applyEnemyHitReaction(enemy, shockwave.metadata.damage, shockwave.position);
                         }
                     }
                 }
@@ -2018,6 +4286,45 @@
                 if (progress >= 1) {
                     shockwave.dispose();
                     shockwaves.splice(i, 1);
+                }
+            }
+        }
+
+        function updateExplosions(delta) {
+            for (let i = explosions.length - 1; i >= 0; i--) {
+                const explosion = explosions[i];
+                explosion.metadata.age += delta;
+                const progress = Math.min(1, explosion.metadata.age / explosion.metadata.duration);
+                if (explosion.metadata.vx !== undefined) {
+                    explosion.position.x += explosion.metadata.vx * delta;
+                    explosion.position.y += explosion.metadata.vy * delta;
+                    const scale = Math.max(0.08, 1 - progress);
+                    explosion.scaling.set(scale, scale, scale);
+                } else {
+                    const scale = BABYLON.Scalar.Lerp(0.3, explosion.metadata.maxScale, progress);
+                    explosion.scaling.set(scale, scale, scale);
+                }
+                explosion.rotation.z += (explosion.metadata.spin || 0) * delta;
+                const fade = Math.max(0, 1 - progress);
+                explosion.visibility = fade;
+                if (progress >= 1) {
+                    explosion.dispose();
+                    explosions.splice(i, 1);
+                }
+            }
+        }
+
+        function updateSparks(delta) {
+            for (let i = sparks.length - 1; i >= 0; i--) {
+                const spark = sparks[i];
+                spark.metadata.life -= delta;
+                spark.position.x += spark.metadata.vx * delta;
+                spark.position.y += spark.metadata.vy * delta;
+                const scale = Math.max(0, spark.metadata.life / spark.metadata.maxLife);
+                spark.scaling.set(scale, scale, scale);
+                if (spark.metadata.life <= 0) {
+                    spark.dispose();
+                    sparks.splice(i, 1);
                 }
             }
         }
@@ -2041,13 +4348,81 @@
                     addSparks(shieldPosition, 8);
                     if (shield.metadata.hp <= 0) {
                         addSparks(shieldPosition, 16);
+                        playSound("shieldBreak");
                         shield.dispose();
                         enemy.metadata.shields.splice(i, 1);
+                    } else {
+                        playSound("shield");
                     }
                     return true;
                 }
             }
             return false;
+        }
+
+        function updateFighterDodge(enemy, delta, introActive) {
+            if (enemy.metadata.enemyType !== "fighter" || introActive) {
+                enemy.metadata.dodgeY = BABYLON.Scalar.Lerp(enemy.metadata.dodgeY || 0, 0, Math.min(1, delta * 5));
+                enemy.metadata.dodgeDirection = 0;
+                return 0;
+            }
+            enemy.metadata.dodgeCooldown = Math.max(0, (enemy.metadata.dodgeCooldown || 0) - delta);
+
+            let bestThreat = null;
+            let bestScore = Infinity;
+            bullets.forEach((bullet) => {
+                if (bullet.metadata.shotOwner && bullet.metadata.shotOwner !== "player") {
+                    return;
+                }
+                const bulletVx = bullet.metadata.vx !== undefined ? bullet.metadata.vx : bullet.metadata.speed || 0;
+                const bulletVy = bullet.metadata.vy || 0;
+                if (bulletVx <= 0.1 || bullet.position.x > enemy.position.x + 0.15 || bullet.position.x < enemy.position.x - 4.8) {
+                    return;
+                }
+                const timeToReach = (enemy.position.x - bullet.position.x) / bulletVx;
+                if (timeToReach < 0 || timeToReach > 0.72) {
+                    return;
+                }
+                const predictedY = bullet.position.y + bulletVy * timeToReach;
+                const missDistance = Math.abs(predictedY - enemy.position.y);
+                const dangerRadius = enemy.metadata.radius + bullet.metadata.radius + 0.42;
+                if (missDistance < dangerRadius && missDistance < bestScore) {
+                    bestScore = missDistance;
+                    bestThreat = { predictedY };
+                }
+            });
+
+            if (bestThreat && enemy.metadata.dodgeCooldown <= 0) {
+                const desiredDirection = bestThreat.predictedY <= enemy.position.y ? 1 : -1;
+                const roomUp = world.maxY - 0.55 - enemy.position.y;
+                const roomDown = enemy.position.y - (world.minY + 0.55);
+                enemy.metadata.dodgeDirection = desiredDirection > 0 && roomUp < 0.7
+                    ? -1
+                    : desiredDirection < 0 && roomDown < 0.7
+                        ? 1
+                        : desiredDirection;
+                enemy.metadata.dodgeTimer = 0.42;
+            } else {
+                enemy.metadata.dodgeTimer = Math.max(0, (enemy.metadata.dodgeTimer || 0) - delta);
+                if (enemy.metadata.dodgeTimer <= 0) {
+                    enemy.metadata.dodgeDirection = 0;
+                }
+            }
+
+            const dodgeSpeed = 5.4;
+            if (enemy.metadata.dodgeDirection) {
+                enemy.metadata.dodgeY = BABYLON.Scalar.Clamp(
+                    (enemy.metadata.dodgeY || 0) + enemy.metadata.dodgeDirection * dodgeSpeed * delta,
+                    -1.45,
+                    1.45
+                );
+                if (!bestThreat && enemy.metadata.dodgeTimer <= 0) {
+                    enemy.metadata.dodgeCooldown = 0.3;
+                }
+            } else {
+                enemy.metadata.dodgeY = BABYLON.Scalar.Lerp(enemy.metadata.dodgeY || 0, 0, Math.min(1, delta * 3.2));
+            }
+            return enemy.metadata.dodgeY || 0;
         }
 
         function updateLists(delta) {
@@ -2071,33 +4446,138 @@
 
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const enemy = enemies[i];
+                if (enemy.metadata.isStageOneCoreFalling) {
+                    enemy.metadata.fallTimer += delta;
+                    enemy.metadata.nextFallBurst -= delta;
+                    enemy.position.x -= 0.45 * delta;
+                    enemy.position.y -= 1.45 * delta;
+                    enemy.position.z -= 0.18 * delta;
+                    enemy.rotation.z += 3.2 * delta;
+                    enemy.scaling.scaleInPlace(1 - delta * 0.22);
+                    if (enemy.metadata.nextFallBurst <= 0) {
+                        addExplosionBurst(enemy.position, 0.85 + enemy.metadata.fallTimer * 0.35);
+                        addSparks(enemy.position, 26);
+                        playSound("explosion");
+                        enemy.metadata.nextFallBurst = 0.24;
+                    }
+                    if (enemy.metadata.fallTimer >= 1.45) {
+                        addExplosionBurst(enemy.position, 2.2);
+                        addSparks(enemy.position, 90);
+                        addShockwave(enemy.position, enemy);
+                        playSound("boss");
+                        disposeEnemy(enemy);
+                        enemies.splice(i, 1);
+                        state.stage1CoreFallDone = true;
+                        state.stage1ClearTimer = 0;
+                    }
+                    continue;
+                }
                 const motion = enemy.metadata.motion || "sine";
                 if (motion === "hover") {
-                    enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, world.maxX - 2.0, 0.018);
+                    enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, enemy.metadata.hoverX || world.maxX - 2.0, 0.018);
+                } else if (motion === "stage1LeftGuard") {
+                    const guardX = enemy.metadata.hoverX !== undefined ? enemy.metadata.hoverX : enemy.position.x;
+                    enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, guardX, 0.028);
+                    if (Math.abs(enemy.position.x - guardX) < 0.02) {
+                        enemy.position.x = guardX;
+                    }
                 } else if (motion === "boss") {
                     enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, world.maxX - 2.4, 0.02);
-                } else {
+                } else if (motion === "gravityBoss") {
+                    enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, enemy.metadata.hoverX, 0.018);
+                } else if (motion === "drift") {
                     enemy.position.x -= enemy.metadata.speed * delta;
+                    enemy.position.y += (enemy.metadata.driftY || 0) * delta;
+                } else if (motion === "bossKaraageMissile") {
+                    updateBossKaraageMissile(enemy, delta);
+                } else {
+                    if (enemy.metadata.depthIntro !== null && enemy.metadata.depthIntro !== undefined && enemy.metadata.introRightX !== undefined) {
+                        enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, enemy.metadata.introRightX, Math.min(1, delta * 1.2));
+                    } else {
+                        enemy.position.x -= enemy.metadata.speed * delta;
+                    }
                 }
-                if (enemy.metadata.isStageBoss) {
+                if (enemy.metadata.isStageBoss && enemy.metadata.hoverX === undefined) {
                     enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, world.maxX - 1.3, 0.025);
                 }
                 if (enemy.metadata.isFinalBoss) {
                     enemy.position.x = BABYLON.Scalar.Lerp(enemy.position.x, world.maxX - 1.8, 0.02);
                     enemy.metadata.waveY = 0;
+                    updateFinalBoss(enemy, delta);
                 }
+                const introActive = enemy.metadata.depthIntro !== null && enemy.metadata.depthIntro !== undefined;
+                const dodgeY = updateFighterDodge(enemy, delta, introActive);
                 const waveAmount = enemy.metadata.waveAmount === undefined ? 0.28 : enemy.metadata.waveAmount;
                 const waveSpeed = enemy.metadata.waveSpeed === undefined ? 2.2 : enemy.metadata.waveSpeed;
-                enemy.position.y = enemy.metadata.waveY + Math.sin(state.elapsed * waveSpeed + enemy.metadata.wavePhase) * waveAmount;
+                if (motion !== "drift" && motion !== "bossKaraageMissile") {
+                    enemy.position.y = BABYLON.Scalar.Clamp(
+                        enemy.metadata.waveY + Math.sin(state.elapsed * waveSpeed + enemy.metadata.wavePhase) * waveAmount + dodgeY,
+                        world.minY + 0.45,
+                        world.maxY - 0.45
+                    );
+                }
                 const bankZ = BABYLON.Scalar.Clamp(
-                    Math.cos(state.elapsed * waveSpeed + enemy.metadata.wavePhase) * waveAmount * waveSpeed * 0.16,
+                    Math.cos(state.elapsed * waveSpeed + enemy.metadata.wavePhase) * waveAmount * waveSpeed * 0.16 + dodgeY * 0.24,
                     BABYLON.Tools.ToRadians(-20),
                     BABYLON.Tools.ToRadians(20)
                 );
-                enemy.rotation.z += enemy.metadata.spin * delta;
+                enemy.metadata.baseRotationZ = (enemy.metadata.baseRotationZ || 0) + enemy.metadata.spin * delta;
+                if (enemy.metadata.enemyType === "asteroid") {
+                    enemy.rotation.x += enemy.metadata.asteroidSpinX * delta;
+                    enemy.rotation.y += enemy.metadata.asteroidSpinY * delta;
+                    enemy.rotation.z += enemy.metadata.asteroidSpinZ * delta;
+                }
+                if (enemy.metadata.hitFlash > 0) {
+                    enemy.metadata.hitFlash = Math.max(0, enemy.metadata.hitFlash - delta);
+                    enemy.metadata.hitKick = BABYLON.Scalar.Lerp(enemy.metadata.hitKick || 0, 0, 0.18);
+                    enemy.metadata.hitScale = BABYLON.Scalar.Lerp(enemy.metadata.hitScale || 1, 1, 0.18);
+                    if (enemy.metadata.depthIntro === null || enemy.metadata.depthIntro === undefined) {
+                        enemy.scaling.setAll(enemy.metadata.hitScale || 1);
+                    }
+                } else if (enemy.metadata.hitKick) {
+                    enemy.metadata.hitKick = BABYLON.Scalar.Lerp(enemy.metadata.hitKick, 0, 0.2);
+                    enemy.metadata.hitScale = BABYLON.Scalar.Lerp(enemy.metadata.hitScale || 1, 1, 0.2);
+                    if (Math.abs(enemy.metadata.hitKick) < 0.01) {
+                        enemy.metadata.hitKick = 0;
+                    }
+                }
                 const modelRoot = enemy.getChildren().find((child) => child.name && child.name.indexOf("Model") >= 0);
+                if (enemy.metadata.depthIntro !== null && enemy.metadata.depthIntro !== undefined) {
+                    enemy.metadata.depthIntro += delta;
+                    const progress = Math.min(1, enemy.metadata.depthIntro / (enemy.metadata.depthIntroDuration || 0.75));
+                    const targetScale = 1;
+                    const startScale = enemy.metadata.depthIntroStartScale || (enemy.position.z < 0 ? 0.48 : 1.32);
+                    const scale = BABYLON.Scalar.Lerp(startScale, targetScale, progress) * (enemy.metadata.hitScale || 1);
+                    enemy.scaling.setAll(scale);
+                    enemy.position.z = BABYLON.Scalar.Lerp(enemy.metadata.depthIntroStartZ || enemy.position.z, 0, progress);
+                    if (progress >= 1) {
+                        enemy.metadata.depthIntro = null;
+                        enemy.metadata.introRotation = null;
+                    }
+                }
                 if (modelRoot && enemy.metadata.enemyConfig) {
-                    modelRoot.rotation.z = enemy.metadata.enemyConfig.rotation.z + bankZ;
+                    const targetRotation = enemy.metadata.enemyConfig.rotation;
+                    if (enemy.metadata.introRotation && enemy.metadata.depthIntro !== null && enemy.metadata.depthIntro !== undefined) {
+                        const progress = Math.min(1, enemy.metadata.depthIntro / (enemy.metadata.depthIntroDuration || 0.75));
+                        modelRoot.rotation.x = BABYLON.Scalar.Lerp(enemy.metadata.introRotation.x, targetRotation.x, progress);
+                        modelRoot.rotation.y = BABYLON.Scalar.Lerp(enemy.metadata.introRotation.y, targetRotation.y, progress);
+                        modelRoot.rotation.z = BABYLON.Scalar.Lerp(enemy.metadata.introRotation.z, targetRotation.z, progress) + bankZ + (enemy.metadata.hitKick || 0);
+                    } else {
+                        modelRoot.rotation.x = targetRotation.x;
+                        modelRoot.rotation.y = targetRotation.y;
+                        modelRoot.rotation.z = targetRotation.z + bankZ + (enemy.metadata.hitKick || 0);
+                    }
+                } else if (enemy.metadata.enemyType !== "asteroid") {
+                    enemy.rotation.z = (enemy.metadata.baseRotationZ || 0) + bankZ + (enemy.metadata.hitKick || 0);
+                }
+                if (enemy.metadata.carriesCapsule && enemy.metadata.parts) {
+                    enemy.metadata.parts.forEach((part) => {
+                        if (part.name === "capsuleCarrierRing") {
+                            part.rotation.z += delta * 4.5;
+                            const pulse = 1 + Math.sin(state.elapsed * 8 + part.metadata.pulse) * 0.12;
+                            part.scaling.set(pulse, pulse, pulse);
+                        }
+                    });
                 }
                 if (enemy.metadata.enemyType === "corvette" && enemy.metadata.parts) {
                     enemy.metadata.parts.forEach((part, partIndex) => {
@@ -2106,7 +4586,26 @@
                         part.position.y = Math.sin(angle) * 0.58;
                     });
                 }
-                if (enemy.metadata.canShoot && enemy.position.x < world.maxX - 0.2 && enemy.position.x > game.player.position.x + 1.2) {
+                if (enemy.metadata.enemyType === "gravityBoss") {
+                    enemy.metadata.gravityTimer -= delta;
+                    if (enemy.metadata.parts) {
+                        enemy.metadata.parts.forEach((part) => {
+                            part.rotation.z += delta * 1.9;
+                            const pulse = 1 + Math.sin(state.elapsed * 3.8) * 0.08;
+                            part.scaling.set(pulse, pulse, pulse);
+                        });
+                    }
+                    if (enemy.metadata.gravityTimer <= 0) {
+                        spawnGravityAsteroid(enemy);
+                        enemy.metadata.gravityTimer = 1.25;
+                    }
+                }
+                if (!introActive && enemy.metadata.openingShotPending && enemy.position.x < world.maxX - 0.05 && enemy.position.x > game.player.position.x + 1.2) {
+                    fireEnemyBullet(enemy);
+                    enemy.metadata.openingShotPending = false;
+                    enemy.metadata.shootTimer = Math.max(enemy.metadata.shootTimer || 0, 1.2);
+                }
+                if (!introActive && enemy.metadata.canShoot && enemy.position.x < world.maxX - 0.2 && enemy.position.x > game.player.position.x + 1.2) {
                     enemy.metadata.shootTimer -= delta;
                     if (enemy.metadata.shootTimer <= 0) {
                         const shotChance = enemy.metadata.isFinalBoss ? 0.95 : 1;
@@ -2114,13 +4613,30 @@
                             fireEnemyBullet(enemy);
                         }
                         enemy.metadata.shootTimer = enemy.metadata.isFinalBoss
-                            ? randomRange(enemy.metadata.shotInterval || 4)
+                            ? ((enemy.metadata.finalBossPhase || 1) >= 3 ? 1.45 : (enemy.metadata.finalBossPhase || 1) >= 2 ? 2.05 : 2.85)
+                            : enemy.metadata.enemyType === "worker"
+                                ? 2 + Math.random() * 3
                             : randomRange(enemy.metadata.shotInterval || 8);
                     }
                 }
 
+                if (introActive) {
+                    continue;
+                }
+
                 if (distance2D(enemy.position, game.player.position) < enemy.metadata.radius + 0.38) {
+                    if (state.invincibleTimer > 0) {
+                        continue;
+                    }
+                    if (enemy.metadata.isStageOneCore) {
+                        destroyEnemyAt(i, enemy.position.clone());
+                        damagePlayer();
+                        continue;
+                    }
                     addSparks(enemy.position, 14);
+                    if (enemy.metadata.isStageBoss) {
+                        state.stageBossCount = Math.max(0, state.stageBossCount - 1);
+                    }
                     disposeEnemy(enemy);
                     enemies.splice(i, 1);
                     damagePlayer();
@@ -2145,14 +4661,15 @@
                         const enemyPosition = enemy.position.clone();
                         const bulletDamage = bullet.metadata.damage;
                         const isExplosiveMissile = bullet.metadata.kind === "missile" && bullet.metadata.explosive;
+                        const isLemonHit = !!bullet.metadata.lemon;
                         bullet.dispose();
                         bullets.splice(j, 1);
                         enemy.metadata.hp -= bulletDamage;
-                        if (enemy.metadata.isFinalBoss) {
+                        if (enemy.metadata.isFinalBoss || state.bossEnemy === enemy) {
                             const hpRatio = Math.max(0, enemy.metadata.hp / state.bossMaxHp);
                             bossFillEl.style.width = `${hpRatio * 100}%`;
                         }
-                        addSparks(hitPosition, 8);
+                        addSparks(hitPosition, isLemonHit ? 14 : 8);
                         if (isExplosiveMissile) {
                             explodeMissile(hitPosition, enemy);
                         }
@@ -2161,6 +4678,9 @@
                             if (currentIndex >= 0) {
                                 destroyEnemyAt(currentIndex, enemyPosition);
                             }
+                        } else {
+                            applyEnemyHitReaction(enemy, bulletDamage, hitPosition);
+                            playSound("impact");
                         }
                         break;
                     }
@@ -2204,6 +4724,11 @@
                 const capsule = capsules[i];
                 capsule.position.x -= capsule.metadata.speed * delta;
                 capsule.rotation.z += delta * 5;
+                if (capsule.metadata.ring) {
+                    capsule.metadata.ring.rotation.z -= delta * 8;
+                    const pulse = 1 + Math.sin(state.elapsed * 10) * 0.15;
+                    capsule.metadata.ring.scaling.set(pulse, pulse, pulse);
+                }
                 if (distance2D(capsule.position, game.player.position) < capsule.metadata.radius + 0.42) {
                     collectCapsule(capsule);
                     capsule.dispose();
@@ -2218,40 +4743,90 @@
 
             for (let i = terrain.length - 1; i >= 0; i--) {
                 const block = terrain[i];
-                block.position.x -= block.metadata.speed * delta;
+                if (block.metadata.kind === "meteor") {
+                    block.position.x += block.metadata.vx * delta;
+                    block.position.y += block.metadata.vy * delta;
+                    block.rotation.x += block.metadata.spinX * delta;
+                    block.rotation.y += block.metadata.spinY * delta;
+                    block.rotation.z += block.metadata.spinZ * delta;
+                    if (block.position.y < world.minY + 0.35 || block.position.y > world.maxY - 0.35) {
+                        block.metadata.vy *= -1;
+                    }
+                    for (let j = bullets.length - 1; j >= 0; j--) {
+                        const bullet = bullets[j];
+                        if (distance2D(block.position, bullet.position) >= block.metadata.radius + bullet.metadata.radius) {
+                            continue;
+                        }
+                        const hitPosition = bullet.position.clone();
+                        const damage = bullet.metadata.damage || 0.5;
+                        const isExplosiveMissile = bullet.metadata.kind === "missile" && bullet.metadata.explosive;
+                        bullet.dispose();
+                        bullets.splice(j, 1);
+                        block.metadata.hp -= damage;
+                        addSparks(hitPosition, isExplosiveMissile ? 22 : 10);
+                        playSound("impact");
+                        if (isExplosiveMissile) {
+                            addExplosionBurst(hitPosition, 0.55);
+                        }
+                        if (block.metadata.hp <= 0) {
+                            addExplosionBurst(block.position, 1.35);
+                            addSparks(block.position, 48);
+                            playSound("explosion");
+                            block.dispose();
+                            terrain.splice(i, 1);
+                            break;
+                        }
+                    }
+                    if (i >= terrain.length || terrain[i] !== block) {
+                        continue;
+                    }
+                } else {
+                    block.position.x -= block.metadata.speed * delta;
+                }
                 if (distance2D(block.position, game.player.position) < block.metadata.radius + 0.24) {
                     addSparks(game.player.position, 18);
                     damagePlayer();
-                    block.position.x = world.minX - 2;
+                    if (block.metadata.kind !== "meteor") {
+                        block.position.x = world.minX - 2;
+                    }
                 }
-                if (block.position.x < world.minX - 2) {
+                if (block.position.x < world.minX - 2 || block.position.y < world.minY - 1 || block.position.y > world.maxY + 1) {
                     block.dispose();
                     terrain.splice(i, 1);
                 }
             }
 
             updateShockwaves(delta);
-
-            for (let i = sparks.length - 1; i >= 0; i--) {
-                const spark = sparks[i];
-                spark.metadata.life -= delta;
-                spark.position.x += spark.metadata.vx * delta;
-                spark.position.y += spark.metadata.vy * delta;
-                const scale = Math.max(0, spark.metadata.life / spark.metadata.maxLife);
-                spark.scaling.set(scale, scale, scale);
-                if (spark.metadata.life <= 0) {
-                    spark.dispose();
-                    sparks.splice(i, 1);
-                }
-            }
+            updateExplosions(delta);
+            updateSparks(delta);
         }
 
         function updateStars(delta) {
             game.stars.forEach((star) => {
-                star.position.x -= star.metadata.speed * delta;
+                const stageSpeed = state.stage === 2 ? star.metadata.speed * 0.72 : star.metadata.speed;
+                star.position.x -= stageSpeed * delta;
                 if (star.position.x < world.minX - 0.3) {
                     star.position.x = world.maxX + Math.random();
                     star.position.y = world.minY + Math.random() * (world.maxY - world.minY);
+                }
+            });
+            game.backgroundAsteroids.forEach((asteroid) => {
+                const active = state.stage === 2 && state.hasStarted && !state.gameOver;
+                if (asteroid.isEnabled() !== active) {
+                    asteroid.setEnabled(active);
+                }
+                if (!active) {
+                    return;
+                }
+                asteroid.position.x -= asteroid.metadata.speed * delta;
+                asteroid.rotation.x += asteroid.metadata.spinX * delta;
+                asteroid.rotation.y += asteroid.metadata.spinY * delta;
+                asteroid.rotation.z += asteroid.metadata.spinZ * delta;
+                if (asteroid.position.x < world.minX - 1.2) {
+                    asteroid.position.x = world.maxX + 0.8 + Math.random() * 2.2;
+                    asteroid.position.y = world.minY + Math.random() * (world.maxY - world.minY);
+                    asteroid.position.z = 1.6 + Math.random() * 1.9;
+                    asteroid.scaling.setAll(0.22 + Math.random() * 0.62);
                 }
             });
         }
@@ -2259,6 +4834,8 @@
         game.scene.onBeforeRenderObservable.add(() => {
             const delta = Math.min(engine.getDeltaTime() / 1000, 0.033);
             updateStars(delta);
+            updateTitleMusic();
+            updateStage3BossMusic();
 
             if (!state.hasStarted) {
                 return;
@@ -2269,11 +4846,22 @@
             }
 
             if (state.gameOver) {
+                updatePlayerDeathExplosion(delta);
+                updateExplosions(delta);
+                updateSparks(delta);
                 return;
             }
 
             state.elapsed += delta;
             state.stageElapsed += delta;
+            if (state.stage3IntroActive) {
+                updateStage3IntroCutscene(delta);
+                updateDialogue(delta);
+                updateExplosions(delta);
+                updateSparks(delta);
+                updateHud();
+                return;
+            }
             updateStage(delta);
             updateDialogue(delta);
             if (state.isIntermission) {
@@ -2285,18 +4873,20 @@
             state.terrainTimer -= delta;
 
             const spawnDelay = Math.max(0.36, 1.16 - state.stage * 0.16 - state.wave * 0.04);
-            const isBossActive = (state.stage === 1 && state.stage1BossSpawned) || (state.stage === 3 && state.stage3BossSpawned);
-            if (state.enemyTimer <= 0 && !isBossActive) {
+            const isBossActive = (state.stage === 1 && state.stage1BossSpawned) || (state.stage === 2 && (state.stage2BossSpawned || state.stage2ClearPending)) || (state.stage === 3 && state.stage3BossSpawned);
+            const usesScriptedStageSpawns = state.stage === 1;
+            updateBossCapsuleSupply(delta, isBossActive);
+            if (state.enemyTimer <= 0 && !isBossActive && !usesScriptedStageSpawns) {
                 spawnEnemy();
                 state.enemyTimer = spawnDelay;
             }
-            if (state.formationTimer <= 0 && !isBossActive) {
+            if (state.formationTimer <= 0 && !isBossActive && !usesScriptedStageSpawns) {
                 spawnFormation();
                 state.formationTimer = Math.max(3.8, 8.8 - state.stage * 1.1 - state.wave * 0.18);
             }
-            if (state.terrainTimer <= 0) {
-                spawnTerrainBlock();
-                state.terrainTimer = state.stage >= 2 ? Math.max(1.9, 4.2 - state.wave * 0.16) : Math.max(3.2, 6.4 - state.wave * 0.1);
+            if (state.terrainTimer <= 0 && state.stage === 2) {
+                spawnStageTwoMeteor();
+                state.terrainTimer = Math.max(1.15, 2.45 - state.wave * 0.08) + Math.random() * 0.65;
             }
 
             updatePlayer(delta);
@@ -2305,6 +4895,7 @@
         });
 
         resetGame();
+        playTitleMusic();
 
         engine.runRenderLoop(() => {
             game.scene.render();
