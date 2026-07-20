@@ -247,7 +247,9 @@
             { key: "diskA", label: "円盤A", file: "model/からあげ円盤.glb", motion: "hover", speed: 1.5, waveAmount: 2.8, waveSpeed: 0.5, shotInterval: 6.5, size: 4.5, hp: 15, points: 1000, radius: 1.8, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(240), rotationZ: BABYLON.Tools.ToRadians(10), ringShot: true },
             { key: "diskB", label: "円盤B", file: "model/からあげ円盤.glb", motion: "zigzag", speed: 1.0, waveAmount: 0.8, waveSpeed: 0.8, shotInterval: 14, size: 4.5, hp: 15, points: 1000, radius: 1.8, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(240), rotationZ: BABYLON.Tools.ToRadians(10), ringShot: true },
             { key: "fighter", label: "戦闘機", file: "model/からあげ戦闘機.glb", motion: "dash", speed: 2.8, waveAmount: 0.7, waveSpeed: 1.4, shotInterval: 11.5, size: 2.2, hp: 1, points: 150, radius: 0.84, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(240), rotationZ: BABYLON.Tools.ToRadians(10) },
-            { key: "battleship", label: "大戦艦", file: "model/からあげ大戦艦.glb", motion: "boss", speed: 2.5, waveAmount: 1.75, waveSpeed: 1.0, shotInterval: 4, size: 6.5, hp: 150, points: 19800, radius: 3.3, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(240), rotationZ: BABYLON.Tools.ToRadians(10), bossShot: true }
+            { key: "battleship", label: "大戦艦", file: "model/からあげ大戦艦.glb", motion: "boss", speed: 2.5, waveAmount: 1.75, waveSpeed: 1.0, shotInterval: 4, size: 6.5, hp: 150, points: 19800, radius: 3.3, rotationX: 0, rotationY: BABYLON.Tools.ToRadians(240), rotationZ: BABYLON.Tools.ToRadians(10), bossShot: true },
+            { key: "lemonji", label: "Lemonji", file: "model/lemonji.glb", motion: "hover", speed: 1.0, waveAmount: 0.8, waveSpeed: 1.2, shotInterval: 300, size: 0.72, hp: 1, points: 0, radius: 0.4, rotationX: 0, rotationY: Math.PI, rotationZ: 0 },
+            { key: "lemonMissile", label: "Lemon Missile", file: "model/lemonmissile.glb", motion: "dash", speed: 3.8, waveAmount: 0.2, waveSpeed: 1.0, shotInterval: 300, size: 1.15, hp: 4, points: 0, radius: 0.58, rotationX: 0, rotationY: Math.PI / 2, rotationZ: 0, scaleMultiplier: new BABYLON.Vector3(1.55, 0.34, 0.34) }
         ];
 
         const ui = {
@@ -308,7 +310,7 @@
             return material;
         }
 
-        function fitImportedModel(root, meshes, targetSize, rotation) {
+        function fitImportedModel(root, meshes, targetSize, rotation, scaleMultiplier = BABYLON.Vector3.One()) {
             const modelMeshes = meshes.filter((mesh) => mesh.getTotalVertices && mesh.getTotalVertices() > 0);
             if (modelMeshes.length === 0) {
                 return;
@@ -325,7 +327,8 @@
                 mesh.position.subtractInPlace(center);
             });
             root.rotation.set(rotation.x, rotation.y, rotation.z);
-            root.scaling.setAll(maxDimension > 0 ? targetSize / maxDimension : 1);
+            const scale = maxDimension > 0 ? targetSize / maxDimension : 1;
+            root.scaling.set(scale * scaleMultiplier.x, scale * scaleMultiplier.y, scale * scaleMultiplier.z);
         }
 
         function loadModelTemplate(scene, spec) {
@@ -337,7 +340,7 @@
                     mesh.parent = modelRoot;
                     mesh.setEnabled(false);
                 });
-                fitImportedModel(modelRoot, result.meshes, spec.size, BABYLON.Vector3.Zero());
+                fitImportedModel(modelRoot, result.meshes, spec.size, BABYLON.Vector3.Zero(), spec.scaleMultiplier || BABYLON.Vector3.One());
                 templateRoot.setEnabled(false);
                 templates[spec.key] = templateRoot;
             }).catch((error) => {
