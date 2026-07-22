@@ -54,8 +54,13 @@
         const spawned = [];
         const fleetNodes = [];
         const fighterNodes = [];
+        const introCaptions = [
+            "見えたか？\nあれが、からあげ帝国主力艦隊だ。",
+            "数で押しつぶす気だ。\n気を付けろ。"
+        ];
         let introTime = 0;
         let cameraMode = "auto";
+        let manualCaptionIndex = null;
         let disposed = false;
 
         function randomRange(min, max) {
@@ -330,6 +335,7 @@
             }
             introTime = 0;
             cameraMode = "auto";
+            manualCaptionIndex = null;
             showCaption("");
             buildFleet();
         }
@@ -385,15 +391,44 @@
         }
 
         function updateCaptions() {
+            if (manualCaptionIndex !== null) {
+                showCaption(introCaptions[manualCaptionIndex] || "");
+                return;
+            }
             if (introTime < 1.0) {
                 showCaption("");
             } else if (introTime < 4.3) {
-                showCaption("見えたか？\nあれが、からあげ帝国主力艦隊だ。");
+                showCaption(introCaptions[0]);
             } else if (introTime < 6.5) {
-                showCaption("数で押しつぶす気だ。\n気を付けろ。");
+                showCaption(introCaptions[1]);
             } else {
                 showCaption("");
             }
+        }
+
+        function getAutoCaptionIndex() {
+            if (introTime < 1.0) {
+                return -1;
+            }
+            if (introTime < 4.3) {
+                return 0;
+            }
+            if (introTime < 6.5) {
+                return 1;
+            }
+            return introCaptions.length;
+        }
+
+        function advanceDialogue() {
+            const currentIndex = manualCaptionIndex !== null ? manualCaptionIndex : getAutoCaptionIndex();
+            const nextIndex = currentIndex + 1;
+            if (nextIndex >= introCaptions.length) {
+                showCaption("");
+                return false;
+            }
+            manualCaptionIndex = nextIndex;
+            showCaption(introCaptions[manualCaptionIndex]);
+            return true;
         }
 
         function updateScene(delta) {
@@ -477,6 +512,7 @@
             engine,
             scene,
             reset: resetIntro,
+            advanceDialogue,
             dispose() {
                 disposed = true;
                 window.removeEventListener("resize", resizeHandler);

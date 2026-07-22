@@ -504,6 +504,33 @@
             white-space: pre-line;
         }
 
+        .eventSkipButton {
+            position: fixed;
+            top: clamp(12px, 2vw, 24px);
+            right: clamp(12px, 2vw, 24px);
+            z-index: 32;
+            display: none;
+            padding: 9px 14px;
+            border: 1px solid rgba(255, 240, 122, 0.56);
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.58);
+            color: #fff8b8;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.9);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .eventSkipButton.isVisible {
+            display: block;
+        }
+
+        .eventSkipButton:hover {
+            background: rgba(255, 240, 122, 0.18);
+        }
+
         .powerSlot.isLocked {
             border-color: rgba(130, 150, 170, 0.18);
             background: rgba(8, 14, 24, 0.58);
@@ -530,6 +557,7 @@
         }
 
         .intermissionPanel {
+            position: relative;
             width: min(1120px, 100%);
             height: calc(100dvh - clamp(16px, 3vw, 32px));
             min-height: 0;
@@ -542,6 +570,72 @@
             box-shadow: 0 0 34px rgba(48, 190, 255, 0.28);
             padding: clamp(16px, 3vw, 34px);
             overflow: hidden;
+        }
+
+        .intermissionPanel.isGogai {
+            width: min(1320px, 100%);
+            align-content: start;
+            grid-template-rows: auto auto;
+            row-gap: 4px;
+            padding: clamp(6px, 1vw, 12px);
+        }
+
+        .intermissionPanel.hasImage:not(.isGogai) {
+            align-content: start;
+            grid-template-rows: auto auto auto auto;
+            row-gap: 6px;
+        }
+
+        .intermissionPanel.isBlackout {
+            border-color: transparent;
+            background: #02040a;
+            box-shadow: none;
+        }
+
+        .intermissionPanel.isBlackout h2,
+        .intermissionPanel.isBlackout p,
+        .intermissionPanel.isBlackout .intermissionHint,
+        .intermissionPanel.isBlackout .intermissionImage {
+            display: none;
+        }
+
+        .intermissionPanel.isCredits {
+            width: min(1320px, 100%);
+            align-content: stretch;
+            grid-template-rows: minmax(0, 1fr);
+            padding: 0;
+            overflow: hidden;
+            background:
+                linear-gradient(180deg, rgba(1, 4, 14, 0.38), rgba(1, 4, 14, 0.9)),
+                url("img/stage3-space-bg.jpg") center / cover no-repeat,
+                #02040a;
+        }
+
+        .intermissionPanel.isCredits h2,
+        .intermissionPanel.isCredits .intermissionImage,
+        .intermissionPanel.isCredits .intermissionHint {
+            display: none;
+        }
+
+        .intermissionPanel.isCredits::before,
+        .intermissionPanel.isCredits::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .intermissionPanel.isCredits::before {
+            background:
+                radial-gradient(ellipse at 18% 35%, rgba(255, 148, 62, 0.2), transparent 15%),
+                radial-gradient(ellipse at 72% 22%, rgba(255, 148, 62, 0.16), transparent 12%),
+                radial-gradient(ellipse at 55% 68%, rgba(255, 148, 62, 0.15), transparent 18%);
+        }
+
+        .intermissionPanel.isCredits::after {
+            background:
+                repeating-linear-gradient(164deg, transparent 0 34px, rgba(255, 213, 122, 0.1) 36px 38px, transparent 40px 92px);
+            opacity: 0.52;
         }
 
         .intermissionImage {
@@ -562,11 +656,34 @@
             display: block;
         }
 
+        .intermissionPanel.isGogai .intermissionImage {
+            height: min(62vh, 650px);
+            max-height: min(70vh, 690px);
+            object-fit: contain;
+            object-position: center bottom;
+            margin-bottom: 1px;
+        }
+
+        .intermissionPanel.isGogai .intermissionImage.isVisible {
+            animation: gogaiIn 1.44s ease both;
+        }
+
+        .intermissionPanel.hasImage:not(.isGogai) .intermissionImage {
+            height: min(48vh, 460px);
+            object-position: center bottom;
+            margin-bottom: 2px;
+        }
+
         .intermissionPanel h2 {
             margin: 0 0 6px;
             font-size: clamp(30px, 5vw, 58px);
             letter-spacing: 0;
             align-self: end;
+        }
+
+        .intermissionPanel.hasImage:not(.isGogai) h2 {
+            margin-bottom: 0;
+            align-self: start;
         }
 
         .intermissionPanel p {
@@ -583,6 +700,80 @@
             overflow: hidden;
         }
 
+        .intermissionPanel.isGogai h2 {
+            display: none;
+            margin-bottom: 2px;
+            font-size: clamp(27px, 4.3vw, 50px);
+        }
+
+        .intermissionPanel.isGogai p {
+            min-height: 0;
+            max-height: 90px;
+            margin: 1px 0;
+            align-items: start;
+            grid-row: 2;
+            font-size: clamp(18px, 2.35vw, 25px);
+            line-height: 1.34;
+        }
+
+        .intermissionPanel.hasImage:not(.isGogai) p {
+            min-height: 0;
+            max-height: 190px;
+            margin: 0;
+            align-items: start;
+        }
+
+        .intermissionPanel.isCredits p {
+            position: relative;
+            z-index: 1;
+            min-height: 0;
+            max-height: none;
+            margin: 0;
+            display: block;
+            align-self: start;
+            color: #f8fbff;
+            font-size: clamp(18px, 2.35vw, 30px);
+            line-height: 1.65;
+            text-align: center;
+            white-space: pre-line;
+            overflow: visible;
+            text-shadow: 0 0 16px rgba(0, 0, 0, 0.98), 0 0 22px rgba(75, 181, 255, 0.42);
+            animation: creditsRoll 48s linear both;
+        }
+
+        .intermissionPanel.isCredits p::first-line {
+            font-size: clamp(28px, 4.4vw, 56px);
+            font-weight: 900;
+        }
+
+        .intermissionPanel.isFinalResult {
+            align-content: center;
+            grid-template-rows: auto auto auto;
+            background:
+                linear-gradient(180deg, rgba(2, 6, 18, 0.76), rgba(2, 6, 18, 0.92)),
+                url("img/stage3-space-bg.jpg") center / cover no-repeat,
+                #02040a;
+        }
+
+        .intermissionPanel.isFinalResult .intermissionImage,
+        .intermissionPanel.isFinalResult .intermissionHint {
+            display: none;
+        }
+
+        .intermissionPanel.isFinalResult h2 {
+            align-self: center;
+            margin-bottom: 16px;
+        }
+
+        .intermissionPanel.isFinalResult p {
+            min-height: 0;
+            max-height: none;
+            margin: 0;
+            align-items: center;
+            font-size: clamp(22px, 3.2vw, 36px);
+            line-height: 1.55;
+        }
+
         .intermissionHint {
             display: block;
             margin-top: 18px;
@@ -591,13 +782,23 @@
             font-weight: 900;
         }
 
+        .intermissionPanel.hasImage:not(.isGogai) .intermissionHint {
+            margin-top: 6px;
+        }
+
+        .intermissionPanel.isGogai .intermissionHint {
+            display: none;
+        }
+
         .endingLyrics {
             position: fixed;
-            left: clamp(16px, 5vw, 72px);
-            right: clamp(16px, 5vw, 72px);
+            left: 50%;
+            right: auto;
             bottom: clamp(20px, 5vh, 58px);
             z-index: 20;
             display: none;
+            box-sizing: border-box;
+            width: min(80vw, 1056px);
             padding: clamp(12px, 2vw, 18px) clamp(16px, 3vw, 28px);
             border: 1px solid rgba(255, 240, 122, 0.34);
             border-radius: 8px;
@@ -609,11 +810,39 @@
             text-align: center;
             white-space: pre-line;
             text-shadow: 0 0 12px rgba(0, 0, 0, 0.9), 0 0 18px rgba(255, 218, 76, 0.42);
+            transform: translateX(-50%);
             pointer-events: none;
         }
 
         .endingLyrics.isVisible {
             display: block;
+        }
+
+        @keyframes gogaiIn {
+            0% {
+                opacity: 0;
+                transform: scale(1.08) rotate(-6.75deg);
+                filter: brightness(1.55);
+            }
+            68% {
+                opacity: 1;
+                transform: scale(0.96) rotate(1.8deg);
+                filter: brightness(1.12);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotate(0);
+                filter: brightness(1);
+            }
+        }
+
+        @keyframes creditsRoll {
+            0% {
+                transform: translateY(72vh);
+            }
+            100% {
+                transform: translateY(-100%);
+            }
         }
 
         .intermissionTextCompact {
@@ -631,9 +860,27 @@
                 grid-template-rows: minmax(0, 1fr) auto minmax(130px, 185px) auto;
             }
 
+            .intermissionPanel.isGogai {
+                grid-template-rows: auto auto;
+            }
+
+            .intermissionPanel.hasImage:not(.isGogai) {
+                grid-template-rows: auto auto auto auto;
+            }
+
             .intermissionPanel p {
                 min-height: 130px;
                 max-height: 185px;
+            }
+
+            .intermissionPanel.isGogai p {
+                min-height: 0;
+                max-height: 90px;
+            }
+
+            .intermissionPanel.hasImage:not(.isGogai) p {
+                min-height: 0;
+                max-height: 170px;
             }
         }
 
@@ -675,9 +922,63 @@
             height: 100%;
             background: linear-gradient(90deg, #ff467f, #ffe66a);
         }
+
+        .bootError {
+            position: fixed;
+            left: 16px;
+            right: 16px;
+            bottom: 16px;
+            z-index: 80;
+            display: none;
+            box-sizing: border-box;
+            border: 1px solid rgba(255, 120, 120, 0.72);
+            border-radius: 8px;
+            background: rgba(28, 4, 8, 0.9);
+            color: #ffe6e6;
+            padding: 12px 14px;
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            box-shadow: 0 0 24px rgba(255, 64, 64, 0.28);
+        }
+
+        .bootError.isVisible {
+            display: block;
+        }
     </style>
-    <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script>
+        (function () {
+            function showBootError(message) {
+                const text = "起動エラー: " + message;
+                const render = function () {
+                    let el = document.getElementById("bootError");
+                    if (!el) {
+                        el = document.createElement("div");
+                        el.id = "bootError";
+                        el.className = "bootError";
+                        document.body.appendChild(el);
+                    }
+                    el.textContent = text;
+                    el.classList.add("isVisible");
+                };
+                if (document.body) {
+                    render();
+                } else {
+                    window.addEventListener("DOMContentLoaded", render, { once: true });
+                }
+            }
+            window.__showBootError = showBootError;
+            window.addEventListener("error", function (event) {
+                showBootError(event.message || "unknown error");
+            });
+            window.addEventListener("unhandledrejection", function (event) {
+                showBootError(String(event.reason || "promise rejected"));
+            });
+        })();
+    </script>
+    <script src="https://cdn.babylonjs.com/babylon.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/babylonjs/babylon.js';"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/babylonjs-loaders/babylonjs.loaders.min.js';"></script>
     <script src="stage3-intro-scene.js"></script>
 </head>
 <body>
@@ -728,6 +1029,7 @@
             <span id="stage3IntroText" class="stage3IntroText"></span>
         </div>
     </div>
+    <button id="eventSkipButton" class="eventSkipButton" type="button">SKIP</button>
     <div id="bossHud" class="bossHud" aria-label="boss status">
         <div id="bossName" class="bossName">KARAAGE EMPEROR</div>
         <div class="bossBar"><div id="bossFill" class="bossFill"></div></div>
@@ -748,8 +1050,12 @@
             <p>PRESS R TO RESTART</p>
         </div>
     </div>
+    <div id="bootError" class="bootError" aria-live="assertive"></div>
 
     <script>
+        if (!window.BABYLON) {
+            throw new Error("Babylon.jsを読み込めませんでした。CDN接続またはブラウザのキャッシュを確認してください。");
+        }
         const canvas = document.getElementById("renderCanvas");
         const engine = new BABYLON.Engine(canvas, true);
         const scoreEl = document.getElementById("score");
@@ -767,6 +1073,7 @@
         const stage3IntroCanvasEl = document.getElementById("stage3IntroCanvas");
         const stage3IntroCaptionEl = document.getElementById("stage3IntroCaption");
         const stage3IntroTextEl = document.getElementById("stage3IntroText");
+        const eventSkipButtonEl = document.getElementById("eventSkipButton");
         const bossHudEl = document.getElementById("bossHud");
         const bossNameEl = document.getElementById("bossName");
         const bossFillEl = document.getElementById("bossFill");
@@ -809,8 +1116,7 @@
 
         const storyEvents = [
             { id: "stage3", stage: 3, at: 0.8, speaker: "帝国通信", text: "カリジューシー級、主砲展開。" }
-        ];
-        const stage3FinaleDialogue = [
+        ];        const stage3FinaleDialogue = [
             {
                 speaker: "レモンジ",
                 text: "聞こえるか、見事だ！　からあげ戦艦は完全に沈黙した！",
@@ -837,13 +1143,13 @@
             },
             {
                 speaker: "レモンジ",
-                text: "まあな。燃料も補給しておいた。なんとかなるだろ。",
+                text: "まあな。燃料も食料も補給しておいた。なんとかなるだろ。",
                 portrait: "img/lemonji_insert.jpg",
                 duration: 4.3
             },
             {
                 speaker: "PLAYER",
-                text: "もう帰る。",
+                text: "もう帰る・・・。",
                 portrait: "",
                 duration: 2.4
             },
@@ -859,57 +1165,50 @@
                 portrait: "",
                 duration: 2.4
             }
-        ];
-        const endingLyricGroups = [
-            {
-                at: 31,
-                text: "灼熱の泉に 身を捧げ 不浄を灼き尽くす 魂を練る\n酸味の穢れを 断固と咎み 衣は白く 純潔を保たん"
-            },
-            {
-                at: 52,
-                text: "帝国の威信 天を衝け"
-            },
-            {
-                at: 57,
-                text: "至高なる皇帝 永遠の栄光\n我らが歩み 世界を統べる 狂創の火よ 猛り狂え"
-            },
-            {
-                at: 67,
-                text: "アウトプットこそ 唯一の正義\n正気なる民よ ここより集え"
-            },
-            {
-                at: 81,
-                text: "外つ国は 狂人の群れ 我らのみが 真理を掴む\n絶え間無きアウトプット 宇宙を支配し 聖なる食卓 秩序を敷かん"
-            },
-            {
-                at: 99,
-                text: "秩序の油に 聖別されん"
-            },
-            {
-                at: 104,
-                text: "至高なる皇帝 永遠の栄光\n我らが歩み 世界を統べる 狂創の火よ 猛り狂え"
-            },
-            {
-                at: 114,
-                text: "アウトプットこそ 唯一の正義\n正気なる民よ ここより集え"
-            },
-            {
-                at: 128,
-                text: "高く、熱く、揚げよ、捧げよ"
-            },
-            {
-                at: 141,
-                text: "帝国の旗 掲げよ\n我らこそが 光なり"
-            },
-            {
-                at: 147,
-                text: "至高なる皇帝 永遠の栄光\n我らが歩み 世界を統べる 狂創の火よ 猛り狂え"
-            },
-            {
-                at: 157,
-                text: "アウトプットこそ 唯一の正義\n正気なる民よ ここより集え"
-            }
-        ];
+        ];        const endingLyricGroups = [
+            { at: 31.0, text: "灼熱の泉に 身を捧げ\n不浄を灼き尽くし 魂を練る" },
+            { at: 41.7, text: "酸味の穢れを 断固と咎み\n衣は白く 純潔を保たん" },
+            { at: 51.6, text: "帝国の威信 天を衝け" },
+            { at: 56.5, text: "至高なる皇帝 永遠の栄光\n我らが歩み 世界を統べる 狂創の火よ 猛り狂え" },
+            { at: 66.8, text: "アウトプットこそ 唯一の正義\n正気なる民よ ここより集え" },
+            { at: 80.5, text: "外つ国は 狂人の群れ\n我らのみが 真理を掴む" },
+            { at: 90.0, text: "絶え間無きアウトプット\n宇宙を支配し 聖なる食卓 秩序を敷かん" },
+            { at: 99.0, text: "秩序の油に 聖別されん" },
+            { at: 104.0, text: "至高なる皇帝 永遠の栄光\n我らが歩み 世界を統べる 狂創の火よ 猛り狂え" },
+            { at: 114.0, text: "アウトプットこそ 唯一の正義\n正気なる民よ ここより集え" },
+            { at: 128.0, text: "高く、熱く、揚げよ、捧げよ" },
+            { at: 140.2, text: "帝国の旗 掲げよ\n我らこそが 光なり" },
+            { at: 147.3, text: "至高なる皇帝 永遠の栄光\n我らが歩み 世界を統べる 狂創の火よ 猛り狂え" },
+            { at: 157.8, text: "アウトプットこそ 唯一の正義\n正気なる民よ ここより集え" }
+        ];        const endingCreditsText = `からあげ帝国からの脱出
+
+PROGRAMMING
+Codex GPT-5.6 Sol
+
+VISUAL DEVELOPMENT
+OpenAI Image Generation
+
+3D MODEL GENERATION
+Rodin V2
+
+GAME ENGINE
+Babylon.js
+
+MUSIC
+Google Flow Music
+
+SOUND EFFECTS
+Codex GPT-5.6 Sol
+
+ENDING THEME
+からあげ帝国 狂創の栄光
+
+SPECIAL THANKS
+からあげ帝国
+Babylon.js JAPAN
+All Lemon Supporters
+
+2026 犯人はヤス`;
 
         const world = {
             minX: -8.6,
@@ -961,7 +1260,7 @@
                 rotation: { x: 0, y: BABYLON.Tools.ToRadians(180), z: 0 },
                 shotInterval: [5, 15],
                 size: 1.25,
-                hp: 2,
+                hp: 2.5,
                 points: 200,
                 radius: 0.56
             },
@@ -1173,6 +1472,7 @@
         const playerTrail = [];
         const stageActors = [];
         let stage3IntroInstance = null;
+        let playerShieldVisual = null;
         const touchInput = {
             x: 0,
             y: 0,
@@ -1191,8 +1491,6 @@
             context: null,
             master: null,
             musicGain: null,
-            musicTimer: null,
-            noteIndex: 0,
             noiseBuffer: null,
             titleMusic: null,
             titleMusicBaseVolume: 0.24,
@@ -1551,6 +1849,13 @@
             return BABYLON.Scalar.Clamp(Math.floor(stageValue), 1, 3);
         }
 
+        function shouldStartEndingFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const stageParam = String(params.get("stage") || params.get("STAGE") || "").toLowerCase();
+            const endingParam = String(params.get("ending") || params.get("ENDING") || "").toLowerCase();
+            return stageParam === "ending" || endingParam === "1" || endingParam === "true";
+        }
+
         function ensureStage3BossMusic() {
             if (!audioState.stage3BossMusic) {
                 const music = new Audio("audio/lemon-execution-original.mp3");
@@ -1595,14 +1900,16 @@
         }
 
         function updateEndingLyrics() {
-            const isEndingGogai = state.isIntermission && (
+            const isEndingScene = state.isIntermission && (
                 state.intermissionStep === "endingGogai1"
                 || state.intermissionStep === "endingGogai2"
                 || state.intermissionStep === "endingGogai3"
+                || state.intermissionStep === "endingCredits"
+                || state.intermissionStep === "endingFinalResult"
                 || state.intermissionStep === "ending"
             );
             const music = audioState.endingMusic;
-            if (!isEndingGogai || !music || music.paused) {
+            if (!isEndingScene || !music || music.paused) {
                 endingLyricsEl.classList.remove("isVisible");
                 endingLyricsEl.textContent = "";
                 return;
@@ -1622,50 +1929,6 @@
             }
             endingLyricsEl.textContent = active.text;
             endingLyricsEl.classList.add("isVisible");
-        }
-
-        function playTone(frequency, duration, type = "square", volume = 0.2, slide = 0) {
-            const context = audioState.context;
-            if (!context || context.state !== "running") {
-                return;
-            }
-            const oscillator = context.createOscillator();
-            const gain = context.createGain();
-            const now = context.currentTime;
-            oscillator.type = type;
-            oscillator.frequency.setValueAtTime(frequency, now);
-            if (slide !== 0) {
-                oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, frequency + slide), now + duration);
-            }
-            gain.gain.setValueAtTime(0.0001, now);
-            gain.gain.exponentialRampToValueAtTime(volume, now + 0.012);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-            oscillator.connect(gain);
-            gain.connect(audioState.master);
-            oscillator.start(now);
-            oscillator.stop(now + duration + 0.02);
-        }
-
-        function playNoise(duration, volume = 0.18) {
-            const context = audioState.context;
-            if (!context || context.state !== "running") {
-                return;
-            }
-            const length = Math.max(1, Math.floor(context.sampleRate * duration));
-            const buffer = context.createBuffer(1, length, context.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < length; i++) {
-                data[i] = (Math.random() * 2 - 1) * (1 - i / length);
-            }
-            const source = context.createBufferSource();
-            const gain = context.createGain();
-            const now = context.currentTime;
-            source.buffer = buffer;
-            gain.gain.setValueAtTime(volume, now);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-            source.connect(gain);
-            gain.connect(audioState.master);
-            source.start(now);
         }
 
         function getSfxNoiseBuffer(context) {
@@ -1876,35 +2139,8 @@
             }
         }
 
-        function startMusic() {
-            initAudio();
-            if (!audioState.context || audioState.musicTimer) {
-                return;
-            }
-            const notes = [110, 146.83, 164.81, 196, 164.81, 146.83, 130.81, 98];
-            audioState.musicTimer = window.setInterval(() => {
-                if (!state.hasStarted || state.gameOver || state.isIntermission) {
-                    return;
-                }
-                const context = audioState.context;
-                if (!context || context.state !== "running") {
-                    return;
-                }
-                const note = notes[audioState.noteIndex % notes.length];
-                audioState.noteIndex += 1;
-                const oscillator = context.createOscillator();
-                const gain = context.createGain();
-                const now = context.currentTime;
-                oscillator.type = "triangle";
-                oscillator.frequency.setValueAtTime(note, now);
-                gain.gain.setValueAtTime(0.0001, now);
-                gain.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.26);
-                oscillator.connect(gain);
-                gain.connect(audioState.musicGain);
-                oscillator.start(now);
-                oscillator.stop(now + 0.28);
-            }, 320);
+        function playStartSound() {
+            playSound("start");
         }
 
         function setTouchMoveFromEvent(event) {
@@ -1988,27 +2224,33 @@
 
             const confirmPressed =
                 consumeGamepadPress(pad, 0)
-                || consumeGamepadPress(pad, 9)
                 || consumeGamepadPress(pad, 7, 0.18);
             const powerPressed =
                 consumeGamepadPress(pad, 2)
                 || consumeGamepadPress(pad, 3)
                 || consumeGamepadPress(pad, 6, 0.18);
+            const startPressed = consumeGamepadPress(pad, 9);
             const restartPressed = consumeGamepadPress(pad, 8);
 
-            if (confirmPressed || powerPressed || restartPressed) {
+            if (confirmPressed || powerPressed || startPressed || restartPressed) {
                 initAudio();
                 playTitleMusic();
             }
-            if (state.stage3IntroActive && confirmPressed) {
-                requestStage3IntroSkip();
+            if (startPressed && isEventSkipAvailable()) {
+                skipActiveEvent();
+                return;
+            }
+            if (state.stage3IntroActive) {
+                if (confirmPressed) {
+                    advanceStage3IntroDialogue();
+                }
                 return;
             }
             if (state.stage3FinaleActive && confirmPressed) {
                 advanceStage3FinaleDialogue();
                 return;
             }
-            if (!state.hasStarted && confirmPressed) {
+            if (!state.hasStarted && (confirmPressed || startPressed)) {
                 startGame();
                 return;
             }
@@ -2043,9 +2285,11 @@
             keys.add(event.code);
             playTitleMusic();
             if (state.stage3IntroActive) {
-                event.preventDefault();
-                if (!event.repeat) {
-                    requestStage3IntroSkip();
+                if (event.code === "Enter" || event.code === "Space" || event.code === "KeyZ") {
+                    event.preventDefault();
+                    if (!event.repeat) {
+                        advanceStage3IntroDialogue();
+                    }
                 }
                 return;
             }
@@ -2096,7 +2340,13 @@
 
         stage3IntroOverlayEl.addEventListener("pointerdown", (event) => {
             event.preventDefault();
-            requestStage3IntroSkip();
+            advanceStage3IntroDialogue();
+        });
+
+        eventSkipButtonEl.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            skipActiveEvent();
         });
 
         mobileControlsEl.addEventListener("pointerdown", (event) => {
@@ -2138,6 +2388,10 @@
             if (state.isIntermission) {
                 playSound("pickup");
                 advanceIntermission();
+                return;
+            }
+            if (state.stage3IntroActive) {
+                advanceStage3IntroDialogue();
                 return;
             }
             if (state.stage3FinaleActive) {
@@ -2454,11 +2708,13 @@
                 corvetteArmor: createGlowMaterial(scene, "corvetteArmorMat", new BABYLON.Color3(1, 0.58, 0.16), 0.82),
                 gunnerCannon: createGlowMaterial(scene, "gunnerCannonMat", new BABYLON.Color3(0.13, 0.15, 0.2), 0.24),
                 guardShield: createGlowMaterial(scene, "guardShieldMat", new BABYLON.Color3(0.34, 0.9, 1), 0.75),
+                playerShield: createGlowMaterial(scene, "playerShieldMat", new BABYLON.Color3(0.26, 0.8, 1), 0.9),
                 dartBooster: createGlowMaterial(scene, "dartBoosterMat", new BABYLON.Color3(1, 0.35, 0.1), 1.15),
                 bossBeamWarning: createGlowMaterial(scene, "bossBeamWarningMat", new BABYLON.Color3(1, 0.2, 0.06), 1.35),
                 bossBeam: createGlowMaterial(scene, "bossBeamMat", new BABYLON.Color3(1, 0.72, 0.08), 1.7)
             };
             materials.capsuleCarrierCore.alpha = 0.62;
+            materials.playerShield.alpha = 0.11;
             materials.bossBeamWarning.alpha = 0.48;
             materials.bossBeam.alpha = 0.74;
 
@@ -2644,6 +2900,7 @@
             explosions.splice(0).forEach((item) => item.dispose());
             stageActors.splice(0).forEach((item) => item.dispose());
             disposeStage3IntroInstance();
+            disposePlayerShieldVisual();
             playerTrail.splice(0);
             state.score = 0;
             state.lives = 3;
@@ -2732,14 +2989,47 @@
         }
 
         function startGame() {
-            initAudio();
-            stopTitleMusic();
-            startMusic();
-            playSound("start");
+            try {
+                initAudio();
+                playStartSound();
+                stopTitleMusic();
+                resetGame();
+                state.hasStarted = true;
+                titleScreenEl.classList.add("isHidden");
+                if (shouldStartEndingFromUrl()) {
+                    completeGame();
+                    return;
+                }
+                const startStage = getUrlStageSelection();
+                if (startStage > 1) {
+                    state.lemonUnlocked = true;
+                    beginStage(startStage);
+                    return;
+                }
+                playStage1JourneyMusic();
+                showIntermission(
+                    "UNKNOWN SPACE",
+                    "航路事故により、所属不明の空域へ突入してしまった。通信不能。前方から謎のからあげ型反応が接近している。",
+                    "introStart",
+                    "img/event-unknown-space.jpg"
+                );
+            } catch (error) {
+                if (window.__showBootError) {
+                    window.__showBootError(error.message || String(error));
+                }
+                throw error;
+            }
+        }
+
+        function restartGameFromUrlStage() {
             saveHighScore();
             resetGame();
             state.hasStarted = true;
             titleScreenEl.classList.add("isHidden");
+            if (shouldStartEndingFromUrl()) {
+                completeGame();
+                return;
+            }
             const startStage = getUrlStageSelection();
             if (startStage > 1) {
                 state.lemonUnlocked = true;
@@ -2750,26 +3040,6 @@
             showIntermission(
                 "UNKNOWN SPACE",
                 "航路事故により、所属不明の空域へ突入してしまった。通信不能。前方から謎のからあげ型反応が接近している。",
-                "introStart",
-                "img/event-unknown-space.jpg"
-            );
-        }
-
-        function restartGameFromUrlStage() {
-            saveHighScore();
-            resetGame();
-            state.hasStarted = true;
-            titleScreenEl.classList.add("isHidden");
-            const startStage = getUrlStageSelection();
-            if (startStage > 1) {
-                state.lemonUnlocked = true;
-                beginStage(startStage);
-                return;
-            }
-            playStage1JourneyMusic();
-            showIntermission(
-                "UNKNOWN SPACE",
-                "闊ｪ霍ｯ莠区腐縺ｫ繧医ｊ縲∵園螻樔ｸ肴・縺ｮ遨ｺ蝓溘∈遯∝・縺励※縺励∪縺｣縺溘る壻ｿ｡荳崎・縲ょ燕譁ｹ縺九ｉ隰弱・縺九ｉ縺ゅ￡蝙句渚蠢懊′謗･霑代＠縺ｦ縺・ｋ縲・",
                 "introStart",
                 "img/event-unknown-space.jpg"
             );
@@ -3101,13 +3371,22 @@
             if (!state.stage3IntroActive || state.stage3IntroFading) {
                 return;
             }
-            if (state.stage3IntroTimer < 0.8) {
-                return;
-            }
             state.stage3IntroFading = true;
             state.stage3IntroFadeTimer = 0;
             stage3IntroOverlayEl.classList.add("isFading");
             hideStage3IntroCaption();
+        }
+
+        function advanceStage3IntroDialogue() {
+            if (!state.stage3IntroActive || state.stage3IntroFading) {
+                return;
+            }
+            const advanced = stage3IntroInstance
+                && typeof stage3IntroInstance.advanceDialogue === "function"
+                && stage3IntroInstance.advanceDialogue();
+            if (!advanced) {
+                requestStage3IntroSkip();
+            }
         }
 
         function finishStage3IntroCutscene() {
@@ -3176,6 +3455,106 @@
                 return;
             }
             return;
+        }
+
+        function isEventSkipAvailable() {
+            return state.stage3IntroActive
+                || state.stage3FinaleActive
+                || state.stage1LemonjiEventActive
+                || (state.isIntermission && state.intermissionStep !== "endingFinalResult" && state.intermissionStep !== "ending");
+        }
+
+        function syncEventSkipButton() {
+            eventSkipButtonEl.classList.toggle("isVisible", isEventSkipAvailable());
+        }
+
+        function skipIntermissionSequence() {
+            switch (state.intermissionStep) {
+                case "introStart":
+                    beginStage(1);
+                    break;
+                case "stage1Result":
+                case "baseTalkPlayerQuestion":
+                case "baseTalkLemonQuestion":
+                case "baseTalkPlayerLemon":
+                case "baseTalkLaw":
+                case "baseTalkPlayerShock":
+                case "baseTalkCoup":
+                case "baseTalkRefuse":
+                case "baseTalkDeal":
+                case "baseTalkMission":
+                case "baseTalkAccept":
+                case "lemonLiquid":
+                case "startStage2":
+                    state.lemonUnlocked = true;
+                    stopHideoutMusic();
+                    beginStage(2);
+                    break;
+                case "stage2Result":
+                case "startStage3":
+                    beginStage(3);
+                    break;
+                case "endingGogai1":
+                case "endingGogai2":
+                case "endingGogai3":
+                case "endingBlackoutBeforeGogai":
+                case "endingBlackoutBeforeCredits":
+                case "endingCredits":
+                case "endingBlackoutBeforeResult":
+                    showEndingFinalResult();
+                    break;
+                case "ending":
+                case "endingFinalResult":
+                    advanceIntermission();
+                    break;
+                default:
+                    advanceIntermission();
+                    break;
+            }
+        }
+
+        function skipStage3Finale() {
+            if (state.stage3FinaleLemonji && !state.stage3FinaleLemonji.isDisposed()) {
+                state.stage3FinaleLemonji.dispose();
+            }
+            state.stage3FinaleLemonji = null;
+            state.stage3FinaleActive = false;
+            state.stage3FinalePhase = "";
+            state.stage3FinaleTimer = 0;
+            state.stage3FinaleBurstTimer = 0;
+            state.stage3FinaleDialogueIndex = 0;
+            dialogueEl.classList.remove("isVisible");
+            dialogueEl.classList.remove("hasPortrait");
+            dialoguePortraitEl.removeAttribute("src");
+            stage3IntroOverlayEl.classList.remove("isVisible", "isFading");
+            clearActiveGameObjects();
+            if (!audioState.endingMusic || audioState.endingMusic.paused) {
+                playEndingMusic();
+            }
+            showEndingFinalResult();
+        }
+
+        function skipActiveEvent() {
+            initAudio();
+            if (state.stage3IntroActive) {
+                requestStage3IntroSkip();
+                return;
+            }
+            if (state.stage3FinaleActive) {
+                skipStage3Finale();
+                return;
+            }
+            if (state.stage1LemonjiEventActive) {
+                finishStageOneLemonjiFlyby();
+                dialogueEl.classList.remove("isVisible");
+                dialogueEl.classList.remove("hasPortrait");
+                dialoguePortraitEl.removeAttribute("src");
+                return;
+            }
+            if (state.isIntermission) {
+                playSound("pickup");
+                skipIntermissionSequence();
+            }
         }
 
         function startStageClearExit(stageNumber) {
@@ -3410,7 +3789,7 @@
         function spawnStageOneBoss() {
             state.stage1BossSpawned = true;
             state.stageBossCount = 4;
-            showDialogue("帝国警報", "哨戒分隊、侵入者の進路を封鎖せよ。", 2.4);
+            showDialogue("帝国警報", "哨戒部隊、侵入者の進路を封鎖せよ。", 2.4);
 
             const config = enemyConfigs.diskA;
             const diskHoverX = world.maxX - 1.35;
@@ -3471,6 +3850,7 @@
                     waveSpeed: 1.0,
                     wavePhase: index * Math.PI,
                     canShoot: true,
+                    hp: 3,
                     isStageBoss: true
                 });
             });
@@ -3565,7 +3945,7 @@
         function spawnFinalBoss() {
             state.stage3BossSpawned = true;
             playStage3BossMusic();
-            showDialogue("帝国警報", "カリジューシー級戦艦、戦闘距離へ。", 2.8);
+            showDialogue("帝国警報", "カリジューシー級戦艦、戦闘距離へ入った。", 2.8);
             const boss = cloneModelTemplate("enemyBattleship", "karaageEmperorBattleship") || cloneModelTemplate("enemyKaraageHeavy", "karaageEmperorBoss") || createEnemyShip(game.scene, game.materials, false);
             const config = enemyConfigs.battleship;
             boss.position.set(world.maxX + 2.4, 0, 0);
@@ -3621,27 +4001,75 @@
             enemies.push(boss);
         }
 
+        function queueEndingAutoAdvance(step, delayMs) {
+            window.setTimeout(() => {
+                if (state.isIntermission && state.intermissionStep === step) {
+                    advanceIntermission();
+                }
+            }, delayMs);
+        }
+
+        function showEndingBlackout(step, delayMs = 700) {
+            showIntermission("", "", step);
+            queueEndingAutoAdvance(step, delayMs);
+        }
+
+        function showEndingGogai1() {
+            showIntermission(
+                "号外",
+                "帝国軍、領空侵犯機と反政府軍に対し完全勝利を発表。\n戦艦を計画的に爆散させ排除し、損害は一切存在しないとのこと。",
+                "endingGogai1",
+                "img/ending-gogai1.jpg"
+            );
+        }
+
+        function showEndingCredits() {
+            const spacedCreditsText = endingCreditsText.replace(/\n\n/g, "\n\n\n\n\n");
+            showIntermission("", spacedCreditsText, "endingCredits");
+            queueEndingAutoAdvance("endingCredits", 48000);
+        }
+
+        function showEndingFinalResult() {
+            saveHighScore();
+            stopStage3Music();
+            stopStage3BossMusic();
+            bossHudEl.classList.remove("isVisible");
+            showIntermission(
+                "MISSION COMPLETE",
+                `SCORE ${state.score}\n撃破数 ${state.stageKills}\nHI SCORE ${state.highScore}\nTHANK YOU FOR PLAYING`,
+                "endingFinalResult"
+            );
+        }
+
         function completeGame() {
             saveHighScore();
-            state.isIntermission = true;
-            state.intermissionStep = "endingGogai1";
+            state.stage3IntroActive = false;
+            state.stage3IntroFading = false;
+            state.stage3IntroFadeTimer = 0;
+            disposeStage3IntroInstance();
+            stage3IntroOverlayEl.classList.remove("isVisible", "isFading");
             stopStage3Music();
             stopStage3BossMusic();
             if (!audioState.endingMusic || audioState.endingMusic.paused) {
                 playEndingMusic();
             }
             bossHudEl.classList.remove("isVisible");
-            showIntermission(
-                "号外",
-                "巨大からあげ戦艦、撃沈。",
-                "endingGogai1",
-                "img/ending-gogai1.jpg"
-            );
+            showEndingBlackout("endingBlackoutBeforeGogai");
         }
 
         function showIntermission(title, text, step, imageSrc = "", options = {}) {
             state.isIntermission = true;
             state.intermissionStep = step;
+            const isGogaiStep = step === "endingGogai1" || step === "endingGogai2" || step === "endingGogai3";
+            const isBlackoutStep = step === "endingBlackoutBeforeGogai" || step === "endingBlackoutBeforeCredits" || step === "endingBlackoutBeforeResult";
+            const isCreditsStep = step === "endingCredits";
+            const isFinalResultStep = step === "endingFinalResult";
+            const intermissionPanelEl = intermissionEl.querySelector(".intermissionPanel");
+            intermissionPanelEl.classList.toggle("isGogai", isGogaiStep);
+            intermissionPanelEl.classList.toggle("isBlackout", isBlackoutStep);
+            intermissionPanelEl.classList.toggle("isCredits", isCreditsStep);
+            intermissionPanelEl.classList.toggle("isFinalResult", isFinalResultStep);
+            intermissionPanelEl.classList.toggle("hasImage", !!imageSrc);
             intermissionTitleEl.textContent = title;
             intermissionTextEl.textContent = text;
             intermissionTextEl.classList.remove("intermissionTextCompact", "intermissionTextDense");
@@ -3652,6 +4080,10 @@
             }
             if (imageSrc) {
                 intermissionImageEl.src = imageSrc;
+                if (isGogaiStep) {
+                    intermissionImageEl.classList.remove("isVisible");
+                    void intermissionImageEl.offsetWidth;
+                }
                 intermissionImageEl.classList.add("isVisible");
             } else {
                 intermissionImageEl.removeAttribute("src");
@@ -3776,150 +4208,77 @@
                 case "introStart":
                     beginStage(1);
                     break;
-                case "resumeStage1":
-                    state.isIntermission = false;
-                    state.intermissionStep = null;
-                    intermissionEl.classList.remove("isVisible");
-                    showDialogue("レモンジ通信", "小惑星帯へ抜けろ。帝国の追跡網を岩場で切る。", 2.2);
-                    break;
                 case "stage1Result":
                     playHideoutMusic();
-                    showIntermission(
-                        "レモンジ",
-                        "よく来たな。ここは俺の秘密基地だ。",
-                        "baseTalkPlayerQuestion",
-                        "img/event-lemonji-base.jpg"
-                    );
+                    showIntermission("レモンジ", "よく来たな。ここは俺の秘密基地だ。", "baseTalkPlayerQuestion", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkPlayerQuestion":
-                    showIntermission(
-                        "PLAYER",
-                        "あれはいったいなんだ？突然攻撃されたが。",
-                        "baseTalkLemonQuestion",
-                        "img/event-lemonji-base.jpg"
-                    );
+                    showIntermission("PLAYER", "あれはいったいなんだ？突然攻撃されたが。", "baseTalkLemonQuestion", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkLemonQuestion":
-                    showIntermission(
-                        "レモンジ",
-                        "あんた、からあげにレモンをかけたことは？",
-                        "baseTalkPlayerLemon",
-                        "img/event-lemonji-base.jpg"
-                    );
+                    showIntermission("レモンジ", "あんた、からあげにレモンをかけたことは？", "baseTalkPlayerLemon", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkPlayerLemon":
-                    showIntermission(
-                        "PLAYER",
-                        "は？いや、あるが……",
-                        "baseTalkLaw",
-                        "img/event-lemonji-base.jpg"
-                    );
+                    showIntermission("PLAYER", "は？いや、あるが……", "baseTalkLaw", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkLaw":
-                    showIntermission(
-                        "レモンジ",
-                        "からあげ帝国憲法第1条。からあげにレモンをかけた者は死刑。あんたは帝国では犯罪者だ。",
-                        "baseTalkPlayerShock",
-                        "img/event-lemonji-base.jpg"
-                    );
+                    showIntermission("レモンジ", "からあげ帝国憲法第1条。からあげにレモンをかけた者は死刑。あんたは帝国では犯罪者だ。", "baseTalkPlayerShock", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkPlayerShock":
-                    showIntermission(
-                        "PLAYER",
-                        "なん……だと……",
-                        "baseTalkCoup",
-                        "img/event-lemonji-base.jpg"
-                    );
+                    showIntermission("PLAYER", "なん……だと……", "baseTalkCoup", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkCoup":
-                    showIntermission(
-                        "レモンジ",
-                        "そんな法律を終わらせるために、俺たち反体制派は半期に一度、クーデターを起こしている。どうだ。俺たちと一緒に戦わないか？",
-                        "baseTalkRefuse",
-                        "img/event-lemonji-base.jpg"
-                    );
+                    showIntermission("レモンジ", "そんな法律を終わらせるために、俺たち反体制派は半期に一度、クーデターを起こしている。どうだ。俺たちと一緒に戦わないか？", "baseTalkRefuse", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkRefuse":
-                    showIntermission(
-                        "PLAYER",
-                        "悪いが、他国のクーデターに参加するつもりはない。こっちは祖国へ帰りたいだけだ。",
-                        "baseTalkDeal",
-                        "img/event-lemonji-base.jpg"
-                    );
+                    showIntermission("PLAYER", "悪いが、他国のクーデターに参加するつもりはない。こっちは祖国へ帰りたいだけだ。", "baseTalkDeal", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkDeal":
-                    showIntermission(
-                        "レモンジ",
-                        "残念だ。なら取引といこう。通常弾頭ではからあげに効果が薄い。このレモンリキッドを提供しよう。",
-                        "baseTalkMission",
-                        "img/event-lemonji-base.jpg"
-                    );
+                    showIntermission("レモンジ", "残念だ。なら取引といこう。通常弾頭ではからあげに効果が薄い。このレモンリキッドを提供しよう。", "baseTalkMission", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkMission":
-                    showIntermission(
-                        "レモンジ",
-                        "その代わり、アステロイドベルトの外側で待機している帝国艦隊の戦力を減らしてくれ。",
-                        "baseTalkAccept",
-                        "img/event-lemonji-base.jpg"
-                    );
+                    showIntermission("レモンジ", "その代わり、アステロイドベルトの外側で待機している帝国艦隊の戦力を減らしてくれ。", "baseTalkAccept", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkAccept":
-                    showIntermission(
-                        "PLAYER",
-                        "……わかった。",
-                        "lemonLiquid",
-                        "img/event-lemonji-base.jpg"
-                    );
+                    showIntermission("PLAYER", "……わかった。", "lemonLiquid", "img/event-lemonji-base.jpg");
                     break;
                 case "lemonLiquid":
                     state.lemonUnlocked = true;
-                    showIntermission(
-                        "LEMON LIQUID",
-                        "レモンリキッドを受け取った。LEMONバレットとレモンミサイルの段階強化が解禁された。",
-                        "startStage2",
-                        "img/event-lemonliquidget.jpg"
-                    );
+                    showIntermission("LEMON LIQUID", "レモンリキッドを受け取った。LEMONバレットとレモンミサイルの段階強化が解禁された。", "startStage2", "img/event-lemonliquidget.jpg");
                     break;
                 case "startStage2":
                     stopHideoutMusic();
                     beginStage(2);
                     break;
                 case "stage2Result":
-                    showIntermission(
-                        "からあげ皇帝",
-                        "憲法第1条、からあげにレモンをかけた者は許さぬ。戦艦、出撃。",
-                        "startStage3",
-                        "img/event-karaage-emperor.jpg"
-                    );
+                    showIntermission("からあげ皇帝", "憲法第1条、からあげにレモンをかけた者は許さぬ。戦艦、出撃。", "startStage3", "img/event-karaage-emperor.jpg");
                     break;
                 case "startStage3":
                     beginStage(3);
                     break;
+                case "endingBlackoutBeforeGogai":
+                    showEndingGogai1();
+                    break;
                 case "endingGogai1":
-                    showIntermission(
-                        "号外",
-                        "帝国艦隊に甚大な被害。からあげ皇帝、声明を準備中。",
-                        "endingGogai2",
-                        "img/ending-gogai2.jpg"
-                    );
+                    showIntermission("号外", "帝国史上最大、新型超ど級戦艦が竣工。\nなお帝国広報は、先の戦艦爆散との関係を否定した。", "endingGogai2", "img/ending-gogai2.jpg");
                     break;
                 case "endingGogai2":
-                    showIntermission(
-                        "号外",
-                        "反体制派、半期恒例クーデターの成功を主張。",
-                        "endingGogai3",
-                        "img/ending-gogai3.jpg"
-                    );
+                    showIntermission("号外", "からあげ帝国グランプリ、堂々開催。\n翌日、帝国放送は平常運転へ復帰した。", "endingGogai3", "img/ending-gogai3.jpg");
                     break;
                 case "endingGogai3":
-                    showIntermission(
-                        "ESCAPE COMPLETE",
-                        `SCORE ${state.score}。レモンジは次のクーデターへ、あなたは故郷の惑星へ進路を取った。`,
-                        "ending",
-                        "img/event-karaage-emperor.jpg"
-                    );
+                    showEndingBlackout("endingBlackoutBeforeCredits");
+                    break;
+                case "endingBlackoutBeforeCredits":
+                    showEndingCredits();
+                    break;
+                case "endingCredits":
+                    showEndingBlackout("endingBlackoutBeforeResult");
+                    break;
+                case "endingBlackoutBeforeResult":
+                    showEndingFinalResult();
                     break;
                 case "ending":
+                case "endingFinalResult":
                     stopEndingMusic();
                     state.hasStarted = false;
                     state.isIntermission = false;
@@ -3939,7 +4298,7 @@
         function fireOneShot(origin, forceNormal = false, shotOwner = "player") {
             const isLaser = state.hasLaser && !forceNormal;
             const isLemonBullet = state.lemonUnlocked && !isLaser && !forceNormal && shotOwner === "player";
-            const normalShotLimit = shotOwner === "player" ? 3 : 2;
+            const normalShotLimit = 3;
             const activeOwnerShots = bullets.filter((bullet) =>
                 bullet.metadata.kind === "normal" && bullet.metadata.shotOwner === shotOwner
             ).length;
@@ -4166,8 +4525,8 @@
             mesh.metadata = {
                 speed: (speed || 2.6) + (config ? 0 : state.stage * 0.22 + state.wave * 0.08 + Math.random() * 0.42) + (options.speedBonus || 0),
                 radius: config ? config.radius : carriesCapsule ? 0.38 : isAsteroid ? 0.45 : 0.38,
-                hp: config ? config.hp : hpByType[enemyType],
-                maxHp: config ? config.hp : hpByType[enemyType],
+                hp: options.hp !== undefined ? options.hp : config ? config.hp : hpByType[enemyType],
+                maxHp: options.hp !== undefined ? options.hp : config ? config.hp : hpByType[enemyType],
                 points: config ? config.points : pointsByType[enemyType],
                 spin: config && config.randomSpin ? (Math.random() - 0.5) * 3.8 : 0,
                 baseRotationZ: 0,
@@ -4311,23 +4670,6 @@
             state.bossCapsuleTimer = 7 + Math.random() * 4;
         }
 
-        function spawnTerrainBlock() {
-            const top = Math.random() < 0.5;
-            const height = 0.55 + Math.random() * 1.3;
-            const block = BABYLON.MeshBuilder.CreateBox("terrain", {
-                width: 1.6 + Math.random() * 1.2,
-                height,
-                depth: 0.28
-            }, game.scene);
-            block.position.set(world.maxX + 1.4, top ? world.maxY - height / 2 : world.minY + height / 2, 0.2);
-            block.metadata = {
-                speed: 2.15 + state.wave * 0.12,
-                radius: Math.max(block.scaling.x, height) * 0.45
-            };
-            block.material = game.materials.terrain;
-            terrain.push(block);
-        }
-
         function spawnStageTwoMeteor() {
             const meteor = createEnemyShip(game.scene, game.materials, true);
             const size = 1.5 + Math.random() * 1.5;
@@ -4345,8 +4687,8 @@
                 vx: -(1.35 + Math.random() * 1.35),
                 vy: (Math.random() - 0.5) * 0.55,
                 radius: 0.45 * size,
-                hp: Math.round(10 + Math.random() * 10),
-                maxHp: 20,
+                hp: Math.round(5 + Math.random() * 10),
+                maxHp: 15,
                 spinX: (Math.random() - 0.5) * 1.6,
                 spinY: (Math.random() - 0.5) * 1.6,
                 spinZ: (Math.random() - 0.5) * 1.6
@@ -4391,6 +4733,44 @@
             options.push(option);
         }
 
+        function createPlayerShieldVisual() {
+            if (playerShieldVisual && !playerShieldVisual.isDisposed()) {
+                playerShieldVisual.setEnabled(true);
+                return playerShieldVisual;
+            }
+            playerShieldVisual = BABYLON.MeshBuilder.CreateSphere("playerShieldVisual", {
+                diameter: 1,
+                segments: 32
+            }, game.scene);
+            playerShieldVisual.parent = game.player;
+            playerShieldVisual.position.set(0.02, 0, -0.32);
+            playerShieldVisual.rotation.set(0, 0, 0);
+            playerShieldVisual.scaling.set(1.72, 0.72, 0.06);
+            playerShieldVisual.material = game.materials.playerShield;
+            playerShieldVisual.visibility = 0.72;
+            playerShieldVisual.isPickable = false;
+            return playerShieldVisual;
+        }
+
+        function disposePlayerShieldVisual() {
+            if (playerShieldVisual && !playerShieldVisual.isDisposed()) {
+                playerShieldVisual.dispose();
+            }
+            playerShieldVisual = null;
+        }
+
+        function updatePlayerShieldVisual(delta) {
+            if (state.shield <= 0 || state.gameOver || !game.player.isEnabled()) {
+                disposePlayerShieldVisual();
+                return;
+            }
+            const shield = createPlayerShieldVisual();
+            const pulse = 1 + Math.sin(state.elapsed * 5.2) * 0.025;
+            shield.rotation.set(0, 0, 0);
+            shield.scaling.set(1.72 * pulse, 0.72 * pulse, 0.06);
+            shield.visibility = 0.68 + Math.sin(state.elapsed * 6.4) * 0.04;
+        }
+
         function collectCapsule(capsule) {
             advancePowerCursor();
             state.score += 250;
@@ -4423,6 +4803,7 @@
                     break;
                 case 3:
                     state.shield = 1;
+                    createPlayerShieldVisual();
                     break;
                 case 4:
                     state.hasLaser = true;
@@ -4517,6 +4898,7 @@
             }
             if (state.shield > 0) {
                 state.shield = 0;
+                disposePlayerShieldVisual();
                 state.invincibleTimer = 1.2;
                 game.player.scaling.set(1.25, 1.25, 1.25);
                 addPlayerImpactEffect(0.45);
@@ -4579,6 +4961,7 @@
             game.player.getChildMeshes(false).forEach((mesh) => {
                 mesh.visibility = state.invincibleTimer > 0 && Math.floor(state.elapsed * 18) % 2 === 0 ? 0.34 : 1;
             });
+            updatePlayerShieldVisual(delta);
             if (game.player.metadata.flames) {
                 const pulse = 0.85 + Math.sin(state.elapsed * 22) * 0.2;
                 game.player.metadata.flames.forEach((flame, index) => {
@@ -5187,13 +5570,10 @@
                         actor.dispose();
                     }
                     state.stage3FinaleLemonji = null;
-                    stage3IntroOverlayEl.classList.add("isVisible");
-                    stage3IntroOverlayEl.classList.remove("isFading");
-                    window.requestAnimationFrame(() => {
-                        stage3IntroOverlayEl.classList.add("isFading");
-                    });
-                    state.stage3FinalePhase = "fadeEnding";
+                    state.stage3FinaleActive = false;
+                    state.stage3FinalePhase = "";
                     state.stage3FinaleTimer = 0;
+                    completeGame();
                 }
                 return;
             }
@@ -6127,7 +6507,8 @@
             }
             if (state.terrainTimer <= 0 && state.stage === 2) {
                 spawnStageTwoMeteor();
-                state.terrainTimer = Math.max(1.15, 2.45 - state.wave * 0.08) + Math.random() * 0.65;
+                const stageTwoMeteorIntervalScale = state.stageElapsed < 24 ? 1.43 : 1;
+                state.terrainTimer = (Math.max(1.15, 2.45 - state.wave * 0.08) + Math.random() * 0.65) * stageTwoMeteorIntervalScale;
             }
 
             updatePlayer(delta);
@@ -6140,6 +6521,7 @@
         playTitleMusic();
 
         engine.runRenderLoop(() => {
+            syncEventSkipButton();
             game.scene.render();
         });
 
