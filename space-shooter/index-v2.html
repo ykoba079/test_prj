@@ -1601,6 +1601,7 @@ All Lemon Supporters
         const shockwaves = [];
         const sparks = [];
         const explosions = [];
+        const floatingTexts = [];
         const playerTrail = [];
         const stageActors = [];
         let stage3IntroInstance = null;
@@ -3141,6 +3142,10 @@ All Lemon Supporters
             state.powerCursor = -1;
         }
 
+        function areAllPowersMaxed() {
+            return powerItems.every((_, index) => isPowerMaxed(index));
+        }
+
         function resetGame() {
             touchInput.firing = false;
             resetTouchMove();
@@ -3153,6 +3158,7 @@ All Lemon Supporters
             shockwaves.splice(0).forEach((item) => item.dispose());
             sparks.splice(0).forEach((item) => item.dispose());
             explosions.splice(0).forEach((item) => item.dispose());
+            floatingTexts.splice(0).forEach((item) => item.dispose());
             stageActors.splice(0).forEach((item) => item.dispose());
             disposeStage3IntroInstance();
             disposePlayerShieldVisual();
@@ -5106,9 +5112,85 @@ All Lemon Supporters
             shield.visibility = 0.82 + Math.sin(state.elapsed * 6.4) * 0.035;
         }
 
+        function addFloatingText(text, position) {
+            const texture = new BABYLON.DynamicTexture(`floatingTextTexture${floatingTexts.length}`, { width: 256, height: 128 }, game.scene, true);
+            const context = texture.getContext();
+            context.clearRect(0, 0, 256, 128);
+            context.font = "900 72px sans-serif";
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            context.lineWidth = 10;
+            context.strokeStyle = "rgba(0, 40, 70, 0.92)";
+            context.strokeText(text, 128, 64);
+            context.fillStyle = "rgba(255, 244, 80, 1)";
+            context.fillText(text, 128, 64);
+            texture.update();
+
+            const material = new BABYLON.StandardMaterial(`floatingTextMat${floatingTexts.length}`, game.scene);
+            material.diffuseTexture = texture;
+            material.emissiveTexture = texture;
+            material.opacityTexture = texture;
+            material.useAlphaFromDiffuseTexture = true;
+            material.disableLighting = true;
+            material.backFaceCulling = false;
+
+            const mesh = BABYLON.MeshBuilder.CreatePlane("floatingScoreText", {
+                width: 1.18,
+                height: 0.58
+            }, game.scene);
+            mesh.position.copyFrom(position);
+            mesh.position.z = -0.62;
+            mesh.material = material;
+            mesh.isPickable = false;
+            mesh.metadata = {
+                age: 0,
+                life: 1,
+                startY: position.y,
+                material
+            };
+            floatingTexts.push(mesh);
+        }
+
+        function updateFloatingTexts(delta) {
+            for (let i = floatingTexts.length - 1; i >= 0; i -= 1) {
+                const text = floatingTexts[i];
+                if (!text || text.isDisposed()) {
+                    floatingTexts.splice(i, 1);
+                    continue;
+                }
+                text.metadata.age += delta;
+                const progress = Math.min(1, text.metadata.age / text.metadata.life);
+                text.position.y = text.metadata.startY + progress * 0.48;
+                text.visibility = 1 - progress;
+                if (text.metadata.material) {
+                    text.metadata.material.alpha = 1 - progress;
+                }
+                if (progress >= 1) {
+                    if (text.material) {
+                        const material = text.material;
+                        const texture = material.diffuseTexture;
+                        text.dispose();
+                        if (texture) {
+                            texture.dispose();
+                        }
+                        material.dispose();
+                    } else {
+                        text.dispose();
+                    }
+                    floatingTexts.splice(i, 1);
+                }
+            }
+        }
+
         function collectCapsule(capsule) {
+            const wasFullyPowered = areAllPowersMaxed();
+            const bonusPosition = capsule.position.clone();
             advancePowerCursor();
             state.score += 250;
+            if (wasFullyPowered) {
+                state.score += 500;
+                addFloatingText("500", bonusPosition);
+            }
             saveHighScore();
             addSparks(capsule.position, 20);
             playSound("pickup");
@@ -6720,6 +6802,7 @@ All Lemon Supporters
             updateShockwaves(delta);
             updateExplosions(delta);
             updateSparks(delta);
+            updateFloatingTexts(delta);
         }
 
         function updateStars(delta) {
@@ -6780,6 +6863,7 @@ All Lemon Supporters
                 updatePlayerDeathExplosion(delta);
                 updateExplosions(delta);
                 updateSparks(delta);
+                updateFloatingTexts(delta);
                 return;
             }
 
@@ -6793,6 +6877,7 @@ All Lemon Supporters
                 updateStage3Finale(delta);
                 updateExplosions(delta);
                 updateSparks(delta);
+                updateFloatingTexts(delta);
                 updateHud();
                 return;
             }
@@ -6810,6 +6895,7 @@ All Lemon Supporters
                 updateDialogue(delta);
                 updateExplosions(delta);
                 updateSparks(delta);
+                updateFloatingTexts(delta);
                 updateHud();
                 return;
             }
@@ -6817,6 +6903,7 @@ All Lemon Supporters
                 updateStageClearExit(delta);
                 updateExplosions(delta);
                 updateSparks(delta);
+                updateFloatingTexts(delta);
                 updateHud();
                 return;
             }
