@@ -556,6 +556,10 @@
             display: grid;
         }
 
+        .intermission.isRevealIn {
+            background: #02040a;
+        }
+
         .intermissionPanel {
             position: relative;
             width: min(1120px, 100%);
@@ -582,7 +586,7 @@
 
         .intermissionPanel.hasImage:not(.isGogai) {
             align-content: start;
-            grid-template-rows: auto auto auto auto;
+            grid-template-rows: auto auto minmax(0, 1fr);
             row-gap: 6px;
         }
 
@@ -590,6 +594,10 @@
             border-color: transparent;
             background: #02040a;
             box-shadow: none;
+        }
+
+        .intermissionPanel.isRevealIn {
+            animation: intermissionRevealIn 1.5s ease both;
         }
 
         .intermissionPanel.isBlackout h2,
@@ -609,6 +617,102 @@
                 linear-gradient(180deg, rgba(1, 4, 14, 0.38), rgba(1, 4, 14, 0.9)),
                 url("img/stage3-space-bg.jpg") center / cover no-repeat,
                 #02040a;
+        }
+
+        .intermissionPanel.isNextWorld {
+            width: min(1320px, 100%);
+            align-content: end;
+            grid-template-rows: minmax(0, 1fr) auto auto;
+            padding: clamp(18px, 3vw, 42px);
+            overflow: hidden;
+            background: rgba(2, 6, 18, 0.94);
+        }
+
+        .intermissionPanel.isNextWorld::before {
+            content: "";
+            position: absolute;
+            inset: -10%;
+            background: url("img/nextworld.jpg") left bottom / 118% auto no-repeat;
+            opacity: 0.88;
+            transform: translate(-3%, 3%) scale(1.08);
+            animation: nextWorldDrift 14s ease-out both;
+        }
+
+        .intermissionPanel.isNextWorld::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(180deg, rgba(1, 4, 13, 0.05), rgba(1, 4, 13, 0.7));
+        }
+
+        .intermissionPanel.isNextWorld .intermissionImage {
+            display: none;
+        }
+
+        .intermissionPanel.isNextWorld h2,
+        .intermissionPanel.isNextWorld p {
+            position: relative;
+            z-index: 1;
+        }
+
+        .intermissionPanel.isNextWorld h2 {
+            align-self: end;
+            margin: 0 0 8px;
+        }
+
+        .intermissionPanel.isNextWorld p {
+            min-height: 0;
+            max-height: none;
+            margin: 0;
+            align-items: start;
+        }
+
+        .intermissionPanel.isControls {
+            width: min(1320px, 100%);
+            align-content: center;
+            grid-template-rows: minmax(0, 82%) minmax(34px, auto);
+            row-gap: clamp(8px, 1.2vw, 14px);
+        }
+
+        .controlsGuide {
+            display: none;
+            min-height: 0;
+            height: 100%;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: clamp(14px, 2vw, 26px);
+        }
+
+        .intermissionPanel.isControls .controlsGuide {
+            display: grid;
+        }
+
+        .controlsGuide img {
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            object-fit: contain;
+            border: 1px solid rgba(144, 232, 255, 0.28);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.22);
+            box-shadow: 0 0 24px rgba(33, 170, 255, 0.16);
+        }
+
+        .intermissionPanel.isControls .intermissionImage {
+            display: none;
+        }
+
+        .intermissionPanel.isControls h2 {
+            display: none;
+        }
+
+        .intermissionPanel.isControls p {
+            min-height: 0;
+            max-height: none;
+            margin: 0;
+            align-items: center;
+            font-size: clamp(15px, 1.8vw, 22px);
+            line-height: 1.15;
         }
 
         .intermissionPanel.isCredits h2,
@@ -633,9 +737,7 @@
         }
 
         .intermissionPanel.isCredits::after {
-            background:
-                repeating-linear-gradient(164deg, transparent 0 34px, rgba(255, 213, 122, 0.1) 36px 38px, transparent 40px 92px);
-            opacity: 0.52;
+            display: none;
         }
 
         .intermissionImage {
@@ -708,17 +810,18 @@
 
         .intermissionPanel.isGogai p {
             min-height: 0;
-            max-height: 90px;
+            max-height: min(19vh, 150px);
             margin: 1px 0;
             align-items: start;
             grid-row: 2;
-            font-size: clamp(18px, 2.35vw, 25px);
-            line-height: 1.34;
+            font-size: clamp(17px, 2.05vw, 23px);
+            line-height: 1.28;
         }
 
         .intermissionPanel.hasImage:not(.isGogai) p {
             min-height: 0;
-            max-height: 190px;
+            max-height: none;
+            height: 100%;
             margin: 0;
             align-items: start;
         }
@@ -763,6 +866,7 @@
         .intermissionPanel.isFinalResult h2 {
             align-self: center;
             margin-bottom: 16px;
+            white-space: pre-line;
         }
 
         .intermissionPanel.isFinalResult p {
@@ -775,7 +879,7 @@
         }
 
         .intermissionHint {
-            display: block;
+            display: none;
             margin-top: 18px;
             color: #fff07a;
             font-size: 13px;
@@ -845,6 +949,26 @@
             }
         }
 
+        @keyframes intermissionRevealIn {
+            0% {
+                opacity: 0;
+                filter: brightness(0);
+            }
+            100% {
+                opacity: 1;
+                filter: brightness(1);
+            }
+        }
+
+        @keyframes nextWorldDrift {
+            0% {
+                transform: translate(-4%, 4%) scale(1.1);
+            }
+            100% {
+                transform: translate(3%, -3%) scale(1.1);
+            }
+        }
+
         .intermissionTextCompact {
             font-size: clamp(19px, 2.45vw, 25px) !important;
             line-height: 1.42 !important;
@@ -865,7 +989,11 @@
             }
 
             .intermissionPanel.hasImage:not(.isGogai) {
-                grid-template-rows: auto auto auto auto;
+                grid-template-rows: auto auto minmax(0, 1fr);
+            }
+
+            .controlsGuide {
+                grid-template-columns: 1fr;
             }
 
             .intermissionPanel p {
@@ -875,12 +1003,12 @@
 
             .intermissionPanel.isGogai p {
                 min-height: 0;
-                max-height: 90px;
+                max-height: min(21vh, 135px);
             }
 
             .intermissionPanel.hasImage:not(.isGogai) p {
                 min-height: 0;
-                max-height: 170px;
+                max-height: none;
             }
         }
 
@@ -1004,7 +1132,6 @@
         <div class="powerSlot" data-power-index="3">SHIELD</div>
         <div class="powerSlot" data-power-index="4">LEMON</div>
     </div>
-    <div class="help">WASD / ARROWS: MOVE<br>Z: FIRE<br>X: POWER UP<br>R: RESTART<br>GAMEPAD: MOVE / FIRE / POWER</div>
     <div id="stageClearBanner" class="stageClearBanner">STAGE CLEAR</div>
     <div id="mobileControls" class="mobileControls" aria-label="mobile controls">
         <div id="movePad" class="movePad" aria-label="move pad">
@@ -1037,6 +1164,10 @@
     <div id="intermission" class="intermission" aria-live="polite">
         <div class="intermissionPanel">
             <img id="intermissionImage" class="intermissionImage" alt="">
+            <div id="controlsGuide" class="controlsGuide" aria-label="controls guide">
+                <img src="img/keybord.jpg" alt="Keyboard controls">
+                <img src="img/pad.jpg" alt="Gamepad controls">
+            </div>
             <h2 id="intermissionTitle"></h2>
             <p id="intermissionText"></p>
             <span class="intermissionHint">CLICK / Z / ENTER / SPACE</span>
@@ -1047,7 +1178,6 @@
         <div>
             <h1>GAME OVER</h1>
             <p id="finalScore">SCORE 0</p>
-            <p>PRESS R TO RESTART</p>
         </div>
     </div>
     <div id="bootError" class="bootError" aria-live="assertive"></div>
@@ -1110,28 +1240,28 @@
 
         const stageDefinitions = [
             { stage: 1, duration: Infinity, title: "帝国哨戒圏・カリッと包囲網" },
-            { stage: 2, duration: Infinity, title: "アステロイドベルト秘密基地" },
-            { stage: 3, duration: Infinity, title: "帝国戦艦カリジューシー級" }
+            { stage: 2, duration: Infinity, title: "アステロイドベルト・重力封鎖圏" },
+            { stage: 3, duration: Infinity, title: "帝国艦隊・最終防衛線" }
         ];
 
         const storyEvents = [
-            { id: "stage3", stage: 3, at: 0.8, speaker: "帝国通信", text: "カリジューシー級、主砲展開。" }
+            { id: "stage3", stage: 3, at: 0.8, speaker: "帝国通信", text: "カリジューシー級、侵入者を戦闘距離に捕捉。" }
         ];        const stage3FinaleDialogue = [
             {
                 speaker: "レモンジ",
-                text: "聞こえるか、見事だ！　からあげ戦艦は完全に沈黙した！",
+                text: "聞こえるか、見事だ！\nカリジューシー級は完全に沈黙した！",
                 portrait: "img/lemonji_insert.jpg",
                 duration: 4.4
             },
             {
                 speaker: "PLAYER",
-                text: "約束は果たした。レモンリキッドの借りも返したぞ。",
+                text: "約束は果たした。\nレモンリキッドの借りも返したぞ。",
                 portrait: "",
                 duration: 4.0
             },
             {
                 speaker: "レモンジ",
-                text: "ああ。そこの宙域に時空の歪みがある。そこから帰れるはずだ。",
+                text: "ああ。実はすぐ近くに時空の歪みがある。\nそこから帰れるはずだ。",
                 portrait: "img/lemonji_insert.jpg",
                 duration: 4.8
             },
@@ -1143,19 +1273,19 @@
             },
             {
                 speaker: "レモンジ",
-                text: "まあな。燃料も食料も補給しておいた。なんとかなるだろ。",
+                text: "まあな。\n燃料も食料も補給しておいた。なんとかなるだろ。",
                 portrait: "img/lemonji_insert.jpg",
                 duration: 4.3
             },
             {
                 speaker: "PLAYER",
-                text: "もう帰る・・・。",
+                text: "もう帰る……。",
                 portrait: "",
                 duration: 2.4
             },
             {
                 speaker: "レモンジ",
-                text: "さらばだ！　来期のクーデターでまた会おう！",
+                text: "さらばだ！\n来期のクーデターでまた会おう！",
                 portrait: "img/lemonji_insert.jpg",
                 duration: 4.1
             },
@@ -1201,7 +1331,7 @@ SOUND EFFECTS
 Codex GPT-5.6 Sol
 
 ENDING THEME
-からあげ帝国 狂創の栄光
+「からあげ帝国 狂創の栄光」
 
 SPECIAL THANKS
 からあげ帝国
@@ -1408,6 +1538,7 @@ All Lemon Supporters
             hasLaser: false,
             shield: 0,
             gameOver: false,
+            gameOverReturnTimer: 0,
             hasStarted: false,
             isIntermission: false,
             intermissionStep: null,
@@ -1436,6 +1567,7 @@ All Lemon Supporters
             stage3ClearTimer: 0,
             stage3SupportCooldown: 0,
             stage3SupportDiskCount: 0,
+            stage3SupportCount: 0,
             stage3FinaleActive: false,
             stage3FinalePhase: "",
             stage3FinaleTimer: 0,
@@ -2250,8 +2382,20 @@ All Lemon Supporters
                 advanceStage3FinaleDialogue();
                 return;
             }
-            if (!state.hasStarted && (confirmPressed || startPressed)) {
+            if (!state.hasStarted && state.isIntermission && state.intermissionStep === "controlsGuide" && (confirmPressed || powerPressed || startPressed || restartPressed)) {
                 startGame();
+                return;
+            }
+            if (!state.hasStarted && (confirmPressed || startPressed)) {
+                if (state.isIntermission && state.intermissionStep === "controlsGuide") {
+                    startGame();
+                } else {
+                    showTitleControlsGuide();
+                }
+                return;
+            }
+            if (state.gameOver && (confirmPressed || powerPressed || startPressed || restartPressed)) {
+                returnToTitleFromGameOver();
                 return;
             }
             if (state.isIntermission && confirmPressed) {
@@ -2284,6 +2428,20 @@ All Lemon Supporters
         window.addEventListener("keydown", (event) => {
             keys.add(event.code);
             playTitleMusic();
+            if (state.isIntermission && state.intermissionStep === "controlsGuide") {
+                if (!event.repeat && !event.ctrlKey && !event.altKey && !event.metaKey && event.code !== "ShiftLeft" && event.code !== "ShiftRight") {
+                    event.preventDefault();
+                    startGame();
+                }
+                return;
+            }
+            if ((event.code === "Escape" || event.code === "Tab") && isEventSkipAvailable()) {
+                event.preventDefault();
+                if (!event.repeat) {
+                    skipActiveEvent();
+                }
+                return;
+            }
             if (state.stage3IntroActive) {
                 if (event.code === "Enter" || event.code === "Space" || event.code === "KeyZ") {
                     event.preventDefault();
@@ -2302,7 +2460,18 @@ All Lemon Supporters
             }
             if (!state.hasStarted && (event.code === "Enter" || event.code === "Space" || event.code === "KeyZ")) {
                 event.preventDefault();
-                startGame();
+                if (state.isIntermission && state.intermissionStep === "controlsGuide") {
+                    startGame();
+                } else {
+                    showTitleControlsGuide();
+                }
+                return;
+            }
+            if (state.gameOver && (event.code === "Enter" || event.code === "Space" || event.code === "KeyZ" || event.code === "KeyX")) {
+                event.preventDefault();
+                if (!event.repeat) {
+                    returnToTitleFromGameOver();
+                }
                 return;
             }
             if (state.isIntermission && (event.code === "Enter" || event.code === "Space" || event.code === "KeyZ")) {
@@ -2316,7 +2485,7 @@ All Lemon Supporters
             if (event.code === "KeyX" && !event.repeat) {
                 activatePower();
             }
-            if (event.code === "KeyR" && state.hasStarted) {
+            if (event.code === "KeyR" && state.hasStarted && !state.gameOver) {
                 restartGameFromUrlStage();
             }
         });
@@ -2326,7 +2495,7 @@ All Lemon Supporters
         });
 
         startButtonEl.addEventListener("click", () => {
-            startGame();
+            showTitleControlsGuide();
         });
 
         titleScreenEl.addEventListener("pointerdown", () => {
@@ -2336,6 +2505,11 @@ All Lemon Supporters
         intermissionEl.addEventListener("click", () => {
             playSound("pickup");
             advanceIntermission();
+        });
+
+        messageEl.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            returnToTitleFromGameOver();
         });
 
         stage3IntroOverlayEl.addEventListener("pointerdown", (event) => {
@@ -2458,6 +2632,88 @@ All Lemon Supporters
             material.diffuseColor = color.scale(0.35);
             material.emissiveColor = color.scale(emissiveStrength);
             material.specularColor = color.scale(0.25);
+            return material;
+        }
+
+        function createPlayerShieldMaterial(scene) {
+            const texture = new BABYLON.DynamicTexture("playerShieldTexture", { width: 512, height: 512 }, scene, true);
+            const context = texture.getContext();
+            context.clearRect(0, 0, 512, 512);
+            context.save();
+            context.beginPath();
+            context.ellipse(256, 256, 224, 186, 0, 0, Math.PI * 2);
+            context.clip();
+
+            const bodyGradient = context.createRadialGradient(256, 256, 24, 256, 256, 230);
+            bodyGradient.addColorStop(0, "rgba(20, 150, 255, 0.02)");
+            bodyGradient.addColorStop(0.56, "rgba(30, 160, 255, 0.08)");
+            bodyGradient.addColorStop(0.78, "rgba(50, 210, 255, 0.22)");
+            bodyGradient.addColorStop(1, "rgba(110, 230, 255, 0.44)");
+            context.fillStyle = bodyGradient;
+            context.fillRect(0, 0, 512, 512);
+
+            context.strokeStyle = "rgba(88, 195, 255, 0.2)";
+            context.lineWidth = 1.2;
+            const radius = 18;
+            const hexH = Math.sqrt(3) * radius;
+            for (let y = 60; y < 456; y += hexH) {
+                for (let x = 36; x < 476; x += radius * 3) {
+                    const offsetX = ((Math.round(y / hexH) % 2) * radius * 1.5);
+                    context.beginPath();
+                    for (let i = 0; i < 6; i += 1) {
+                        const angle = Math.PI / 6 + i * Math.PI / 3;
+                        const px = x + offsetX + Math.cos(angle) * radius;
+                        const py = y + Math.sin(angle) * radius;
+                        if (i === 0) {
+                            context.moveTo(px, py);
+                        } else {
+                            context.lineTo(px, py);
+                        }
+                    }
+                    context.closePath();
+                    context.stroke();
+                }
+            }
+            context.restore();
+
+            const rimGradient = context.createRadialGradient(256, 256, 150, 256, 256, 236);
+            rimGradient.addColorStop(0, "rgba(80, 210, 255, 0)");
+            rimGradient.addColorStop(0.72, "rgba(80, 210, 255, 0.1)");
+            rimGradient.addColorStop(0.9, "rgba(130, 240, 255, 0.58)");
+            rimGradient.addColorStop(1, "rgba(245, 255, 255, 0.82)");
+            context.beginPath();
+            context.ellipse(256, 256, 224, 186, 0, 0, Math.PI * 2);
+            context.strokeStyle = rimGradient;
+            context.lineWidth = 22;
+            context.stroke();
+
+            context.strokeStyle = "rgba(220, 250, 255, 0.9)";
+            context.lineWidth = 3;
+            context.beginPath();
+            context.ellipse(256, 256, 224, 186, 0, 0, Math.PI * 2);
+            context.stroke();
+
+            const rearFade = context.createLinearGradient(32, 0, 480, 0);
+            rearFade.addColorStop(0, "rgba(255, 255, 255, 0.58)");
+            rearFade.addColorStop(0.42, "rgba(255, 255, 255, 0.72)");
+            rearFade.addColorStop(1, "rgba(255, 255, 255, 0.96)");
+            context.globalCompositeOperation = "destination-in";
+            context.fillStyle = rearFade;
+            context.fillRect(0, 0, 512, 512);
+            context.globalCompositeOperation = "source-over";
+
+            texture.update();
+            const material = new BABYLON.StandardMaterial("playerShieldMat", scene);
+            material.diffuseTexture = texture;
+            material.emissiveTexture = texture;
+            material.opacityTexture = texture;
+            material.diffuseColor = BABYLON.Color3.White();
+            material.emissiveColor = BABYLON.Color3.White();
+            material.specularColor = BABYLON.Color3.Black();
+            material.useAlphaFromDiffuseTexture = true;
+            material.backFaceCulling = false;
+            material.disableLighting = true;
+            material.alpha = 0.82;
             return material;
         }
 
@@ -2708,13 +2964,12 @@ All Lemon Supporters
                 corvetteArmor: createGlowMaterial(scene, "corvetteArmorMat", new BABYLON.Color3(1, 0.58, 0.16), 0.82),
                 gunnerCannon: createGlowMaterial(scene, "gunnerCannonMat", new BABYLON.Color3(0.13, 0.15, 0.2), 0.24),
                 guardShield: createGlowMaterial(scene, "guardShieldMat", new BABYLON.Color3(0.34, 0.9, 1), 0.75),
-                playerShield: createGlowMaterial(scene, "playerShieldMat", new BABYLON.Color3(0.26, 0.8, 1), 0.9),
+                playerShield: createPlayerShieldMaterial(scene),
                 dartBooster: createGlowMaterial(scene, "dartBoosterMat", new BABYLON.Color3(1, 0.35, 0.1), 1.15),
                 bossBeamWarning: createGlowMaterial(scene, "bossBeamWarningMat", new BABYLON.Color3(1, 0.2, 0.06), 1.35),
                 bossBeam: createGlowMaterial(scene, "bossBeamMat", new BABYLON.Color3(1, 0.72, 0.08), 1.7)
             };
             materials.capsuleCarrierCore.alpha = 0.62;
-            materials.playerShield.alpha = 0.11;
             materials.bossBeamWarning.alpha = 0.48;
             materials.bossBeam.alpha = 0.74;
 
@@ -2922,6 +3177,7 @@ All Lemon Supporters
             state.shield = 0;
             state.invincibleTimer = 0;
             state.gameOver = false;
+            state.gameOverReturnTimer = 0;
             state.isIntermission = false;
             state.intermissionStep = null;
             state.lemonUnlocked = false;
@@ -2949,6 +3205,7 @@ All Lemon Supporters
             state.stage3ClearTimer = 0;
             state.stage3SupportCooldown = 0;
             state.stage3SupportDiskCount = 0;
+            state.stage3SupportCount = 0;
             state.stage3FinaleActive = false;
             state.stage3FinalePhase = "";
             state.stage3FinaleTimer = 0;
@@ -3009,7 +3266,7 @@ All Lemon Supporters
                 playStage1JourneyMusic();
                 showIntermission(
                     "UNKNOWN SPACE",
-                    "航路事故により、所属不明の空域へ突入してしまった。通信不能。前方から謎のからあげ型反応が接近している。",
+                    "標準航宙時 26.207.1842\n\n航行中、原因不明の空間異常が発生。\n現在位置および宙域の所属を特定できない。\n\n前方より、からあげ型の未確認反応が接近ーー\n\n警告ーーからあげ型反応、発砲。\n敵性と判定。回避行動に移る。",
                     "introStart",
                     "img/event-unknown-space.jpg"
                 );
@@ -3039,10 +3296,35 @@ All Lemon Supporters
             playStage1JourneyMusic();
             showIntermission(
                 "UNKNOWN SPACE",
-                "航路事故により、所属不明の空域へ突入してしまった。通信不能。前方から謎のからあげ型反応が接近している。",
+                "標準航宙時 26.207.1842\n\n航行中、原因不明の空間異常が発生。\n現在位置および宙域の所属を特定できない。\n\n前方より、からあげ型の未確認反応が接近――\n\n警告――からあげ型反応、発砲。\n敵性と判定。回避行動に移る。",
                 "introStart",
                 "img/event-unknown-space.jpg"
             );
+        }
+
+        function returnToTitleFromGameOver() {
+            if (!state.gameOver || state.gameOverReturnTimer < 2) {
+                return;
+            }
+            saveHighScore();
+            resetGame();
+            state.hasStarted = false;
+            titleScreenEl.classList.remove("isHidden");
+            playTitleMusic();
+        }
+
+        function showControlsGuide() {
+            showIntermission("", "PRESS ANY KEY / BUTTON", "controlsGuide");
+        }
+
+        function showTitleControlsGuide() {
+            if (shouldStartEndingFromUrl() || getUrlStageSelection() > 1) {
+                startGame();
+                return;
+            }
+            initAudio();
+            titleScreenEl.classList.add("isHidden");
+            showControlsGuide();
         }
 
         function showDialogue(speaker, text, duration = 4.2, portraitSrc = "") {
@@ -3171,6 +3453,20 @@ All Lemon Supporters
             );
         }
 
+        function getStage3LemonjiSupportLine() {
+            if (state.stage3SupportCount === 0) {
+                return "援護する。レモンカートリッジミサイル、発射！";
+            }
+            const lines = [
+                "ヒャッハー！　酸味の時間だ！",
+                "反体制派名物、雑な大火力だ！",
+                "安心しろ。だいたい狙ってる！",
+                "帝国憲法にミサイルで異議申し立てだ！",
+                "当たったらすまん。たぶん当たらん！"
+            ];
+            return lines[Math.floor(Math.random() * lines.length)];
+        }
+
         function spawnStage3LemonjiSupport() {
             if (state.stage !== 3 || state.stage3BossSpawned || hasActiveStage3LemonjiSupport()) {
                 return;
@@ -3205,7 +3501,10 @@ All Lemon Supporters
                 exitY: world.minY - 1.2
             };
             stageActors.push(root);
-            showDialogue("", "援護する。レモンミサイル、発射！", 2.8, "img/lemonji_insert.jpg");
+            showDialogue("", getStage3LemonjiSupportLine(), 2.8, "img/lemonji_insert.jpg");
+            state.stage3SupportCount += 1;
+            return;
+            showDialogue("", "援護する。レモンカートリッジミサイル、発射！", 2.8, "img/lemonji_insert.jpg");
         }
 
         function launchStage3SupportMissile(actor) {
@@ -3461,7 +3760,7 @@ All Lemon Supporters
             return state.stage3IntroActive
                 || state.stage3FinaleActive
                 || state.stage1LemonjiEventActive
-                || (state.isIntermission && state.intermissionStep !== "endingFinalResult" && state.intermissionStep !== "ending");
+                || (state.isIntermission && state.intermissionStep !== "controlsGuide" && state.intermissionStep !== "endingFinalResult" && state.intermissionStep !== "ending");
         }
 
         function syncEventSkipButton() {
@@ -3470,6 +3769,9 @@ All Lemon Supporters
 
         function skipIntermissionSequence() {
             switch (state.intermissionStep) {
+                case "controlsGuide":
+                    startGame();
+                    break;
                 case "introStart":
                     beginStage(1);
                     break;
@@ -3500,6 +3802,8 @@ All Lemon Supporters
                 case "endingBlackoutBeforeGogai":
                 case "endingBlackoutBeforeCredits":
                 case "endingCredits":
+                case "endingBlackoutBeforeNextWorld":
+                case "endingNextWorld":
                 case "endingBlackoutBeforeResult":
                     showEndingFinalResult();
                     break;
@@ -3891,7 +4195,7 @@ All Lemon Supporters
         function spawnStageTwoBoss() {
             state.stage2BossSpawned = true;
             state.stageBossCount = 1;
-            showDialogue("レモンジ", "重力反応がでかい。小惑星を引き寄せて盾にしてるぞ。", 3.2);
+            showDialogue("レモンジ", "でかい重力反応だ。\n小惑星を引き寄せて、盾にしてるぞ。", 3.2);
             const config = enemyConfigs.diskB;
             const boss = cloneModelTemplate("enemyDiskB", "stage2GravityKaraage") || cloneModelTemplate("enemyDiskA", "stage2GravityKaraage") || createEnemyShip(game.scene, game.materials, false);
             boss.position.set(world.maxX + 2.2, 0, -0.08);
@@ -4009,35 +4313,48 @@ All Lemon Supporters
             }, delayMs);
         }
 
-        function showEndingBlackout(step, delayMs = 700) {
+        function showEndingBlackout(step, delayMs = 180) {
             showIntermission("", "", step);
             queueEndingAutoAdvance(step, delayMs);
         }
 
-        function showEndingGogai1() {
+        function showEndingGogai1(options = {}) {
             showIntermission(
                 "号外",
-                "帝国軍、領空侵犯機と反政府軍に対し完全勝利を発表。\n戦艦を計画的に爆散させ排除し、損害は一切存在しないとのこと。",
+                "帝国軍、完全勝利を発表。\n戦艦の計画的爆散作戦により、侵入者および反体制派を宙域外へ退去させた。\n帝国側の損害は一切存在しない。\nなお、反体制派も完全勝利を宣言している。",
                 "endingGogai1",
-                "img/ending-gogai1.jpg"
+                "img/ending-gogai1.jpg",
+                options
             );
         }
 
-        function showEndingCredits() {
+        function showEndingCredits(options = {}) {
             const spacedCreditsText = endingCreditsText.replace(/\n\n/g, "\n\n\n\n\n");
-            showIntermission("", spacedCreditsText, "endingCredits");
+            showIntermission("", spacedCreditsText, "endingCredits", "", options);
             queueEndingAutoAdvance("endingCredits", 48000);
         }
 
-        function showEndingFinalResult() {
+        function showEndingNextWorld(options = {}) {
+            showIntermission(
+                "PLAYER",
+                "……どこだここは……",
+                "endingNextWorld",
+                "img/nextworld.jpg",
+                options
+            );
+        }
+
+        function showEndingFinalResult(options = {}) {
             saveHighScore();
             stopStage3Music();
             stopStage3BossMusic();
             bossHudEl.classList.remove("isVisible");
             showIntermission(
-                "MISSION COMPLETE",
+                "MISSION COMPLETE\n脱出成功？",
                 `SCORE ${state.score}\n撃破数 ${state.stageKills}\nHI SCORE ${state.highScore}\nTHANK YOU FOR PLAYING`,
-                "endingFinalResult"
+                "endingFinalResult",
+                "",
+                options
             );
         }
 
@@ -4061,14 +4378,21 @@ All Lemon Supporters
             state.isIntermission = true;
             state.intermissionStep = step;
             const isGogaiStep = step === "endingGogai1" || step === "endingGogai2" || step === "endingGogai3";
-            const isBlackoutStep = step === "endingBlackoutBeforeGogai" || step === "endingBlackoutBeforeCredits" || step === "endingBlackoutBeforeResult";
+            const isBlackoutStep = step === "endingBlackoutBeforeGogai" || step === "endingBlackoutBeforeCredits" || step === "endingBlackoutBeforeNextWorld" || step === "endingBlackoutBeforeResult";
             const isCreditsStep = step === "endingCredits";
             const isFinalResultStep = step === "endingFinalResult";
+            const isNextWorldStep = step === "endingNextWorld";
+            const isControlsStep = step === "controlsGuide";
+            const shouldRevealIn = options.reveal === true;
             const intermissionPanelEl = intermissionEl.querySelector(".intermissionPanel");
+            intermissionEl.classList.toggle("isRevealIn", shouldRevealIn);
             intermissionPanelEl.classList.toggle("isGogai", isGogaiStep);
             intermissionPanelEl.classList.toggle("isBlackout", isBlackoutStep);
             intermissionPanelEl.classList.toggle("isCredits", isCreditsStep);
             intermissionPanelEl.classList.toggle("isFinalResult", isFinalResultStep);
+            intermissionPanelEl.classList.toggle("isNextWorld", isNextWorldStep);
+            intermissionPanelEl.classList.toggle("isControls", isControlsStep);
+            intermissionPanelEl.classList.toggle("isRevealIn", shouldRevealIn);
             intermissionPanelEl.classList.toggle("hasImage", !!imageSrc);
             intermissionTitleEl.textContent = title;
             intermissionTextEl.textContent = text;
@@ -4105,8 +4429,9 @@ All Lemon Supporters
                 stopStage1JourneyMusic();
                 showIntermission(
                     "STAGE 1 CLEAR",
-                    `SCORE ${state.score} / 撃破 ${state.stageKills}。小惑星地帯への進路を確保した。`,
-                    "stage1Result"
+                    `SCORE ${state.score} / 撃破数 ${state.stageKills}\nアステロイドベルトへの進路を確保した。`,
+                    "stage1Result",
+                    "img/stageClear1.jpg"
                 );
                 return;
             }
@@ -4114,8 +4439,9 @@ All Lemon Supporters
                 stopStage2Music();
                 showIntermission(
                     "STAGE 2 CLEAR",
-                    `SCORE ${state.score} / 撃破 ${state.stageKills}。アステロイドベルトから脱出に成功した。`,
-                    "stage2Result"
+                    `SCORE ${state.score} / 撃破数 ${state.stageKills}\nアステロイドベルトからの脱出に成功した。`,
+                    "stage2Result",
+                    "img/StageClear2.jpg"
                 );
             }
         }
@@ -4156,6 +4482,7 @@ All Lemon Supporters
             state.stage3ClearTimer = 0;
             state.stage3SupportCooldown = 0;
             state.stage3SupportDiskCount = 0;
+            state.stage3SupportCount = 0;
             state.stage3FinaleActive = false;
             state.stage3FinalePhase = "";
             state.stage3FinaleTimer = 0;
@@ -4205,6 +4532,9 @@ All Lemon Supporters
                 return;
             }
             switch (state.intermissionStep) {
+                case "controlsGuide":
+                    startGame();
+                    break;
                 case "introStart":
                     beginStage(1);
                     break;
@@ -4213,69 +4543,75 @@ All Lemon Supporters
                     showIntermission("レモンジ", "よく来たな。ここは俺の秘密基地だ。", "baseTalkPlayerQuestion", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkPlayerQuestion":
-                    showIntermission("PLAYER", "あれはいったいなんだ？突然攻撃されたが。", "baseTalkLemonQuestion", "img/event-lemonji-base.jpg");
+                    showIntermission("PLAYER", "あれはいったいなんだ？　なぜ突然攻撃してきた？", "baseTalkLemonQuestion", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkLemonQuestion":
-                    showIntermission("レモンジ", "あんた、からあげにレモンをかけたことは？", "baseTalkPlayerLemon", "img/event-lemonji-base.jpg");
+                    showIntermission("レモンジ", "あんた、からあげにレモンをかけたことはあるか？", "baseTalkPlayerLemon", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkPlayerLemon":
-                    showIntermission("PLAYER", "は？いや、あるが……", "baseTalkLaw", "img/event-lemonji-base.jpg");
+                    showIntermission("PLAYER", "は？　まぁ、あるが……。", "baseTalkLaw", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkLaw":
-                    showIntermission("レモンジ", "からあげ帝国憲法第1条。からあげにレモンをかけた者は死刑。あんたは帝国では犯罪者だ。", "baseTalkPlayerShock", "img/event-lemonji-base.jpg");
+                    showIntermission("レモンジ", "からあげ帝国憲法第1条。\nからあげにレモンをかけた者は死刑。\n\nあんたは帝国では犯罪者だ。", "baseTalkPlayerShock", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkPlayerShock":
-                    showIntermission("PLAYER", "なん……だと……", "baseTalkCoup", "img/event-lemonji-base.jpg");
+                    showIntermission("PLAYER", "……冗談だろ？", "baseTalkCoup", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkCoup":
-                    showIntermission("レモンジ", "そんな法律を終わらせるために、俺たち反体制派は半期に一度、クーデターを起こしている。どうだ。俺たちと一緒に戦わないか？", "baseTalkRefuse", "img/event-lemonji-base.jpg");
+                    showIntermission("レモンジ", "そんな法律を終わらせるため、俺たちは半期に一度、クーデターを起こしている。\nどうだ。俺たちと一緒に戦わないか？", "baseTalkRefuse", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkRefuse":
-                    showIntermission("PLAYER", "悪いが、他国のクーデターに参加するつもりはない。こっちは祖国へ帰りたいだけだ。", "baseTalkDeal", "img/event-lemonji-base.jpg");
+                    showIntermission("PLAYER", "悪いが、他国のクーデターに参加するつもりはない。\nこっちは祖国へ帰りたいだけだ。", "baseTalkDeal", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkDeal":
-                    showIntermission("レモンジ", "残念だ。なら取引といこう。通常弾頭ではからあげに効果が薄い。このレモンリキッドを提供しよう。", "baseTalkMission", "img/event-lemonji-base.jpg");
+                    showIntermission("レモンジ", "残念だ。なら取引といこう。\n通常弾頭では帝国のからあげに効果が薄い。このレモンリキッドを提供しよう。", "baseTalkMission", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkMission":
-                    showIntermission("レモンジ", "その代わり、アステロイドベルトの外側で待機している帝国艦隊の戦力を減らしてくれ。", "baseTalkAccept", "img/event-lemonji-base.jpg");
+                    showIntermission("レモンジ", "その代わり、アステロイドベルトの出口を封鎖している帝国の艦隊を排除してくれ。", "baseTalkAccept", "img/event-lemonji-base.jpg");
                     break;
                 case "baseTalkAccept":
                     showIntermission("PLAYER", "……わかった。", "lemonLiquid", "img/event-lemonji-base.jpg");
                     break;
                 case "lemonLiquid":
                     state.lemonUnlocked = true;
-                    showIntermission("LEMON LIQUID", "レモンリキッドを受け取った。LEMONバレットとレモンミサイルの段階強化が解禁された。", "startStage2", "img/event-lemonliquidget.jpg");
+                    showIntermission("LEMON LIQUID", "レモンリキッドを受け取った。\nLEMON BULLET / LEMON MISSILE の強化が解禁された。", "startStage2", "img/event-lemonliquidget.jpg");
                     break;
                 case "startStage2":
                     stopHideoutMusic();
                     beginStage(2);
                     break;
                 case "stage2Result":
-                    showIntermission("からあげ皇帝", "憲法第1条、からあげにレモンをかけた者は許さぬ。戦艦、出撃。", "startStage3", "img/event-karaage-emperor.jpg");
+                    showIntermission("からあげ皇帝", "帝国憲法第1条。\n黄金の衣を酸味で穢す者、断じて許さぬ。\n\nカリジューシー級を出撃させよ。", "startStage3", "img/event-karaage-emperor.jpg");
                     break;
                 case "startStage3":
                     beginStage(3);
                     break;
                 case "endingBlackoutBeforeGogai":
-                    showEndingGogai1();
+                    showEndingGogai1({ reveal: true });
                     break;
                 case "endingGogai1":
-                    showIntermission("号外", "帝国史上最大、新型超ど級戦艦が竣工。\nなお帝国広報は、先の戦艦爆散との関係を否定した。", "endingGogai2", "img/ending-gogai2.jpg");
+                    showIntermission("号外", "帝国史上最大、新型超弩級戦艦が竣工。\n帝国広報は、先の戦艦爆散との関連を否定している。", "endingGogai2", "img/ending-gogai2.jpg");
                     break;
                 case "endingGogai2":
-                    showIntermission("号外", "からあげ帝国グランプリ、堂々開催。\n翌日、帝国放送は平常運転へ復帰した。", "endingGogai3", "img/ending-gogai3.jpg");
+                    showIntermission("号外", "からあげ帝国グランプリ、堂々開催。\n皇帝陛下御用達店が三年連続で金賞を受賞した。\n食用油価格は安定。レモン類似物の持ち込み検査も強化された。", "endingGogai3", "img/ending-gogai3.jpg");
                     break;
                 case "endingGogai3":
                     showEndingBlackout("endingBlackoutBeforeCredits");
                     break;
                 case "endingBlackoutBeforeCredits":
-                    showEndingCredits();
+                    showEndingCredits({ reveal: true });
                     break;
                 case "endingCredits":
+                    showEndingBlackout("endingBlackoutBeforeNextWorld");
+                    break;
+                case "endingBlackoutBeforeNextWorld":
+                    showEndingNextWorld({ reveal: true });
+                    break;
+                case "endingNextWorld":
                     showEndingBlackout("endingBlackoutBeforeResult");
                     break;
                 case "endingBlackoutBeforeResult":
-                    showEndingFinalResult();
+                    showEndingFinalResult({ reveal: true });
                     break;
                 case "ending":
                 case "endingFinalResult":
@@ -4738,16 +5074,15 @@ All Lemon Supporters
                 playerShieldVisual.setEnabled(true);
                 return playerShieldVisual;
             }
-            playerShieldVisual = BABYLON.MeshBuilder.CreateSphere("playerShieldVisual", {
-                diameter: 1,
-                segments: 32
+            playerShieldVisual = BABYLON.MeshBuilder.CreatePlane("playerShieldVisual", {
+                size: 1
             }, game.scene);
             playerShieldVisual.parent = game.player;
-            playerShieldVisual.position.set(0.02, 0, -0.32);
+            playerShieldVisual.position.set(0.34, 0, -0.36);
             playerShieldVisual.rotation.set(0, 0, 0);
-            playerShieldVisual.scaling.set(1.72, 0.72, 0.06);
+            playerShieldVisual.scaling.set(2.74, 0.93, 1);
             playerShieldVisual.material = game.materials.playerShield;
-            playerShieldVisual.visibility = 0.72;
+            playerShieldVisual.visibility = 0.86;
             playerShieldVisual.isPickable = false;
             return playerShieldVisual;
         }
@@ -4767,8 +5102,8 @@ All Lemon Supporters
             const shield = createPlayerShieldVisual();
             const pulse = 1 + Math.sin(state.elapsed * 5.2) * 0.025;
             shield.rotation.set(0, 0, 0);
-            shield.scaling.set(1.72 * pulse, 0.72 * pulse, 0.06);
-            shield.visibility = 0.68 + Math.sin(state.elapsed * 6.4) * 0.04;
+            shield.scaling.set(2.74 * pulse, 0.93 * pulse, 1);
+            shield.visibility = 0.82 + Math.sin(state.elapsed * 6.4) * 0.035;
         }
 
         function collectCapsule(capsule) {
@@ -4920,6 +5255,7 @@ All Lemon Supporters
             playSound("hit");
             if (state.lives <= 0) {
                 state.gameOver = true;
+                state.gameOverReturnTimer = 0;
                 saveHighScore();
                 finalScoreEl.textContent = `SCORE ${state.score}`;
                 messageEl.classList.add("isVisible");
@@ -6440,6 +6776,7 @@ All Lemon Supporters
             }
 
             if (state.gameOver) {
+                state.gameOverReturnTimer += delta;
                 updatePlayerDeathExplosion(delta);
                 updateExplosions(delta);
                 updateSparks(delta);

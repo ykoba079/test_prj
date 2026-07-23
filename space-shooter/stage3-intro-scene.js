@@ -55,8 +55,8 @@
         const fleetNodes = [];
         const fighterNodes = [];
         const introCaptions = [
-            "見えたか？\nあれが、からあげ帝国主力艦隊だ。",
-            "数で押しつぶす気だ。\n気を付けろ。"
+            "見えたか？\nあれが、からあげ帝国の艦隊だ。",
+            "数で押しつぶす気らしい。\n気を付けろ。"
         ];
         let introTime = 0;
         let cameraMode = "auto";
@@ -246,7 +246,12 @@
                     center[3] * randomRange(0.78, 0.96)
                 ];
             }));
-            extendedFormationCenters.unshift([12.5, 1.25, 5.2, 0.5]);
+            const foregroundPassCount = 3;
+            extendedFormationCenters.unshift(
+                [12.5, 1.25, 5.2, 0.5],
+                [14.2, 3.45, 8.8, 0.44],
+                [15.0, -3.25, 14.8, 0.38]
+            );
             const speedMultipliers = [1, 0.8, 0.6];
             const formationShapes = {
                 v: [
@@ -279,11 +284,13 @@
                 ]
             };
             extendedFormationCenters.forEach((center, formationIndex) => {
-                const pathSpeed = formationIndex === 0
-                    ? 3.05
+                const isForegroundPass = formationIndex < foregroundPassCount;
+                const pathSpeed = isForegroundPass
+                    ? 3.05 * speedMultipliers[formationIndex % speedMultipliers.length]
                     : randomRange(0.68, 1.35) * speedMultipliers[formationIndex % speedMultipliers.length];
                 const phase = randomRange(0, Math.PI * 2);
-                const pathOffset = formationIndex === 0 ? -2.75 : randomRange(-8, 22);
+                const foregroundOffsets = [-2.75, -3.35, -2.15];
+                const pathOffset = isForegroundPass ? foregroundOffsets[formationIndex] : randomRange(-8, 22);
                 const isWide = Math.random() < 0.8;
                 const isV = Math.random() < 0.7;
                 const formationOffsets = isV
@@ -310,7 +317,7 @@
                         fighter.metadata.pathOffset = pathOffset + memberIndex * 0.18;
                         fighter.metadata.laneDrift = 0.08;
                         fighter.metadata.phase = phase;
-                        fighter.metadata.isForegroundPass = formationIndex === 0;
+                        fighter.metadata.isForegroundPass = isForegroundPass;
                         fighterNodes.push(fighter);
                         addEngineGlow(fighter, -0.36, -0.03, 0.02, 0.28);
                     }
@@ -489,7 +496,7 @@
         if (fleetButton) fleetButton.addEventListener("click", () => {
             cameraMode = "fleet";
             setFleetCamera();
-            showCaption("見えたか？\nあれが、からあげ帝国主力艦隊だ。");
+            showCaption("見えたか？\nあれが、からあげ帝国の艦隊だ。");
         });
         if (sideButton) sideButton.addEventListener("click", () => {
             cameraMode = "side";
