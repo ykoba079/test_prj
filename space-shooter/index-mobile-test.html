@@ -449,15 +449,15 @@
             }
 
             .bossHud {
-                top: max(8px, env(safe-area-inset-top, 0px));
-                left: calc(max(8px, env(safe-area-inset-left, 0px)) + 176px);
-                width: min(250px, calc(100vw - 488px));
+                top: calc(max(8px, env(safe-area-inset-top, 0px)) + 2px);
+                left: calc(max(8px, env(safe-area-inset-left, 0px)) + 168px);
+                width: min(210px, calc(100vw - 500px));
                 transform: none;
-                padding: 6px 8px;
-                border: 1px solid rgba(255, 172, 208, 0.36);
-                border-radius: 6px;
-                background: rgba(5, 12, 30, 0.62);
-                box-shadow: 0 0 20px rgba(255, 80, 150, 0.14);
+                padding: 0;
+                border: 0;
+                border-radius: 0;
+                background: transparent;
+                box-shadow: none;
             }
 
             .bossName {
@@ -470,7 +470,7 @@
             }
 
             .bossBar {
-                height: 7px;
+                height: 5px;
                 border-radius: 4px;
             }
 
@@ -495,8 +495,8 @@
             }
 
             .dialogueText {
-                font-size: clamp(9px, 2.05vw, 12px);
-                line-height: 1.22;
+                font-size: clamp(5px, 1.02vw, 6px);
+                line-height: 1.2;
             }
 
             .dialogueSpeaker {
@@ -548,9 +548,16 @@
             .intermissionPanel.hasImage:not(.isGogai):not(.isControls):not(.isNextWorld):not(.isFinalResult) p {
                 grid-column: 2;
                 grid-row: 2;
-                align-items: start;
+                display: block;
+                align-items: initial;
+                min-height: 0;
+                max-height: none;
+                height: auto;
+                overflow: visible;
+                overflow-wrap: anywhere;
+                word-break: normal;
                 font-size: clamp(11px, 2.5vw, 14px);
-                line-height: 1.25;
+                line-height: 1.38;
             }
 
             .intermissionPanel.hasImage:not(.isGogai):not(.isControls):not(.isNextWorld):not(.isFinalResult) .intermissionHint {
@@ -1483,7 +1490,7 @@
                 <span class="titleHint">Z / ENTER / SPACE</span>
             </div>
             <div id="titleHighScore" class="titleHighScore">HI SCORE 0</div>
-            <div class="mobileTestStamp">MOBILE TEST 2026-07-25 05:51</div>
+            <div class="mobileTestStamp">MOBILE TEST 2026-07-25 06:02</div>
         </div>
     </div>
     <div class="hud" aria-label="game status">
