@@ -373,12 +373,12 @@
             }
 
             .mobileActions {
-                grid-template-columns: clamp(66px, 14vmin, 82px) clamp(86px, 17vmin, 108px);
+                grid-template-columns: repeat(2, clamp(86px, 17vmin, 108px));
                 gap: clamp(8px, 2vmin, 14px);
             }
 
             .controlButton {
-                height: clamp(58px, 12vmin, 76px);
+                height: clamp(82px, 17vmin, 108px);
             }
 
             .controlButton.isPrimary {
@@ -437,40 +437,71 @@
             }
 
             .mobileActions {
-                grid-template-columns: clamp(58px, 14vh, 72px) clamp(76px, 19vh, 94px);
+                grid-template-columns: repeat(2, clamp(76px, 19vh, 94px));
             }
 
             .controlButton {
-                height: clamp(52px, 14vh, 64px);
+                height: clamp(72px, 19vh, 92px);
             }
 
             .controlButton.isPrimary {
                 height: clamp(72px, 19vh, 92px);
             }
 
+            .bossHud {
+                top: max(8px, env(safe-area-inset-top, 0px));
+                left: calc(max(8px, env(safe-area-inset-left, 0px)) + 176px);
+                width: min(250px, calc(100vw - 488px));
+                transform: none;
+                padding: 6px 8px;
+                border: 1px solid rgba(255, 172, 208, 0.36);
+                border-radius: 6px;
+                background: rgba(5, 12, 30, 0.62);
+                box-shadow: 0 0 20px rgba(255, 80, 150, 0.14);
+            }
+
+            .bossName {
+                margin-bottom: 3px;
+                font-size: 9px;
+                text-align: left;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .bossBar {
+                height: 7px;
+                border-radius: 4px;
+            }
+
             .dialogue {
-                bottom: calc(116px + env(safe-area-inset-bottom, 0px));
-                max-width: 64vw;
+                bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+                width: min(480px, 46vw);
+                max-width: 46vw;
+                padding: 7px 9px;
+                border-color: rgba(131, 230, 255, 0.24);
+                background: rgba(4, 10, 26, 0.42);
+                box-shadow: 0 0 18px rgba(35, 180, 255, 0.12);
+                text-shadow: 0 0 10px rgba(0, 0, 0, 0.86), 0 0 10px rgba(80, 220, 255, 0.28);
+            }
+
+            .dialogue.isVisible {
+                gap: 8px;
+            }
+
+            .dialoguePortrait {
+                width: clamp(34px, 8vh, 46px);
+                height: clamp(34px, 8vh, 46px);
             }
 
             .dialogueText {
-                font-size: clamp(7px, 1.48vw, 9px);
-                line-height: 1.24;
+                font-size: clamp(9px, 2.05vw, 12px);
+                line-height: 1.22;
             }
 
             .dialogueSpeaker {
-                font-size: 8px;
-            }
-
-            .intermissionPanel p {
-                font-size: clamp(6px, 1.25vw, 8px);
-                line-height: 1.18;
-            }
-
-            .intermissionTextCompact,
-            .intermissionTextDense {
-                font-size: clamp(6px, 1.18vw, 8px) !important;
-                line-height: 1.16 !important;
+                margin-bottom: 3px;
+                font-size: 9px;
             }
 
             .stage3IntroCaption {
@@ -518,8 +549,8 @@
                 grid-column: 2;
                 grid-row: 2;
                 align-items: start;
-                font-size: clamp(6px, 1.25vw, 8px);
-                line-height: 1.18;
+                font-size: clamp(11px, 2.5vw, 14px);
+                line-height: 1.25;
             }
 
             .intermissionPanel.hasImage:not(.isGogai):not(.isControls):not(.isNextWorld):not(.isFinalResult) .intermissionHint {
@@ -1452,7 +1483,7 @@
                 <span class="titleHint">Z / ENTER / SPACE</span>
             </div>
             <div id="titleHighScore" class="titleHighScore">HI SCORE 0</div>
-            <div class="mobileTestStamp">MOBILE TEST 2026-07-25 05:28</div>
+            <div class="mobileTestStamp">MOBILE TEST 2026-07-25 05:51</div>
         </div>
     </div>
     <div class="hud" aria-label="game status">
