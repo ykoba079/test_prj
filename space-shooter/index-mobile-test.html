@@ -207,28 +207,6 @@
             filter: brightness(1.25);
         }
 
-        .rotateNotice {
-            position: fixed;
-            left: 50%;
-            top: calc(env(safe-area-inset-top, 0px) + 12px);
-            z-index: 31;
-            display: none;
-            width: min(360px, calc(100vw - 32px));
-            box-sizing: border-box;
-            padding: 10px 12px;
-            border: 1px solid rgba(255, 240, 122, 0.38);
-            border-radius: 8px;
-            background: rgba(1, 5, 16, 0.72);
-            color: #fff8b8;
-            font-size: 13px;
-            font-weight: 900;
-            line-height: 1.35;
-            text-align: center;
-            text-shadow: 0 0 10px rgba(0, 0, 0, 0.86);
-            transform: translateX(-50%);
-            pointer-events: none;
-        }
-
         @media (hover: none), (pointer: coarse), (max-width: 760px) {
             .mobileControls {
                 display: flex;
@@ -409,10 +387,6 @@
         }
 
         @media (hover: none) and (pointer: coarse) and (orientation: portrait) {
-            .rotateNotice {
-                display: block;
-            }
-
             .mobileControls {
                 padding-bottom: max(18px, env(safe-area-inset-bottom, 0px));
             }
@@ -512,6 +486,47 @@
 
             .controlsGuide {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .intermissionPanel.hasImage:not(.isGogai):not(.isControls):not(.isNextWorld):not(.isFinalResult) {
+                grid-template-columns: minmax(0, 48%) minmax(0, 1fr);
+                grid-template-rows: auto minmax(0, 1fr) auto;
+                column-gap: 14px;
+                row-gap: 4px;
+                align-content: stretch;
+                text-align: left;
+            }
+
+            .intermissionPanel.hasImage:not(.isGogai):not(.isControls):not(.isNextWorld):not(.isFinalResult) .intermissionImage {
+                grid-column: 1;
+                grid-row: 1 / 4;
+                height: 100%;
+                max-height: none;
+                margin: 0;
+                object-position: center;
+            }
+
+            .intermissionPanel.hasImage:not(.isGogai):not(.isControls):not(.isNextWorld):not(.isFinalResult) h2 {
+                grid-column: 2;
+                grid-row: 1;
+                align-self: start;
+                font-size: clamp(13px, 2.8vw, 18px);
+                line-height: 1.05;
+            }
+
+            .intermissionPanel.hasImage:not(.isGogai):not(.isControls):not(.isNextWorld):not(.isFinalResult) p {
+                grid-column: 2;
+                grid-row: 2;
+                align-items: start;
+                font-size: clamp(6px, 1.25vw, 8px);
+                line-height: 1.18;
+            }
+
+            .intermissionPanel.hasImage:not(.isGogai):not(.isControls):not(.isNextWorld):not(.isFinalResult) .intermissionHint {
+                grid-column: 2;
+                grid-row: 3;
+                align-self: end;
+                text-align: center;
             }
         }
 
@@ -653,6 +668,14 @@
             font-weight: 1000;
             letter-spacing: 0;
             text-shadow: 0 0 18px rgba(255, 232, 96, 0.66), 0 2px 8px rgba(0, 0, 0, 0.8);
+        }
+
+        .mobileTestStamp {
+            margin-top: 8px;
+            color: rgba(217, 247, 255, 0.78);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0;
         }
 
         .dialogue {
@@ -1421,7 +1444,6 @@
 </head>
 <body>
     <canvas id="renderCanvas"></canvas>
-    <div class="rotateNotice">横向きにすると遊びやすくなります</div>
     <div id="titleScreen" class="titleScreen" aria-label="title screen">
         <div class="titleContent">
             <h1>からあげ帝国からの脱出</h1>
@@ -1430,6 +1452,7 @@
                 <span class="titleHint">Z / ENTER / SPACE</span>
             </div>
             <div id="titleHighScore" class="titleHighScore">HI SCORE 0</div>
+            <div class="mobileTestStamp">MOBILE TEST 2026-07-25 05:28</div>
         </div>
     </div>
     <div class="hud" aria-label="game status">
@@ -2594,12 +2617,22 @@ All Lemon Supporters
             const maxDistance = rect.width * 0.36;
             const dx = event.clientX - centerX;
             const dy = event.clientY - centerY;
-            const distance = Math.min(maxDistance, Math.sqrt(dx * dx + dy * dy));
+            const rawDistance = Math.sqrt(dx * dx + dy * dy);
+            const distance = Math.min(maxDistance, rawDistance);
             const angle = Math.atan2(dy, dx);
             const knobX = Math.cos(angle) * distance;
             const knobY = Math.sin(angle) * distance;
-            touchInput.x = maxDistance > 0 ? knobX / maxDistance : 0;
-            touchInput.y = maxDistance > 0 ? -knobY / maxDistance : 0;
+            const normalized = maxDistance > 0 ? distance / maxDistance : 0;
+            const deadZone = 0.34;
+            if (normalized <= deadZone) {
+                touchInput.x = 0;
+                touchInput.y = 0;
+            } else {
+                const adjusted = (normalized - deadZone) / (1 - deadZone);
+                const response = Math.pow(adjusted, 1.65);
+                touchInput.x = Math.cos(angle) * response;
+                touchInput.y = -Math.sin(angle) * response;
+            }
             movePadKnobEl.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
         }
 
