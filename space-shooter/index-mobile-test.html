@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,6 +21,11 @@
             -webkit-user-select: none;
             user-select: none;
             -webkit-touch-callout: none;
+            touch-action: none;
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
         }
 
         #renderCanvas {
@@ -277,8 +282,9 @@
             }
 
             .dialogueText {
-                font-size: clamp(18px, 4.2vw, 24px);
-                line-height: 1.4;
+                font-size: clamp(13px, 2.95vw, 17px);
+                line-height: 1.32;
+                overflow-wrap: anywhere;
             }
 
             .dialogueSpeaker {
@@ -302,8 +308,8 @@
                 right: max(14px, env(safe-area-inset-right, 0px));
                 bottom: calc(136px + env(safe-area-inset-bottom, 0px));
                 gap: 12px;
-                font-size: clamp(18px, 4.4vw, 28px);
-                line-height: 1.35;
+                font-size: clamp(13px, 3.1vw, 20px);
+                line-height: 1.28;
             }
 
             .stage3IntroPortrait {
@@ -329,8 +335,9 @@
             }
 
             .intermissionPanel p {
-                font-size: clamp(15px, 3.55vw, 20px);
-                line-height: 1.34;
+                font-size: clamp(11px, 2.5vw, 14px);
+                line-height: 1.25;
+                overflow-wrap: anywhere;
             }
 
             .intermissionPanel.hasImage:not(.isGogai) .intermissionImage {
@@ -350,8 +357,8 @@
                 bottom: calc(12px + env(safe-area-inset-bottom, 0px));
                 width: min(92vw, 720px);
                 padding: 9px 12px;
-                font-size: clamp(14px, 3.8vw, 20px);
-                line-height: 1.35;
+                font-size: clamp(10px, 2.66vw, 14px);
+                line-height: 1.28;
             }
 
             .titleScreen {
@@ -1280,8 +1287,8 @@
         @media (hover: none), (pointer: coarse), (max-width: 760px) {
             .intermissionTextCompact,
             .intermissionTextDense {
-                font-size: clamp(14px, 3.35vw, 19px) !important;
-                line-height: 1.28 !important;
+                font-size: clamp(10px, 2.35vw, 13px) !important;
+                line-height: 1.22 !important;
             }
 
             .intermissionPanel.hasImage:not(.isGogai) {
@@ -2582,6 +2589,19 @@ All Lemon Supporters
             movePadEl.classList.remove("isActive");
         }
 
+        function resetTouchActions() {
+            resetTouchMove();
+            touchInput.firing = false;
+            fireButtonEl.classList.remove("isPressed");
+            powerButtonEl.classList.remove("isPressed");
+        }
+
+        function preventMobileGesture(event) {
+            if (event.cancelable) {
+                event.preventDefault();
+            }
+        }
+
         function getFirstActiveGamepad() {
             if (!navigator.getGamepads) {
                 return null;
@@ -2706,6 +2726,33 @@ All Lemon Supporters
             gamepadInput.y = 0;
             gamepadInput.firing = false;
             gamepadInput.previousButtons = [];
+        });
+
+        ["gesturestart", "gesturechange", "gestureend"].forEach((type) => {
+            document.addEventListener(type, preventMobileGesture, { passive: false });
+        });
+
+        document.addEventListener("touchmove", (event) => {
+            if (event.touches && event.touches.length > 1) {
+                preventMobileGesture(event);
+            }
+        }, { passive: false });
+
+        let lastTouchEndTime = 0;
+        document.addEventListener("touchend", (event) => {
+            const now = Date.now();
+            if (now - lastTouchEndTime < 360) {
+                preventMobileGesture(event);
+            }
+            lastTouchEndTime = now;
+        }, { passive: false });
+
+        window.addEventListener("blur", resetTouchActions);
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                resetTouchActions();
+            }
         });
 
         window.addEventListener("keydown", (event) => {
