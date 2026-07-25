@@ -1,0 +1,2879 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3DGS Fighter V1</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f7f1e7;
+      --muted: #aeb7c2;
+      --line: rgba(255, 255, 255, 0.18);
+      --panel: rgba(12, 15, 20, 0.84);
+      --blue: #45b8ff;
+      --red: #ff5252;
+      --gold: #ffd166;
+      --green: #4bd37b;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #090b10;
+      color: var(--ink);
+      font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif;
+    }
+
+    #renderCanvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 12px 12px auto;
+      z-index: 5;
+      display: grid;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .fighter {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .fighter.right {
+      text-align: right;
+    }
+
+    .nameLine {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 900;
+      text-transform: uppercase;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+    }
+
+    .fighter.right .nameLine {
+      justify-content: flex-end;
+    }
+
+    .tag {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 3px 8px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .meter {
+      overflow: hidden;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.7);
+      border-radius: 5px;
+      background: #23151a;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), var(--gold));
+      transition: width 140ms ease-out;
+    }
+
+    .fighter.right .fill {
+      margin-left: auto;
+      background: linear-gradient(90deg, var(--gold), var(--green));
+    }
+
+    .timer {
+      min-width: 72px;
+      border: 2px solid rgba(255, 255, 255, 0.72);
+      border-radius: 7px;
+      background: linear-gradient(180deg, rgba(36, 40, 50, 0.92), rgba(10, 12, 17, 0.92));
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.38);
+      color: var(--gold);
+      font-size: 34px;
+      font-weight: 950;
+      line-height: 54px;
+      text-align: center;
+      text-shadow: 0 2px 0 #000;
+    }
+
+    .controls {
+      justify-self: center;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      max-width: min(980px, calc(100vw - 24px));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: var(--panel);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
+    }
+
+    .controls label,
+    .controls button {
+      min-height: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      background: #192231;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .controls label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px;
+    }
+
+    .controls input[type="file"] {
+      width: 170px;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .controls input[type="range"] {
+      width: 110px;
+      accent-color: var(--blue);
+    }
+
+    .controls input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--blue);
+    }
+
+    .partsToggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      max-width: min(900px, calc(100vw - 48px));
+    }
+
+    .controls .partsToggles label {
+      min-height: 28px;
+      padding: 0 7px;
+      font-size: 11px;
+      letter-spacing: 0;
+      background: #101824;
+    }
+
+    .controls .partsToggles input[type="checkbox"] {
+      width: 13px;
+      height: 13px;
+    }
+
+    .controls button {
+      padding: 0 12px;
+      background: #2d3848;
+      cursor: pointer;
+    }
+
+    .controls button.primary {
+      background: #cf3a35;
+      color: #fff7ef;
+    }
+
+    .message {
+      position: fixed;
+      left: 50%;
+      bottom: 14px;
+      z-index: 5;
+      width: min(820px, calc(100vw - 24px));
+      transform: translateX(-50%);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: rgba(8, 10, 14, 0.76);
+      box-sizing: border-box;
+      color: #f1eee8;
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .flash {
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      opacity: 0;
+      background: radial-gradient(circle at 50% 52%, rgba(255, 222, 130, 0.34), transparent 32%);
+      pointer-events: none;
+      transition: opacity 90ms ease-out;
+    }
+
+    .flash.isActive {
+      opacity: 1;
+    }
+
+    .selectScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 8;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(5, 7, 11, 0.76);
+      box-sizing: border-box;
+      backdrop-filter: blur(8px);
+    }
+
+    .selectScreen.isHidden {
+      display: none;
+    }
+
+    .selectPanel {
+      width: min(560px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(15, 19, 27, 0.94);
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.48);
+      padding: 18px;
+      box-sizing: border-box;
+    }
+
+    .selectPanel h1 {
+      margin: 0 0 14px;
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .selectGrid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .selectRow {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .selectRow input[type="file"],
+    .selectRow select {
+      min-width: 0;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 6px;
+      background: #192231;
+      color: var(--muted);
+      padding: 8px;
+      font: inherit;
+      font-size: 13px;
+    }
+
+    .selectRow select {
+      color: var(--ink);
+    }
+
+    .selectActions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .selectPanel button {
+      min-height: 42px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 6px;
+      background: #2d3848;
+      color: var(--ink);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .selectPanel button.primary {
+      background: #cf3a35;
+      color: #fff7ef;
+    }
+
+    .selectPanel button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .selectStatus {
+      min-height: 42px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 10px;
+      color: var(--muted);
+      box-sizing: border-box;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        grid-template-columns: 1fr 58px 1fr;
+        gap: 7px;
+      }
+
+      .timer {
+        min-width: 58px;
+        font-size: 25px;
+        line-height: 44px;
+      }
+
+      .nameLine {
+        font-size: 12px;
+      }
+
+      .tag {
+        display: none;
+      }
+
+      .meter {
+        height: 15px;
+      }
+
+      .controls {
+        justify-content: start;
+        max-height: 116px;
+        overflow: auto;
+      }
+
+      .message {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>
+  <div class="flash" id="flash"></div>
+  <div class="hud">
+    <div class="topbar">
+      <div class="fighter left">
+        <div class="nameLine"><span>3DGS HUMAN</span><span class="tag" id="p1State">READY</span></div>
+        <div class="meter"><div class="fill" id="p1Hp"></div></div>
+      </div>
+      <div class="timer" id="timer">99</div>
+      <div class="fighter right">
+        <div class="nameLine"><span class="tag" id="p2State">TEST</span><span>NO RIVAL</span></div>
+        <div class="meter"><div class="fill" id="p2Hp"></div></div>
+      </div>
+    </div>
+    <div class="controls">
+      <label>SPZ <input id="splatFile" type="file" accept=".spz"></label>
+      <label>Scale <input id="scaleInput" type="range" min="45" max="170" value="100"><span id="scaleValue">100</span></label>
+      <label><input id="boxesToggle" type="checkbox">Boxes</label>
+      <div class="partsToggles" id="partsToggles"></div>
+      <button id="sampleButton" type="button">Sample</button>
+      <button id="idleButton" type="button">Idle</button>
+      <button id="walkButton" type="button">Walk</button>
+      <button id="backButton" type="button">Back</button>
+      <button id="resetButton" class="primary" type="button">Reset</button>
+    </div>
+  </div>
+  <div class="message" id="message">Choose a SPZ character, split it into body parts, then start Motion Test.</div>
+  <div class="selectScreen" id="selectScreen">
+    <div class="selectPanel">
+      <h1>Character Select</h1>
+      <div class="selectGrid">
+        <div class="selectRow">
+          <input id="selectSplatFile" type="file" accept=".spz">
+          <button id="selectSampleButton" type="button">Sample</button>
+        </div>
+        <div class="selectRow">
+          <select id="frontSelect">
+            <option value="auto">Front Auto</option>
+            <option value="positiveZ">Front +Z</option>
+            <option value="negativeZ">Front -Z</option>
+          </select>
+          <button id="remapButton" type="button">Remap</button>
+        </div>
+        <div class="selectStatus" id="selectStatus">No character loaded.</div>
+      </div>
+      <div class="selectActions">
+        <button id="startFightButton" class="primary" type="button">Motion Test</button>
+        <button id="reselectButton" type="button">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true, {
+      preserveDrawingBuffer: true,
+      stencil: true
+    });
+
+    const ui = {
+      p1Hp: document.getElementById("p1Hp"),
+      p2Hp: document.getElementById("p2Hp"),
+      p1State: document.getElementById("p1State"),
+      p2State: document.getElementById("p2State"),
+      timer: document.getElementById("timer"),
+      message: document.getElementById("message"),
+      flash: document.getElementById("flash"),
+      splatFile: document.getElementById("splatFile"),
+      scaleInput: document.getElementById("scaleInput"),
+      scaleValue: document.getElementById("scaleValue"),
+      boxesToggle: document.getElementById("boxesToggle"),
+      partsToggles: document.getElementById("partsToggles"),
+      sampleButton: document.getElementById("sampleButton"),
+      idleButton: document.getElementById("idleButton"),
+      walkButton: document.getElementById("walkButton"),
+      backButton: document.getElementById("backButton"),
+      resetButton: document.getElementById("resetButton"),
+      selectScreen: document.getElementById("selectScreen"),
+      selectSplatFile: document.getElementById("selectSplatFile"),
+      selectSampleButton: document.getElementById("selectSampleButton"),
+      selectStatus: document.getElementById("selectStatus"),
+      startFightButton: document.getElementById("startFightButton"),
+      reselectButton: document.getElementById("reselectButton"),
+      frontSelect: document.getElementById("frontSelect"),
+      remapButton: document.getElementById("remapButton")
+    };
+
+    const SAMPLE_SPZ_URL = "../models/asahi2_f.spz";
+    const keys = new Set();
+
+    const scene = new BABYLON.Scene(engine);
+    scene.clearColor = new BABYLON.Color4(0.035, 0.04, 0.055, 1);
+    scene.fogMode = BABYLON.Scene.FOGMODE_LINEAR;
+    scene.fogStart = 20;
+    scene.fogEnd = 56;
+    scene.fogColor = new BABYLON.Color3(0.035, 0.04, 0.055);
+
+    const camera = new BABYLON.ArcRotateCamera(
+      "camera",
+      -Math.PI / 2,
+      Math.PI / 2.38,
+      19,
+      new BABYLON.Vector3(0, 2.1, 0),
+      scene
+    );
+    camera.lowerRadiusLimit = 13;
+    camera.upperRadiusLimit = 28;
+    camera.lowerBetaLimit = Math.PI / 2.9;
+    camera.upperBetaLimit = Math.PI / 2.04;
+    camera.wheelDeltaPercentage = 0.025;
+    camera.attachControl(canvas, true);
+
+    const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+    hemi.intensity = 0.64;
+    hemi.diffuse = new BABYLON.Color3(0.78, 0.9, 1);
+    hemi.groundColor = new BABYLON.Color3(0.28, 0.18, 0.12);
+
+    const keyLight = new BABYLON.DirectionalLight("keyLight", new BABYLON.Vector3(-0.45, -0.82, 0.2), scene);
+    keyLight.position.set(10, 18, -8);
+    keyLight.intensity = 1.2;
+
+    const rimLight = new BABYLON.PointLight("rimLight", new BABYLON.Vector3(0, 5, 8), scene);
+    rimLight.intensity = 0.55;
+    rimLight.diffuse = new BABYLON.Color3(0.5, 0.78, 1);
+
+    const stage = {
+      minX: -7.2,
+      maxX: 7.2,
+      floorY: 0
+    };
+
+    const state = {
+      roundTime: 99,
+      roundActive: false,
+      mode: "select",
+      characterReady: false,
+      characterLoading: false,
+      flashTime: 0,
+      p1: null,
+      p2: null,
+      splatSource: null,
+      sourceName: "none",
+      sourceBounds: null,
+      sourceBase: null,
+      frontSign: 1,
+      mixamo: {
+        current: null,
+        currentKey: null,
+        motions: new Map(),
+        loading: false,
+        error: null
+      },
+      visibleParts: new Set(["head"]),
+      partKeptCounts: {},
+      loadingToken: 0
+    };
+
+    const MIXAMO_MOTION_FILES = {
+      idle: { label: "Fighting Idle", file: "Fighting Idle.glb" },
+      walkForward: { label: "Walking", file: "Walking.glb", displayYaw: Math.PI / 2 },
+      jogBack: { label: "Step Backward", file: "Step Backward.glb" }
+    };
+
+    const PARTS = [
+      { id: "head", label: "HEAD", color: new BABYLON.Color3(1, 0.84, 0.34) },
+      { id: "neck", label: "NECK", color: new BABYLON.Color3(1, 0.72, 0.42) },
+      { id: "spine2", label: "SPINE2", color: new BABYLON.Color3(0.35, 0.75, 1) },
+      { id: "spine1", label: "SPINE1", color: new BABYLON.Color3(0.28, 0.66, 1) },
+      { id: "spine", label: "SPINE", color: new BABYLON.Color3(0.24, 0.58, 1) },
+      { id: "hips", label: "HIPS", color: new BABYLON.Color3(0.2, 0.48, 0.95) },
+      { id: "leftShoulder", label: "L SHOULDER", color: new BABYLON.Color3(1, 0.55, 0.42) },
+      { id: "leftUpperArm", label: "L UPPER ARM", color: new BABYLON.Color3(1, 0.45, 0.38) },
+      { id: "leftForearm", label: "L FOREARM", color: new BABYLON.Color3(1, 0.35, 0.28) },
+      { id: "leftHand", label: "L HAND", color: new BABYLON.Color3(1, 0.62, 0.48) },
+      { id: "rightShoulder", label: "R SHOULDER", color: new BABYLON.Color3(1, 0.55, 0.42) },
+      { id: "rightUpperArm", label: "R UPPER ARM", color: new BABYLON.Color3(1, 0.45, 0.38) },
+      { id: "rightForearm", label: "R FOREARM", color: new BABYLON.Color3(1, 0.35, 0.28) },
+      { id: "rightHand", label: "R HAND", color: new BABYLON.Color3(1, 0.62, 0.48) },
+      { id: "leftThigh", label: "L THIGH", color: new BABYLON.Color3(0.48, 1, 0.62) },
+      { id: "leftShin", label: "L SHIN", color: new BABYLON.Color3(0.36, 0.88, 0.52) },
+      { id: "leftFoot", label: "L FOOT", color: new BABYLON.Color3(0.62, 1, 0.72) },
+      { id: "rightThigh", label: "R THIGH", color: new BABYLON.Color3(0.48, 1, 0.62) },
+      { id: "rightShin", label: "R SHIN", color: new BABYLON.Color3(0.36, 0.88, 0.52) },
+      { id: "rightFoot", label: "R FOOT", color: new BABYLON.Color3(0.62, 1, 0.72) }
+    ];
+
+    function partMeshVisibility(partId) {
+      return state.visibleParts.has(partId) ? 0.82 : 0;
+    }
+
+    function applyPartVisibility() {
+      updateSegmentSplatMask();
+      state.p1?.parts?.forEach((part, partId) => {
+        if (part.mesh) {
+          const visibility = partMeshVisibility(partId);
+          part.mesh.setEnabled(true);
+          part.mesh.visibility = visibility;
+        }
+      });
+    }
+
+    function updateSegmentSplatMask() {
+      const mesh = state.p1?.segmentMesh;
+      if (!mesh?.sourceSplatsData || !state.sourceBounds || !state.sourceBase) {
+        return;
+      }
+      mesh.splatsData = mesh.sourceSplatsData.slice(0);
+      const floatData = new Float32Array(mesh.splatsData);
+      const view = new DataView(mesh.splatsData);
+      const count = floatData.length / 8;
+      let kept = 0;
+      for (let i = 0; i < count; i++) {
+        const point = splatPointAt(floatData, i);
+        const partId = partRegionForPoint(point, state.sourceBounds, state.sourceBase);
+        const opacityByteIndex = (i * 8 + 6) * 4 + 3;
+        if (state.visibleParts.has(partId)) {
+          kept++;
+          view.setUint8(opacityByteIndex, Math.max(view.getUint8(opacityByteIndex), 220));
+        } else {
+          view.setUint8(opacityByteIndex, 0);
+        }
+      }
+      mesh.updateData(mesh.splatsData, undefined, { flipY: false });
+      mesh.refreshBoundingInfo?.(true);
+      mesh.computeWorldMatrix(true);
+      mesh.visibility = kept > 0 ? 0.82 : 0;
+      mesh.setEnabled(true);
+    }
+
+    function renderPartToggles() {
+      ui.partsToggles.textContent = "";
+      PARTS.forEach((part) => {
+        const label = document.createElement("label");
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.checked = state.visibleParts.has(part.id);
+        input.dataset.partId = part.id;
+        const count = state.partKeptCounts[part.id];
+        const suffix = Number.isFinite(count) ? ` ${count}` : "";
+        label.append(input, `${part.label}${suffix}`);
+        ui.partsToggles.append(label);
+      });
+    }
+
+    function makeMaterial(name, color, emissive) {
+      const mat = new BABYLON.StandardMaterial(name, scene);
+      mat.diffuseColor = color;
+      mat.emissiveColor = emissive ?? color.scale(0.08);
+      mat.specularColor = new BABYLON.Color3(0.18, 0.18, 0.18);
+      return mat;
+    }
+
+    const mats = {
+      floor: makeMaterial("floorMat", new BABYLON.Color3(0.23, 0.22, 0.2), new BABYLON.Color3(0.02, 0.02, 0.02)),
+      lane: makeMaterial("laneMat", new BABYLON.Color3(0.82, 0.72, 0.48), new BABYLON.Color3(0.08, 0.06, 0.02)),
+      blue: makeMaterial("blueMat", new BABYLON.Color3(0.12, 0.48, 0.86), new BABYLON.Color3(0.02, 0.08, 0.16)),
+      red: makeMaterial("redMat", new BABYLON.Color3(0.9, 0.18, 0.16), new BABYLON.Color3(0.16, 0.02, 0.02)),
+      dark: makeMaterial("darkMat", new BABYLON.Color3(0.05, 0.065, 0.085), new BABYLON.Color3(0.01, 0.012, 0.016)),
+      hit: makeMaterial("hitMat", new BABYLON.Color3(1, 0.75, 0.22), new BABYLON.Color3(0.6, 0.18, 0.02))
+    };
+
+    function createStage() {
+      const floor = BABYLON.MeshBuilder.CreateBox("floor", { width: 17, height: 0.28, depth: 7 }, scene);
+      floor.position.y = -0.16;
+      floor.material = mats.floor;
+
+      const centerLine = BABYLON.MeshBuilder.CreateBox("centerLine", { width: 0.08, height: 0.02, depth: 6.4 }, scene);
+      centerLine.position.y = 0.02;
+      centerLine.material = mats.lane;
+
+      for (let i = 0; i < 9; i++) {
+        const tile = BABYLON.MeshBuilder.CreateBox(`tile${i}`, { width: 1.45, height: 0.025, depth: 0.08 }, scene);
+        tile.position.set(-6.4 + i * 1.6, 0.035, -2.9);
+        tile.material = mats.lane;
+        const tile2 = tile.clone(`tileBack${i}`);
+        tile2.position.z = 2.9;
+      }
+
+      const wall = BABYLON.MeshBuilder.CreateBox("backWall", { width: 18, height: 5.2, depth: 0.2 }, scene);
+      wall.position.set(0, 2.45, 3.62);
+      wall.material = mats.dark;
+
+      for (let i = 0; i < 7; i++) {
+        const light = BABYLON.MeshBuilder.CreateBox(`wallLight${i}`, { width: 1.2, height: 0.06, depth: 0.06 }, scene);
+        light.position.set(-6 + i * 2, 3.9 + (i % 2) * 0.5, 3.48);
+        light.material = i % 2 ? mats.blue : mats.red;
+      }
+    }
+
+    function createFallbackHuman(name, colorMat) {
+      const root = new BABYLON.TransformNode(name, scene);
+      const body = BABYLON.MeshBuilder.CreateCapsule(`${name}Body`, { radius: 0.42, height: 1.85, tessellation: 18 }, scene);
+      body.position.y = 1.18;
+      body.material = colorMat;
+      body.parent = root;
+
+      const head = BABYLON.MeshBuilder.CreateSphere(`${name}Head`, { diameter: 0.54, segments: 18 }, scene);
+      head.position.y = 2.25;
+      head.material = colorMat;
+      head.parent = root;
+
+      [-1, 1].forEach((side) => {
+        const arm = BABYLON.MeshBuilder.CreateCapsule(`${name}Arm${side}`, { radius: 0.13, height: 0.95, tessellation: 12 }, scene);
+        arm.position.set(side * 0.54, 1.45, 0);
+        arm.rotation.z = side * 0.22;
+        arm.material = colorMat;
+        arm.parent = root;
+
+        const leg = BABYLON.MeshBuilder.CreateCapsule(`${name}Leg${side}`, { radius: 0.16, height: 0.9, tessellation: 12 }, scene);
+        leg.position.set(side * 0.18, 0.44, 0);
+        leg.rotation.z = -side * 0.06;
+        leg.material = colorMat;
+        leg.parent = root;
+      });
+      return root;
+    }
+
+    function createFighter(name, x, facing, visual, colorMat) {
+      const root = new BABYLON.TransformNode(`${name}Root`, scene);
+      root.position.set(x, 0, 0);
+      root.scaling.set(1, 1, 1);
+
+      const shadow = BABYLON.MeshBuilder.CreateCylinder(`${name}Shadow`, { diameter: 1.55, height: 0.018, tessellation: 42 }, scene);
+      shadow.position.set(0, 0.018, 0);
+      shadow.scaling.z = 0.48;
+      shadow.material = makeMaterial(`${name}ShadowMat`, new BABYLON.Color3(0, 0, 0), new BABYLON.Color3(0, 0, 0));
+      shadow.material.alpha = 0.36;
+      shadow.parent = root;
+
+      const fallback = visual ?? createFallbackHuman(`${name}Visual`, colorMat);
+      fallback.parent = root;
+
+      return {
+        name,
+        root,
+        visual: fallback,
+        shadow,
+        parts: new Map(),
+        hp: 100,
+        vx: 0,
+        vy: 0,
+        facing,
+        action: "ready",
+        actionTime: 0,
+        hitCooldown: 0,
+        aiTimer: 0,
+        guard: false
+      };
+    }
+
+    function splatPointAt(floatData, index) {
+      return new BABYLON.Vector3(
+        floatData[index * 8],
+        floatData[index * 8 + 1],
+        floatData[index * 8 + 2]
+      );
+    }
+
+    function computeSplatBounds(mesh) {
+      if (!mesh?.splatsData) {
+        return null;
+      }
+      const floatData = new Float32Array(mesh.splatsData);
+      const min = new BABYLON.Vector3(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
+      const max = new BABYLON.Vector3(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY);
+      const count = floatData.length / 8;
+      const step = Math.max(1, Math.floor(count / 160000));
+      for (let i = 0; i < count; i += step) {
+        const p = splatPointAt(floatData, i);
+        min.minimizeInPlace(p);
+        max.maximizeInPlace(p);
+      }
+      return { min, max };
+    }
+
+    function makeSourceBase(bounds) {
+      const size = bounds.max.subtract(bounds.min);
+      const center = bounds.min.add(size.scale(0.5));
+      const scale = BABYLON.Scalar.Clamp(2.55 / Math.max(size.y, 0.001), 0.25, 12);
+      const offset = new BABYLON.Vector3(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
+      return { size, center, scale, offset };
+    }
+
+    function makeDisplayBase(base) {
+      const scale = base.scale * Number(ui.scaleInput.value) / 100;
+      const offset = new BABYLON.Vector3(-base.center.x * scale, -state.sourceBounds.min.y * scale, -base.center.z * scale);
+      return { ...base, scale, offset };
+    }
+
+    function estimateFrontSign(mesh, bounds, base) {
+      const mode = ui.frontSelect.value;
+      if (mode === "positiveZ") {
+        return 1;
+      }
+      if (mode === "negativeZ") {
+        return -1;
+      }
+      const floatData = new Float32Array(mesh.splatsData);
+      const count = floatData.length / 8;
+      const step = Math.max(1, Math.floor(count / 120000));
+      let upperPositive = 0;
+      let upperNegative = 0;
+      for (let i = 0; i < count; i += step) {
+        const p = splatPointAt(floatData, i);
+        const y = (p.y - bounds.min.y) / Math.max(base.size.y, 0.001);
+        if (y < 0.38 || y > 0.82) {
+          continue;
+        }
+        if (p.z >= base.center.z) {
+          upperPositive++;
+        } else {
+          upperNegative++;
+        }
+      }
+      return upperPositive >= upperNegative ? 1 : -1;
+    }
+
+    function localToPlayer(local, base = state.sourceBase) {
+      return local.scale(base.scale).add(base.offset);
+    }
+
+    function playerToLocal(player, base = state.sourceBase) {
+      return player.subtract(base.offset).scale(1 / base.scale);
+    }
+
+    function averageVectors(points) {
+      if (!points.length) {
+        return null;
+      }
+      const total = points.reduce((acc, point) => acc.addInPlace(point), BABYLON.Vector3.Zero());
+      return total.scale(1 / points.length);
+    }
+
+    function estimatePoseRig(mesh, bounds, base) {
+      const size = base.size;
+      const center = base.center;
+      const yAt = (ratio) => bounds.min.y + size.y * ratio;
+      const pointAt = (xRatio, yRatio, z = center.z) =>
+        new BABYLON.Vector3(center.x + size.x * xRatio, yAt(yRatio), z);
+      const floatData = new Float32Array(mesh.splatsData);
+      const count = floatData.length / 8;
+      const step = Math.max(1, Math.floor(count / 140000));
+      const leftArmCandidates = [];
+      const rightArmCandidates = [];
+
+      for (let i = 0; i < count; i += step) {
+        const point = splatPointAt(floatData, i);
+        const nx = (point.x - center.x) / Math.max(size.x, 0.001);
+        const y = (point.y - bounds.min.y) / Math.max(size.y, 0.001);
+        const ax = Math.abs(nx);
+        if (y < 0.32 || y > 0.82 || ax < 0.28) {
+          continue;
+        }
+        if (nx < 0) {
+          leftArmCandidates.push(point);
+        } else {
+          rightArmCandidates.push(point);
+        }
+      }
+
+      const edgeAverage = (points, side) => {
+        if (!points.length) {
+          return null;
+        }
+        const sorted = [...points].sort((a, b) => side < 0 ? a.x - b.x : b.x - a.x);
+        return averageVectors(sorted.slice(0, Math.max(8, Math.ceil(sorted.length * 0.035))));
+      };
+
+      const leftWristGuess = edgeAverage(leftArmCandidates, -1);
+      const rightWristGuess = edgeAverage(rightArmCandidates, 1);
+      const clampYRatio = (point, fallback) => {
+        if (!point) {
+          return fallback;
+        }
+        return BABYLON.Scalar.Clamp((point.y - bounds.min.y) / Math.max(size.y, 0.001), 0.36, 0.72);
+      };
+      const leftWristY = clampYRatio(leftWristGuess, 0.46);
+      const rightWristY = clampYRatio(rightWristGuess, 0.46);
+      const leftWristX = leftWristGuess
+        ? BABYLON.Scalar.Clamp((leftWristGuess.x - center.x) / Math.max(size.x, 0.001), -0.48, -0.32)
+        : -0.42;
+      const rightWristX = rightWristGuess
+        ? BABYLON.Scalar.Clamp((rightWristGuess.x - center.x) / Math.max(size.x, 0.001), 0.32, 0.48)
+        : 0.42;
+
+      const joints = {
+        hips: pointAt(0, 0.36),
+        spine: pointAt(0, 0.46),
+        spine1: pointAt(0, 0.56),
+        spine2: pointAt(0, 0.67),
+        neck: pointAt(0, 0.72),
+        head: pointAt(0, 0.83),
+        leftShoulder: pointAt(-0.24, 0.69),
+        rightShoulder: pointAt(0.24, 0.69),
+        leftHand: pointAt(leftWristX, leftWristY),
+        rightHand: pointAt(rightWristX, rightWristY),
+        leftThigh: pointAt(-0.13, 0.43),
+        rightThigh: pointAt(0.13, 0.43),
+        leftShin: pointAt(-0.16, 0.24),
+        rightShin: pointAt(0.16, 0.24),
+        leftFoot: pointAt(-0.17, 0.08, center.z - size.z * 0.08 * state.frontSign),
+        rightFoot: pointAt(0.17, 0.08, center.z - size.z * 0.08 * state.frontSign)
+      };
+      joints.leftUpperArm = BABYLON.Vector3.Lerp(joints.leftShoulder, joints.leftHand, 0.42);
+      joints.leftForearm = BABYLON.Vector3.Lerp(joints.leftShoulder, joints.leftHand, 0.68);
+      joints.rightUpperArm = BABYLON.Vector3.Lerp(joints.rightShoulder, joints.rightHand, 0.42);
+      joints.rightForearm = BABYLON.Vector3.Lerp(joints.rightShoulder, joints.rightHand, 0.68);
+
+      const radius = {
+        head: 0.09, neck: 0.045, torso: 0.105,
+        shoulder: 0.055, upperArm: 0.055, forearm: 0.052, hand: 0.06,
+        thigh: 0.078, shin: 0.065, foot: 0.075
+      };
+      const capsules = [
+        { id: "head", a: joints.neck, b: joints.head, radius: radius.head, priority: 0.82, yMin: 0.765, yMax: 1.02, xMax: 0.3 },
+        { id: "neck", a: joints.spine2, b: joints.neck, radius: radius.neck, priority: 0.88, yMin: 0.675, yMax: 0.755, xMax: 0.22 },
+        { id: "spine2", a: joints.spine1, b: joints.spine2, radius: radius.torso, priority: 1, yMin: 0.61, yMax: 0.705, xMax: 0.28 },
+        { id: "spine1", a: joints.spine, b: joints.spine1, radius: radius.torso, priority: 1, yMin: 0.51, yMax: 0.625, xMax: 0.29 },
+        { id: "spine", a: joints.hips, b: joints.spine, radius: radius.torso, priority: 1, yMin: 0.405, yMax: 0.525, xMax: 0.3 },
+        { id: "hips", a: pointAt(0, 0.29), b: joints.hips, radius: 0.155, priority: 1, yMin: 0.285, yMax: 0.43, xMax: 0.32 },
+        { id: "leftShoulder", a: joints.spine2, b: joints.leftShoulder, radius: radius.shoulder, priority: 0.9, yMin: 0.63, yMax: 0.735, side: "left" },
+        { id: "leftUpperArm", a: joints.leftShoulder, b: joints.leftUpperArm, radius: radius.upperArm, priority: 0.72, yMin: Math.min(0.58, leftWristY - 0.04), yMax: 0.76, side: "left" },
+        { id: "leftForearm", a: joints.leftUpperArm, b: joints.leftForearm, radius: radius.forearm, priority: 0.7, yMin: Math.min(0.42, leftWristY - 0.04), yMax: 0.68, side: "left" },
+        { id: "leftHand", a: joints.leftForearm, b: joints.leftHand, radius: radius.hand, priority: 0.66, yMin: leftWristY - 0.08, yMax: leftWristY + 0.08, side: "left" },
+        { id: "rightShoulder", a: joints.spine2, b: joints.rightShoulder, radius: radius.shoulder, priority: 0.9, yMin: 0.63, yMax: 0.735, side: "right" },
+        { id: "rightUpperArm", a: joints.rightShoulder, b: joints.rightUpperArm, radius: radius.upperArm, priority: 0.72, yMin: Math.min(0.58, rightWristY - 0.04), yMax: 0.76, side: "right" },
+        { id: "rightForearm", a: joints.rightUpperArm, b: joints.rightForearm, radius: radius.forearm, priority: 0.7, yMin: Math.min(0.42, rightWristY - 0.04), yMax: 0.68, side: "right" },
+        { id: "rightHand", a: joints.rightForearm, b: joints.rightHand, radius: radius.hand, priority: 0.66, yMin: rightWristY - 0.08, yMax: rightWristY + 0.08, side: "right" },
+        { id: "leftThigh", a: joints.leftThigh, b: joints.leftShin, radius: radius.thigh, priority: 0.82, yMin: 0.21, yMax: 0.47, side: "left" },
+        { id: "leftShin", a: joints.leftShin, b: joints.leftFoot, radius: radius.shin, priority: 0.8, yMin: 0.075, yMax: 0.285, side: "left" },
+        { id: "leftFoot", a: joints.leftFoot, b: pointAt(-0.17, 0.025, center.z - size.z * 0.22 * state.frontSign), radius: radius.foot, priority: 0.72, yMin: -0.02, yMax: 0.125, side: "left" },
+        { id: "rightThigh", a: joints.rightThigh, b: joints.rightShin, radius: radius.thigh, priority: 0.82, yMin: 0.21, yMax: 0.47, side: "right" },
+        { id: "rightShin", a: joints.rightShin, b: joints.rightFoot, radius: radius.shin, priority: 0.8, yMin: 0.075, yMax: 0.285, side: "right" },
+        { id: "rightFoot", a: joints.rightFoot, b: pointAt(0.17, 0.025, center.z - size.z * 0.22 * state.frontSign), radius: radius.foot, priority: 0.72, yMin: -0.02, yMax: 0.125, side: "right" }
+      ].map((capsule) => ({
+        ...capsule,
+        radiusWorld: Math.max(size.y * capsule.radius, 0.001)
+      }));
+
+      return { joints, capsules };
+    }
+
+    function distanceToSegmentSquared(point, a, b) {
+      const ab = b.subtract(a);
+      const abLengthSquared = ab.lengthSquared();
+      if (abLengthSquared < 0.000001) {
+        return point.subtract(a).lengthSquared();
+      }
+      const t = BABYLON.Scalar.Clamp(BABYLON.Vector3.Dot(point.subtract(a), ab) / abLengthSquared, 0, 1);
+      const closest = a.add(ab.scale(t));
+      return point.subtract(closest).lengthSquared();
+    }
+
+    function capsulePartForPoint(point, bounds, base) {
+      const rig = base.poseRig;
+      if (!rig?.capsules?.length) {
+        return null;
+      }
+      const y = (point.y - bounds.min.y) / Math.max(base.size.y, 0.001);
+      const nx = (point.x - base.center.x) / Math.max(base.size.x, 0.001);
+      let best = null;
+      rig.capsules.forEach((capsule) => {
+        if (y < capsule.yMin || y > capsule.yMax) {
+          return;
+        }
+        if (capsule.xMax !== undefined && Math.abs(nx) > capsule.xMax) {
+          return;
+        }
+        if ((capsule.side === "left" && nx > -0.04) || (capsule.side === "right" && nx < 0.04)) {
+          return;
+        }
+        const distanceSquared = distanceToSegmentSquared(point, capsule.a, capsule.b);
+        const normalized = distanceSquared / (capsule.radiusWorld * capsule.radiusWorld);
+        const score = normalized * capsule.priority;
+        if (!best || score < best.score) {
+          best = { id: capsule.id, score, normalized };
+        }
+      });
+      if (best && best.normalized < 3.4) {
+        return best.id;
+      }
+      if (y > 0.755 && Math.abs(nx) < 0.32) {
+        return "head";
+      }
+      return null;
+    }
+
+    function partRegionForPoint(point, bounds, base) {
+      const capsulePart = capsulePartForPoint(point, bounds, base);
+      if (capsulePart) {
+        return capsulePart;
+      }
+      const size = base.size;
+      const nx = (point.x - base.center.x) / Math.max(size.x, 0.001);
+      const y = (point.y - bounds.min.y) / Math.max(size.y, 0.001);
+      const ax = Math.abs(nx);
+
+      if (y > 0.76 && ax < 0.3) {
+        return "head";
+      }
+      if (y > 0.7 && y <= 0.79 && ax < 0.18) {
+        return "neck";
+      }
+      if (y > 0.58 && y <= 0.82 && ax >= 0.18 && ax < 0.3) {
+        return nx < 0 ? "leftShoulder" : "rightShoulder";
+      }
+      if (y > 0.66 && y <= 0.82 && ax < 0.2) {
+        return "spine2";
+      }
+      if (y > 0.56 && y <= 0.67 && ax < 0.22) {
+        return "spine1";
+      }
+      if (y > 0.45 && y <= 0.57 && ax < 0.24) {
+        return "spine";
+      }
+      if (y > 0.34 && y <= 0.46 && ax < 0.26) {
+        return "hips";
+      }
+      if (y > 0.34 && y <= 0.78 && ax >= 0.15) {
+        const side = nx < 0 ? "left" : "right";
+        if (y > 0.63) {
+          return `${side}UpperArm`;
+        }
+        if (y > 0.45) {
+          return `${side}Forearm`;
+        }
+        return `${side}Hand`;
+      }
+      if (y <= 0.43 && ax < 0.34) {
+        const side = nx < 0 ? "left" : "right";
+        if (y <= 0.1) {
+          return `${side}Foot`;
+        }
+        return y > 0.24 ? `${side}Thigh` : `${side}Shin`;
+      }
+      if (y > 0.72) {
+        return "head";
+      }
+      if (y > 0.66) {
+        return "spine2";
+      }
+      if (y > 0.56) {
+        return "spine1";
+      }
+      if (y > 0.45) {
+        return "spine";
+      }
+      if (y > 0.34) {
+        return "hips";
+      }
+      if (y <= 0.1) {
+        return nx < 0 ? "leftFoot" : "rightFoot";
+      }
+      return nx < 0 ? (y > 0.24 ? "leftThigh" : "leftShin") : (y > 0.24 ? "rightThigh" : "rightShin");
+    }
+
+    function buildPartDefinitions(bounds, base) {
+      const min = bounds.min;
+      const max = bounds.max;
+      const center = base.center;
+      const size = base.size;
+      const xLeft = center.x - size.x * 0.5;
+      const xRight = center.x + size.x * 0.5;
+      const xMidLeft = center.x - size.x * 0.08;
+      const xMidRight = center.x + size.x * 0.08;
+      const xShoulderLeft = center.x - size.x * 0.25;
+      const xShoulderRight = center.x + size.x * 0.25;
+      const xHipLeft = center.x - size.x * 0.14;
+      const xHipRight = center.x + size.x * 0.14;
+      const zPad = Math.max(size.z * 0.08, 0.04);
+      const yAt = (ratio) => min.y + size.y * ratio;
+
+      const localBoxes = {
+        head: { min: new BABYLON.Vector3(center.x - size.x * 0.26, yAt(0.74), min.z - zPad), max: new BABYLON.Vector3(center.x + size.x * 0.26, max.y, max.z + zPad), pivot: new BABYLON.Vector3(center.x, yAt(0.75), center.z) },
+        neck: { min: new BABYLON.Vector3(center.x - size.x * 0.17, yAt(0.7), min.z - zPad), max: new BABYLON.Vector3(center.x + size.x * 0.17, yAt(0.78), max.z + zPad), pivot: new BABYLON.Vector3(center.x, yAt(0.7), center.z) },
+        spine2: { min: new BABYLON.Vector3(center.x - size.x * 0.22, yAt(0.66), min.z - zPad), max: new BABYLON.Vector3(center.x + size.x * 0.22, yAt(0.72), max.z + zPad), pivot: new BABYLON.Vector3(center.x, yAt(0.66), center.z) },
+        spine1: { min: new BABYLON.Vector3(center.x - size.x * 0.23, yAt(0.56), min.z - zPad), max: new BABYLON.Vector3(center.x + size.x * 0.23, yAt(0.67), max.z + zPad), pivot: new BABYLON.Vector3(center.x, yAt(0.56), center.z) },
+        spine: { min: new BABYLON.Vector3(center.x - size.x * 0.24, yAt(0.45), min.z - zPad), max: new BABYLON.Vector3(center.x + size.x * 0.24, yAt(0.57), max.z + zPad), pivot: new BABYLON.Vector3(center.x, yAt(0.45), center.z) },
+        hips: { min: new BABYLON.Vector3(center.x - size.x * 0.26, yAt(0.34), min.z - zPad), max: new BABYLON.Vector3(center.x + size.x * 0.26, yAt(0.46), max.z + zPad), pivot: new BABYLON.Vector3(center.x, yAt(0.36), center.z) },
+        leftShoulder: { min: new BABYLON.Vector3(center.x - size.x * 0.32, yAt(0.62), min.z - zPad), max: new BABYLON.Vector3(center.x - size.x * 0.16, yAt(0.79), max.z + zPad), pivot: new BABYLON.Vector3(xShoulderLeft, yAt(0.68), center.z) },
+        leftUpperArm: { min: new BABYLON.Vector3(xLeft, yAt(0.61), min.z - zPad), max: new BABYLON.Vector3(center.x - size.x * 0.22, yAt(0.78), max.z + zPad), pivot: new BABYLON.Vector3(xShoulderLeft, yAt(0.69), center.z) },
+        leftForearm: { min: new BABYLON.Vector3(xLeft, yAt(0.45), min.z - zPad), max: new BABYLON.Vector3(xMidLeft, yAt(0.64), max.z + zPad), pivot: new BABYLON.Vector3(center.x - size.x * 0.36, yAt(0.61), center.z) },
+        leftHand: { min: new BABYLON.Vector3(xLeft, yAt(0.33), min.z - zPad), max: new BABYLON.Vector3(xMidLeft, yAt(0.47), max.z + zPad), pivot: new BABYLON.Vector3(center.x - size.x * 0.4, yAt(0.45), center.z) },
+        rightShoulder: { min: new BABYLON.Vector3(center.x + size.x * 0.16, yAt(0.62), min.z - zPad), max: new BABYLON.Vector3(center.x + size.x * 0.32, yAt(0.79), max.z + zPad), pivot: new BABYLON.Vector3(xShoulderRight, yAt(0.68), center.z) },
+        rightUpperArm: { min: new BABYLON.Vector3(center.x + size.x * 0.22, yAt(0.61), min.z - zPad), max: new BABYLON.Vector3(xRight, yAt(0.78), max.z + zPad), pivot: new BABYLON.Vector3(xShoulderRight, yAt(0.69), center.z) },
+        rightForearm: { min: new BABYLON.Vector3(xMidRight, yAt(0.45), min.z - zPad), max: new BABYLON.Vector3(xRight, yAt(0.64), max.z + zPad), pivot: new BABYLON.Vector3(center.x + size.x * 0.36, yAt(0.61), center.z) },
+        rightHand: { min: new BABYLON.Vector3(xMidRight, yAt(0.33), min.z - zPad), max: new BABYLON.Vector3(xRight, yAt(0.47), max.z + zPad), pivot: new BABYLON.Vector3(center.x + size.x * 0.4, yAt(0.45), center.z) },
+        leftThigh: { min: new BABYLON.Vector3(center.x - size.x * 0.34, yAt(0.24), min.z - zPad), max: new BABYLON.Vector3(center.x - size.x * 0.02, yAt(0.46), max.z + zPad), pivot: new BABYLON.Vector3(xHipLeft, yAt(0.44), center.z) },
+        leftShin: { min: new BABYLON.Vector3(center.x - size.x * 0.34, yAt(0.09), min.z - zPad), max: new BABYLON.Vector3(center.x - size.x * 0.02, yAt(0.26), max.z + zPad), pivot: new BABYLON.Vector3(center.x - size.x * 0.17, yAt(0.24), center.z) },
+        leftFoot: { min: new BABYLON.Vector3(center.x - size.x * 0.36, min.y, min.z - zPad), max: new BABYLON.Vector3(center.x - size.x * 0.0, yAt(0.11), max.z + zPad), pivot: new BABYLON.Vector3(center.x - size.x * 0.17, yAt(0.09), center.z) },
+        rightThigh: { min: new BABYLON.Vector3(center.x + size.x * 0.02, yAt(0.24), min.z - zPad), max: new BABYLON.Vector3(center.x + size.x * 0.34, yAt(0.46), max.z + zPad), pivot: new BABYLON.Vector3(xHipRight, yAt(0.44), center.z) },
+        rightShin: { min: new BABYLON.Vector3(center.x + size.x * 0.02, yAt(0.09), min.z - zPad), max: new BABYLON.Vector3(center.x + size.x * 0.34, yAt(0.26), max.z + zPad), pivot: new BABYLON.Vector3(center.x + size.x * 0.17, yAt(0.24), center.z) },
+        rightFoot: { min: new BABYLON.Vector3(center.x + size.x * 0.0, min.y, min.z - zPad), max: new BABYLON.Vector3(center.x + size.x * 0.36, yAt(0.11), max.z + zPad), pivot: new BABYLON.Vector3(center.x + size.x * 0.17, yAt(0.09), center.z) }
+      };
+      const rigJoints = base.poseRig?.joints ?? {};
+
+      return PARTS.map((part) => {
+        const box = localBoxes[part.id];
+        const pivotLocal = rigJoints[part.id] ?? box.pivot;
+        const playerMin = localToPlayer(box.min, base);
+        const playerMax = localToPlayer(box.max, base);
+        const playerPivot = localToPlayer(pivotLocal, base);
+        const minPlayer = BABYLON.Vector3.Minimize(playerMin, playerMax);
+        const maxPlayer = BABYLON.Vector3.Maximize(playerMin, playerMax);
+        return {
+          ...part,
+          minLocal: box.min,
+          maxLocal: box.max,
+          pivotLocal,
+          minPlayer,
+          maxPlayer,
+          pivotPlayer: playerPivot,
+          sizePlayer: maxPlayer.subtract(minPlayer),
+          centerPlayer: minPlayer.add(maxPlayer.subtract(minPlayer).scale(0.5))
+        };
+      });
+    }
+
+    function maskMeshToPart(mesh, partId, bounds, base) {
+      mesh.splatsData = mesh.splatsData.slice(0);
+      const floatData = new Float32Array(mesh.splatsData);
+      const view = new DataView(mesh.splatsData);
+      const count = floatData.length / 8;
+      let kept = 0;
+      const centroidLocal = BABYLON.Vector3.Zero();
+      for (let i = 0; i < count; i++) {
+        const point = splatPointAt(floatData, i);
+        const opacityByteIndex = (i * 8 + 6) * 4 + 3;
+        if (partRegionForPoint(point, bounds, base) === partId) {
+          kept++;
+          centroidLocal.addInPlace(point);
+          view.setUint8(opacityByteIndex, Math.max(view.getUint8(opacityByteIndex), 220));
+        } else {
+          view.setUint8(opacityByteIndex, 0);
+        }
+      }
+      if (kept > 0) {
+        centroidLocal.scaleInPlace(1 / kept);
+      }
+      mesh.updateData(mesh.splatsData, undefined, { flipY: false });
+      mesh.refreshBoundingInfo?.(true);
+      mesh.computeWorldMatrix(true);
+      return { kept, centroidLocal: kept > 0 ? centroidLocal : null };
+    }
+
+    function countSplatParts(mesh, bounds, base) {
+      const floatData = new Float32Array(mesh.splatsData);
+      const count = floatData.length / 8;
+      const result = {};
+      const centroids = {};
+      PARTS.forEach((part) => {
+        result[part.id] = 0;
+        centroids[part.id] = BABYLON.Vector3.Zero();
+      });
+      for (let i = 0; i < count; i++) {
+        const point = splatPointAt(floatData, i);
+        const partId = partRegionForPoint(point, bounds, base);
+        if (!result.hasOwnProperty(partId)) {
+          continue;
+        }
+        result[partId]++;
+        centroids[partId].addInPlace(point);
+      }
+      PARTS.forEach((part) => {
+        if (result[part.id] > 0) {
+          centroids[part.id].scaleInPlace(1 / result[part.id]);
+        } else {
+          centroids[part.id] = null;
+        }
+      });
+      return { counts: result, centroids };
+    }
+
+    function clearPlayerOneParts() {
+      if (!state.p1) {
+        return;
+      }
+      state.p1.rigDebug?.dispose?.();
+      state.p1.rigDebug = null;
+      state.p1.segmentMesh?.dispose(false, true);
+      state.p1.segmentMesh = null;
+      state.p1.parts.forEach((part) => {
+        part.node.dispose(false, true);
+        part.boxMaterial.dispose();
+      });
+      state.p1.parts.clear();
+      if (state.p1.visual && state.p1.visual !== state.p1.root) {
+        state.p1.visual.dispose(false, true);
+      }
+      state.p1.visual = null;
+    }
+
+    function makePartBox(part, parent) {
+      const box = BABYLON.MeshBuilder.CreateBox(`hitbox_${part.id}`, {
+        width: Math.max(part.sizePlayer.x, 0.08),
+        height: Math.max(part.sizePlayer.y, 0.08),
+        depth: Math.max(part.sizePlayer.z, 0.08)
+      }, scene);
+      box.position = part.centerPlayer.subtract(part.pivotPlayer);
+      box.enableEdgesRendering();
+      box.edgesWidth = 1.5;
+      box.edgesColor = new BABYLON.Color4(part.color.r, part.color.g, part.color.b, 0.95);
+      const mat = new BABYLON.StandardMaterial(`hitboxMat_${part.id}`, scene);
+      mat.diffuseColor = part.color;
+      mat.emissiveColor = part.color.scale(0.2);
+      mat.alpha = 0.12;
+      box.material = mat;
+      box.visibility = ui.boxesToggle.checked ? 1 : 0;
+      box.isPickable = false;
+      box.parent = parent;
+      return { box, mat };
+    }
+
+    function buildSpzVirtualRig(fighter) {
+      fighter.parts.forEach((part, partId) => {
+        const parentId = SPZ_RIG_PARENT[partId];
+        const parentPart = parentId ? fighter.parts.get(parentId) : null;
+        part.node.parent = parentPart?.node ?? fighter.root;
+        part.node.position.copyFrom(parentPart ? part.pivotPlayer.subtract(parentPart.pivotPlayer) : part.pivotPlayer);
+        part.restLocalPosition = part.node.position.clone();
+        part.restLocalRotation = BABYLON.Vector3.Zero();
+      });
+    }
+
+    function getPartWorldPosition(part) {
+      part.node.computeWorldMatrix(true);
+      return part.node.getAbsolutePosition().clone();
+    }
+
+    function createSpzRigDebug(fighter) {
+      fighter.rigDebug?.dispose?.();
+      const root = new BABYLON.TransformNode("spzRigDebugRoot", scene);
+      root.position.set(-3.2, 0.06, 0);
+      const getFrameBounds = () => {
+        const positions = [...fighter.parts.values()].map(getPartWorldPosition);
+        return {
+          min: positions.reduce((acc, pos) => BABYLON.Vector3.Minimize(acc, pos), positions[0].clone()),
+          max: positions.reduce((acc, pos) => BABYLON.Vector3.Maximize(acc, pos), positions[0].clone())
+        };
+      };
+      const initialBounds = getFrameBounds();
+      const initialSize = initialBounds.max.subtract(initialBounds.min);
+      const drawScale = 2.4 / Math.max(0.001, initialSize.y);
+      const getAnchor = () => {
+        const hips = fighter.parts.get("hips");
+        return hips ? getPartWorldPosition(hips) : initialBounds.min.add(initialBounds.max.subtract(initialBounds.min).scale(0.5));
+      };
+      const toDebugPoint = (pos, bounds = getFrameBounds(), anchor = getAnchor()) => new BABYLON.Vector3(
+        (pos.x - anchor.x) * drawScale,
+        (pos.y - bounds.min.y) * drawScale,
+        (pos.z - anchor.z) * drawScale
+      );
+
+      const linePairs = Object.entries(SPZ_RIG_PARENT)
+        .filter(([, parentId]) => parentId)
+        .map(([partId, parentId]) => ({
+          part: fighter.parts.get(partId),
+          parent: fighter.parts.get(parentId)
+        }))
+        .filter((pair) => pair.part && pair.parent);
+      const lines = linePairs.map(({ part, parent }) => {
+        const mesh = BABYLON.MeshBuilder.CreateLines(
+          `spzRigLine_${part.id}`,
+          { points: [toDebugPoint(getPartWorldPosition(parent), initialBounds), toDebugPoint(getPartWorldPosition(part), initialBounds)], updatable: true },
+          scene
+        );
+        mesh.parent = root;
+        mesh.color = new BABYLON.Color3(1, 0.92, 0.25);
+        mesh.isPickable = false;
+        return { part, parent, mesh };
+      });
+      const bodyLines = linePairs.map(({ part, parent }) => {
+        const mesh = BABYLON.MeshBuilder.CreateLines(
+          `spzBodyRigLine_${part.id}`,
+          { points: [getPartWorldPosition(parent), getPartWorldPosition(part)], updatable: true },
+          scene
+        );
+        mesh.color = new BABYLON.Color3(1, 0.62, 0.18);
+        mesh.isPickable = false;
+        return { part, parent, mesh };
+      });
+      const markerMat = makeMaterial(
+        "spzRigMarkerMat",
+        new BABYLON.Color3(1, 0.92, 0.25),
+        new BABYLON.Color3(0.38, 0.28, 0.02)
+      );
+      const bodyMarkerMat = makeMaterial(
+        "spzBodyRigMarkerMat",
+        new BABYLON.Color3(1, 0.62, 0.18),
+        new BABYLON.Color3(0.38, 0.16, 0.02)
+      );
+      const markers = [...fighter.parts.values()].map((part) => {
+        const marker = BABYLON.MeshBuilder.CreateSphere(
+          `spzRigMarker_${part.id}`,
+          { diameter: 0.085, segments: 10 },
+          scene
+        );
+        marker.parent = root;
+        marker.position.copyFrom(toDebugPoint(getPartWorldPosition(part), initialBounds));
+        marker.material = markerMat;
+        marker.isPickable = false;
+        return { part, marker };
+      });
+      const bodyMarkers = [...fighter.parts.values()].map((part) => {
+        const marker = BABYLON.MeshBuilder.CreateSphere(
+          `spzBodyRigMarker_${part.id}`,
+          { diameter: 0.07, segments: 10 },
+          scene
+        );
+        marker.position.copyFrom(getPartWorldPosition(part));
+        marker.material = bodyMarkerMat;
+        marker.isPickable = false;
+        return { part, marker };
+      });
+      const label = BABYLON.MeshBuilder.CreateBox("spzRigDebugLabel", { width: 0.16, height: 0.16, depth: 0.16 }, scene);
+      label.parent = root;
+      label.position.set(0, 2.62, 0);
+      label.material = markerMat;
+      label.isPickable = false;
+      return {
+        root,
+        lines,
+        bodyLines,
+        markers,
+        bodyMarkers,
+        getFrameBounds,
+        getAnchor,
+        toDebugPoint,
+        dispose() {
+          lines.forEach(({ mesh }) => mesh.dispose());
+          bodyLines.forEach(({ mesh }) => mesh.dispose());
+          markers.forEach(({ marker }) => marker.dispose());
+          bodyMarkers.forEach(({ marker }) => marker.dispose());
+          label.dispose();
+          root.dispose(false, false);
+          markerMat.dispose();
+          bodyMarkerMat.dispose();
+        }
+      };
+    }
+
+    function updateSpzRigDebug(fighter) {
+      const debug = fighter.rigDebug;
+      if (!debug) {
+        return;
+      }
+      const motion = state.mixamo.current?.mode === "jsonDebug" ? state.mixamo.current : null;
+      const motionInfo = MIXAMO_MOTION_FILES[state.mixamo.currentKey] ?? MIXAMO_MOTION_FILES.idle;
+      debug.root.rotation.y = motionInfo.displayYaw ?? 0;
+      const bounds = debug.getFrameBounds();
+      const anchor = debug.getAnchor();
+      const pointForPart = (part) =>
+        motion?.getPartPoint(part.id) ??
+        debug.toDebugPoint(getPartWorldPosition(part), bounds, anchor);
+      const pointForBody = (part) => {
+        const motionPoint = motion?.getPartPoint(part.id);
+        if (!motionPoint) {
+          return getPartWorldPosition(part);
+        }
+        const yaw = motionInfo.displayYaw ?? 0;
+        const rotated = BABYLON.Vector3.TransformCoordinates(
+          motionPoint,
+          BABYLON.Matrix.RotationY(yaw)
+        );
+        return fighter.root.position.add(rotated);
+      };
+      debug.lines.forEach(({ part, parent, mesh }) => {
+        BABYLON.MeshBuilder.CreateLines(null, {
+          points: [
+            pointForPart(parent),
+            pointForPart(part)
+          ],
+          instance: mesh
+        });
+      });
+      debug.bodyLines.forEach(({ part, parent, mesh }) => {
+        BABYLON.MeshBuilder.CreateLines(null, {
+          points: [pointForBody(parent), pointForBody(part)],
+          instance: mesh
+        });
+      });
+      debug.markers.forEach(({ part, marker }) => {
+        marker.position.copyFrom(pointForPart(part));
+      });
+      debug.bodyMarkers.forEach(({ part, marker }) => {
+        marker.position.copyFrom(pointForBody(part));
+      });
+    }
+
+    async function importSplat(source) {
+      const result = await BABYLON.ImportMeshAsync(source, scene, {
+        pluginOptions: {
+          splat: {
+            keepInRam: true
+          }
+        }
+      });
+      return result.meshes[0];
+    }
+
+    async function loadSplatSource(source, sourceName) {
+      const token = ++state.loadingToken;
+      state.p1.root.setEnabled(true);
+      state.splatSource = source;
+      state.sourceName = sourceName;
+      state.characterReady = false;
+      state.characterLoading = true;
+      ui.startFightButton.disabled = true;
+      setSelectStatus(`${sourceName} loading and splitting...`);
+      setMessage(`${sourceName} loading and splitting into body parts...`);
+
+      try {
+        const probe = await importSplat(source);
+        const bounds = computeSplatBounds(probe);
+        if (!bounds) {
+          throw new Error("splatsData is not available");
+        }
+        const base = makeSourceBase(bounds);
+        state.frontSign = estimateFrontSign(probe, bounds, base);
+        base.poseRig = estimatePoseRig(probe, bounds, base);
+        if (token !== state.loadingToken) {
+          probe.dispose(false, true);
+          return;
+        }
+
+        clearPlayerOneParts();
+        state.sourceBounds = bounds;
+        state.sourceBase = base;
+        const displayBase = makeDisplayBase(base);
+        const parts = buildPartDefinitions(bounds, displayBase);
+        const partStats = countSplatParts(probe, bounds, base);
+
+        probe.parent = state.p1.root;
+        probe.scaling.setAll(displayBase.scale);
+        probe.position.copyFrom(displayBase.offset);
+        probe.rotation.y = 0;
+        probe.visibility = 0.82;
+        probe.alwaysSelectAsActiveMesh = true;
+        probe.sourceSplatsData = probe.splatsData.slice(0);
+        state.p1.segmentMesh = probe;
+
+        const keptByPart = partStats.counts;
+        for (const part of parts) {
+          if (token !== state.loadingToken) {
+            return;
+          }
+          const node = new BABYLON.TransformNode(`partNode_${part.id}`, scene);
+          node.parent = state.p1.root;
+          node.position.copyFrom(part.pivotPlayer);
+
+          const meshAnchorLocal = partStats.centroids[part.id] ?? part.pivotLocal;
+          const meshAnchorPlayer = localToPlayer(meshAnchorLocal, displayBase);
+          const boxVisual = makePartBox(part, node);
+          state.p1.parts.set(part.id, {
+            ...part,
+            node,
+            box: boxVisual.box,
+            boxMaterial: boxVisual.mat,
+            meshAnchorLocal,
+            meshAnchorPlayer
+          });
+        }
+        buildSpzVirtualRig(state.p1);
+        state.p1.rigDebug = createSpzRigDebug(state.p1);
+        state.partKeptCounts = keptByPart;
+        renderPartToggles();
+        applyPartVisibility();
+
+        state.p1.visual = state.p1.root;
+        prepareCharacterPreview();
+        state.characterReady = true;
+        state.characterLoading = false;
+        ui.startFightButton.disabled = false;
+        setSelectStatus(`${sourceName} ready. ${parts.length} capsule body parts generated. Front ${state.frontSign > 0 ? "+Z" : "-Z"}.`);
+        setMessage(`${sourceName} ready. Press Motion Test to check poses.`);
+        console.log("3DGS parts kept splats:", keptByPart);
+      } catch (error) {
+        console.error(error);
+        state.characterReady = false;
+        state.characterLoading = false;
+        ui.startFightButton.disabled = false;
+        setSelectStatus(`${sourceName} failed to load.`);
+        setMessage(`${sourceName} failed. You can still press Motion Test to check Fighting Idle.glb.`);
+      }
+    }
+
+    function setMessage(text) {
+      ui.message.textContent = text;
+    }
+
+    function setSelectStatus(text) {
+      ui.selectStatus.textContent = text;
+    }
+
+    function updateHud() {
+      ui.p1Hp.style.width = `${Math.max(0, state.p1.hp)}%`;
+      ui.p2Hp.style.width = `${Math.max(0, state.p2.hp)}%`;
+      ui.p1State.textContent = state.p1.action.toUpperCase();
+      ui.p2State.textContent = state.mode === "fight" ? state.p2.action.toUpperCase() : "TEST";
+      ui.timer.textContent = state.mode === "fight" ? String(Math.ceil(state.roundTime)).padStart(2, "0") : "--";
+    }
+
+    function applyFacing(fighter, facing) {
+      fighter.facing = facing;
+      fighter.root.scaling.set(1, 1, 1);
+      fighter.root.rotation.y = facing * state.frontSign * Math.PI / 2;
+    }
+
+    function resetPartPose(fighter) {
+      fighter.parts.forEach((part) => {
+        part.node.rotation.set(0, 0, 0);
+        part.node.position.copyFrom(part.restLocalPosition ?? part.pivotPlayer);
+      });
+    }
+
+    function prepareCharacterPreview() {
+      state.mode = "select";
+      state.roundActive = false;
+      state.roundTime = 99;
+      state.p1.root.setEnabled(true);
+      state.p1.hp = 100;
+      state.p2.hp = 100;
+      state.p1.root.position.set(-2.6, 0, 0);
+      state.p2.root.position.set(3.2, 0, 0);
+      state.p1.vx = 0;
+      state.p1.vy = 0;
+      state.p2.vx = 0;
+      state.p2.vy = 0;
+      state.p1.action = "ready";
+      state.p2.action = "ready";
+      state.p1.actionTime = 0;
+      state.p2.actionTime = 0;
+      state.p2.root.setEnabled(false);
+      resetPartPose(state.p1);
+      applyFacing(state.p1, 1);
+      updateHud();
+    }
+
+    function resetMotionTest(showMessage = true) {
+      state.mode = "test";
+      state.roundActive = false;
+      state.roundTime = 99;
+      state.p1.root.setEnabled(state.characterReady);
+      state.p1.hp = 100;
+      state.p2.hp = 100;
+      state.p1.root.position.set(0, 0, 0);
+      state.p2.root.setEnabled(false);
+      state.p1.vx = 0;
+      state.p1.vy = 0;
+      applyFacing(state.p1, 1);
+      state.p1.action = "ready";
+      state.p1.actionTime = 0;
+      state.p1.hitCooldown = 0;
+      resetPartPose(state.p1);
+      if (showMessage) {
+      setMessage("Motion Test reset. Try Idle, Walk, and Back.");
+      }
+      updateHud();
+    }
+
+    function resetRound(showMessage = true) {
+      state.mode = "fight";
+      state.roundTime = 99;
+      state.roundActive = true;
+      state.p1.hp = 100;
+      state.p2.hp = 100;
+      state.p1.root.position.set(-3.2, 0, 0);
+      state.p2.root.position.set(3.2, 0, 0);
+      state.p2.root.setEnabled(true);
+      state.p1.vx = 0;
+      state.p1.vy = 0;
+      state.p2.vx = 0;
+      state.p2.vy = 0;
+      state.p1.action = "ready";
+      state.p2.action = "ready";
+      state.p1.actionTime = 0;
+      state.p2.actionTime = 0;
+      resetPartPose(state.p1);
+      if (showMessage) {
+        setMessage("Round reset. SPZ parts are ready.");
+      }
+      updateHud();
+    }
+
+    function startFight() {
+      if (state.characterLoading) {
+        setSelectStatus("Wait for the SPZ character to finish loading.");
+        return;
+      }
+      ui.selectScreen.classList.add("isHidden");
+      resetMotionTest(false);
+      if (!state.characterReady) {
+        state.p1.root.setEnabled(false);
+      }
+      setMessage(state.characterReady ? "Motion Test. Loading Fighting Idle.glb in Babylon.js." : "Motion-only test. Loading Fighting Idle.glb in Babylon.js.");
+      ensureMixamoIdleMotion();
+    }
+
+    function returnToCharacterSelect() {
+      ui.selectScreen.classList.remove("isHidden");
+      prepareCharacterPreview();
+      ui.startFightButton.disabled = state.characterLoading;
+      setSelectStatus(state.characterReady ? `${state.sourceName} ready.` : "SPZ optional. Press Motion Test to check Fighting Idle.glb only.");
+      setMessage("Press Motion Test to check Fighting Idle.glb, or load a SPZ character.");
+    }
+
+    function clampFighter(fighter) {
+      fighter.root.position.x = BABYLON.Scalar.Clamp(fighter.root.position.x, stage.minX, stage.maxX);
+      fighter.root.position.z = BABYLON.Scalar.Clamp(fighter.root.position.z, -0.85, 0.85);
+      if (fighter.root.position.y <= stage.floorY) {
+        fighter.root.position.y = stage.floorY;
+        fighter.vy = 0;
+      }
+    }
+
+    function setFacing() {
+      const direction = state.p1.root.position.x <= state.p2.root.position.x ? 1 : -1;
+      applyFacing(state.p1, direction);
+      applyFacing(state.p2, -direction);
+    }
+
+    function startAction(fighter, action) {
+      if (state.mode !== "test" && !state.roundActive) {
+        return;
+      }
+      if (fighter.action === "hit" && fighter.actionTime > 0) {
+        return;
+      }
+      const durations = { idle: 0.7, walkForward: 0.7, jogBack: 0.62, jump: 0.35 };
+      fighter.action = action;
+      fighter.actionTime = durations[action] ?? 0.2;
+    }
+
+    function getPartWorldBox(fighter, partId) {
+      const part = fighter.parts.get(partId);
+      if (!part) {
+        return null;
+      }
+      part.box.computeWorldMatrix(true);
+      return part.box.getBoundingInfo().boundingBox;
+    }
+
+    function rivalTargetBox() {
+      const center = state.p2.root.position.add(new BABYLON.Vector3(0, 1.25, 0));
+      return {
+        minimumWorld: center.add(new BABYLON.Vector3(-0.55, -1.15, -0.36)),
+        maximumWorld: center.add(new BABYLON.Vector3(0.55, 1.15, 0.36))
+      };
+    }
+
+    function attackWorldBox(attacker, kind) {
+      const reach = kind === "kick" ? 1.15 : kind === "special" ? 1.45 : 0.9;
+      const height = kind === "kick" ? 0.75 : kind === "special" ? 1.35 : 1.45;
+      const center = attacker.root.position.add(new BABYLON.Vector3(attacker.facing * reach, height, 0));
+      const half = new BABYLON.Vector3(kind === "special" ? 0.72 : 0.46, kind === "kick" ? 0.28 : 0.34, 0.34);
+      return {
+        minimumWorld: center.subtract(half),
+        maximumWorld: center.add(half)
+      };
+    }
+
+    function boxesIntersect(a, b) {
+      return (
+        a.minimumWorld.x <= b.maximumWorld.x &&
+        a.maximumWorld.x >= b.minimumWorld.x &&
+        a.minimumWorld.y <= b.maximumWorld.y &&
+        a.maximumWorld.y >= b.minimumWorld.y &&
+        a.minimumWorld.z <= b.maximumWorld.z &&
+        a.maximumWorld.z >= b.minimumWorld.z
+      );
+    }
+
+    function tryHit(attacker, defender, kind) {
+      if (attacker.hitCooldown > 0) {
+        return;
+      }
+
+      const attackingParts = kind === "kick" ? ["leftShin", "rightShin", "leftThigh", "rightThigh"] : kind === "special" ? ["leftHand", "rightHand", "leftForearm", "rightForearm", "leftShin", "rightShin", "head"] : ["leftHand", "rightHand", "leftForearm", "rightForearm"];
+      const targetBox = defender === state.p2 ? rivalTargetBox() : null;
+      let hitPart = null;
+      let targetPart = null;
+
+      if (targetBox) {
+        hitPart = attackingParts.find((id) => {
+          const box = getPartWorldBox(attacker, id);
+          return box && boxesIntersect(box, targetBox);
+        });
+      } else if (defender.parts.size) {
+        const attackBox = attackWorldBox(attacker, kind);
+        const priority = ["head", "spine2", "spine1", "spine", "hips", "leftHand", "rightHand", "leftForearm", "rightForearm", "leftUpperArm", "rightUpperArm", "leftThigh", "rightThigh", "leftShin", "rightShin"];
+        targetPart = priority.find((id) => {
+          const box = getPartWorldBox(defender, id);
+          return box && boxesIntersect(attackBox, box);
+        });
+        hitPart = targetPart ? kind : null;
+      }
+
+      if (!hitPart) {
+        const distance = Math.abs(attacker.root.position.x - defender.root.position.x);
+        const vertical = Math.abs(attacker.root.position.y - defender.root.position.y);
+        const range = kind === "kick" ? 1.7 : kind === "special" ? 2.25 : 1.25;
+        if (distance > range || vertical > 1.1) {
+          return;
+        }
+        hitPart = hitPart ?? attackingParts[0];
+      }
+
+      const defenderGuarding = defender.guard && Math.sign(attacker.root.position.x - defender.root.position.x) !== defender.facing;
+      const baseDamage = kind === "special" ? 24 : kind === "kick" ? 15 : 9;
+      const damage = defenderGuarding ? Math.ceil(baseDamage * 0.28) : baseDamage;
+      defender.hp = Math.max(0, defender.hp - damage);
+      defender.action = defenderGuarding ? "guard" : "hit";
+      defender.actionTime = defenderGuarding ? 0.18 : 0.28;
+      defender.vx = attacker.facing * (defenderGuarding ? 0.55 : 1.25);
+      attacker.hitCooldown = kind === "special" ? 0.7 : kind === "kick" ? 0.36 : 0.26;
+      state.flashTime = 0.08;
+      ui.flash.classList.add("isActive");
+
+      const sparkBase = defender.root.position.add(new BABYLON.Vector3(-defender.facing * 0.54, kind === "kick" ? 0.75 : 1.45, 0));
+      spawnHitSpark(sparkBase);
+      const hitText = targetPart ? `${targetPart.toUpperCase()} was hit` : `hit with ${String(hitPart).toUpperCase()}`;
+      setMessage(`${kind.toUpperCase()} ${hitText}. Damage ${damage}.`);
+
+      if (defender.hp <= 0) {
+        endRound(attacker.name === "p1" ? "K.O. Player 1 wins." : "K.O. Rival wins.");
+      }
+      updateHud();
+    }
+
+    function spawnHitSpark(position) {
+      const spark = BABYLON.MeshBuilder.CreateSphere("hitSpark", { diameter: 0.28, segments: 12 }, scene);
+      spark.position.copyFrom(position);
+      spark.material = mats.hit;
+      let life = 0;
+      scene.onBeforeRenderObservable.add(function tick() {
+        const dt = Math.min(engine.getDeltaTime() / 1000, 0.04);
+        life += dt;
+        spark.scaling.setAll(1 + life * 8);
+        spark.material.alpha = Math.max(0, 1 - life * 4);
+        if (life > 0.25) {
+          spark.dispose();
+          scene.onBeforeRenderObservable.removeCallback(tick);
+        }
+      });
+    }
+
+    function endRound(text) {
+      state.roundActive = false;
+      state.p1.action = state.p1.hp <= 0 ? "down" : "win";
+      state.p2.action = state.p2.hp <= 0 ? "down" : "win";
+      setMessage(text);
+      updateHud();
+    }
+
+    function updatePlayer(deltaSeconds) {
+      const p = state.p1;
+      let move = 0;
+      if (keys.has("KeyA") || keys.has("ArrowLeft")) {
+        move -= 1;
+      }
+      if (keys.has("KeyD") || keys.has("ArrowRight")) {
+        move += 1;
+      }
+      p.guard = keys.has("KeyL") || keys.has("ShiftLeft");
+      if (p.guard && p.root.position.y <= 0.01 && p.action !== "hit") {
+        p.action = "guard";
+        p.actionTime = 0.12;
+      }
+      if (move !== 0 && p.action !== "hit") {
+        p.vx = move * 4.6;
+        if (state.mode === "test") {
+          const nextFacing = move > 0 ? 1 : -1;
+          applyFacing(p, nextFacing);
+          if (!p.guard) {
+            p.action = "walkForward";
+            p.actionTime = 0.34;
+          }
+        }
+        if (state.mode !== "test" && !p.guard) {
+          const movingTowardOpponent = Math.sign(move) === p.facing;
+          p.action = movingTowardOpponent ? "walkForward" : "jogBack";
+          p.actionTime = 0.08;
+        }
+      } else {
+        p.vx *= Math.pow(0.06, deltaSeconds);
+      }
+      if ((keys.has("KeyW") || keys.has("ArrowUp")) && p.root.position.y <= 0.01 && p.action !== "hit") {
+        p.vy = 6.6;
+        startAction(p, "jump");
+      }
+    }
+
+    function updateAi(deltaSeconds) {
+      const ai = state.p2;
+      const target = state.p1;
+      ai.aiTimer -= deltaSeconds;
+      const dx = target.root.position.x - ai.root.position.x;
+      const distance = Math.abs(dx);
+      ai.guard = false;
+      if (ai.aiTimer <= 0 && ai.action !== "hit") {
+        if (distance > 2.15) {
+          ai.vx = Math.sign(dx) * 3.2;
+          ai.action = "walk";
+          ai.actionTime = 0.14;
+          ai.aiTimer = 0.22;
+        } else if (Math.random() < 0.58) {
+          startAction(ai, Math.random() < 0.58 ? "punch" : "kick");
+          ai.aiTimer = 0.42 + Math.random() * 0.4;
+        } else {
+          ai.guard = true;
+          startAction(ai, "guard");
+          ai.aiTimer = 0.3;
+        }
+      }
+      if (distance < 1.15 && ai.action !== "punch" && ai.action !== "kick") {
+        ai.vx = -Math.sign(dx) * 1.5;
+      }
+    }
+
+    function setPartRotation(fighter, id, x, y, z, lerp = 0.28) {
+      const part = fighter.parts.get(id);
+      if (!part) {
+        return;
+      }
+      part.node.rotationQuaternion = null;
+      part.node.rotation.x = BABYLON.Scalar.Lerp(part.node.rotation.x, x, lerp);
+      part.node.rotation.y = BABYLON.Scalar.Lerp(part.node.rotation.y, y, lerp);
+      part.node.rotation.z = BABYLON.Scalar.Lerp(part.node.rotation.z, z, lerp);
+    }
+
+    function getWorldRotationQuaternion(node) {
+      node.computeWorldMatrix(true);
+      const scale = new BABYLON.Vector3();
+      const rotation = new BABYLON.Quaternion();
+      const position = new BABYLON.Vector3();
+      node.getWorldMatrix().decompose(scale, rotation, position);
+      return rotation;
+    }
+
+    function setNodeWorldRotation(node, worldRotation, lerp = 1) {
+      const parentRotation = node.parent
+        ? getWorldRotationQuaternion(node.parent)
+        : BABYLON.Quaternion.Identity();
+      const localTarget = BABYLON.Quaternion.Inverse(parentRotation).multiply(worldRotation).normalize();
+      const current = node.rotationQuaternion ?? BABYLON.Quaternion.FromEulerVector(node.rotation);
+      node.rotationQuaternion = BABYLON.Quaternion.Slerp(current, localTarget, lerp).normalize();
+    }
+
+    const MIXAMO_PART_BONES = {
+      hips: ["hips"],
+      spine: ["spine"],
+      spine1: ["spine1"],
+      spine2: ["spine2"],
+      neck: ["neck"],
+      head: ["head"],
+      leftShoulder: ["leftshoulder"],
+      leftUpperArm: ["leftarm"],
+      leftForearm: ["leftforearm"],
+      leftHand: ["lefthand"],
+      rightShoulder: ["rightshoulder"],
+      rightUpperArm: ["rightarm"],
+      rightForearm: ["rightforearm"],
+      rightHand: ["righthand"],
+      leftThigh: ["leftupleg"],
+      leftShin: ["leftleg"],
+      leftFoot: ["leftfoot"],
+      rightThigh: ["rightupleg"],
+      rightShin: ["rightleg"],
+      rightFoot: ["rightfoot"]
+    };
+
+    const SPZ_RIG_PARENT = {
+      hips: null,
+      spine: "hips",
+      spine1: "spine",
+      spine2: "spine1",
+      neck: "spine2",
+      head: "neck",
+      leftShoulder: "spine2",
+      leftUpperArm: "leftShoulder",
+      leftForearm: "leftUpperArm",
+      leftHand: "leftForearm",
+      rightShoulder: "spine2",
+      rightUpperArm: "rightShoulder",
+      rightForearm: "rightUpperArm",
+      rightHand: "rightForearm",
+      leftThigh: "hips",
+      leftShin: "leftThigh",
+      leftFoot: "leftShin",
+      rightThigh: "hips",
+      rightShin: "rightThigh",
+      rightFoot: "rightShin"
+    };
+
+    const MIXAMO_IDLE_BASE_POSE = {
+      hips: { x: -0.02, y: 0, z: 0 },
+      spine: { x: 0.03, y: 0, z: 0 },
+      spine1: { x: 0.04, y: 0, z: 0 },
+      spine2: { x: 0.05, y: 0, z: 0 },
+      neck: { x: -0.02, y: 0, z: 0 },
+      head: { x: -0.03, y: 0, z: 0 },
+      leftShoulder: { x: -0.1, y: 0, z: 0.08 },
+      leftUpperArm: { x: -0.28, y: 0, z: 0.24 },
+      leftForearm: { x: -0.22, y: 0, z: 0.12 },
+      leftHand: { x: -0.08, y: 0, z: 0 },
+      rightShoulder: { x: -0.1, y: 0, z: -0.08 },
+      rightUpperArm: { x: -0.28, y: 0, z: -0.24 },
+      rightForearm: { x: -0.22, y: 0, z: -0.12 },
+      rightHand: { x: -0.08, y: 0, z: 0 },
+      leftThigh: { x: 0.08, y: 0, z: 0.04 },
+      leftShin: { x: 0.06, y: 0, z: 0 },
+      leftFoot: { x: -0.04, y: 0, z: 0 },
+      rightThigh: { x: 0.08, y: 0, z: -0.04 },
+      rightShin: { x: 0.06, y: 0, z: 0 },
+      rightFoot: { x: -0.04, y: 0, z: 0 }
+    };
+
+    const MIXAMO_IDLE_TUNING = {
+      hips: { x: 0.12, y: 0.1, z: 0.08, max: 0.07 },
+      spine: { x: 0.14, y: 0.1, z: 0.08, max: 0.07 },
+      spine1: { x: 0.16, y: 0.11, z: 0.08, max: 0.08 },
+      spine2: { x: 0.18, y: 0.12, z: 0.08, max: 0.08 },
+      neck: { x: 0.12, y: 0.08, z: 0.05, max: 0.04 },
+      head: { x: 0.12, y: 0.08, z: 0.05, max: 0.04 },
+      leftShoulder: { x: 0.16, y: 0.04, z: 0.12, max: 0.06 },
+      rightShoulder: { x: 0.16, y: 0.04, z: 0.12, max: 0.06 },
+      leftUpperArm: { x: 0.18, y: 0.04, z: 0.14, max: 0.08 },
+      rightUpperArm: { x: 0.18, y: 0.04, z: 0.14, max: 0.08 },
+      leftForearm: { x: 0.16, y: 0.04, z: 0.1, max: 0.07 },
+      rightForearm: { x: 0.16, y: 0.04, z: 0.1, max: 0.07 },
+      leftHand: { x: 0.08, y: 0.03, z: 0.05, max: 0.04 },
+      rightHand: { x: 0.08, y: 0.03, z: 0.05, max: 0.04 },
+      leftThigh: { x: 0.1, y: 0.04, z: 0.06, max: 0.05 },
+      rightThigh: { x: 0.1, y: 0.04, z: 0.06, max: 0.05 },
+      leftShin: { x: 0.08, y: 0.02, z: 0.03, max: 0.04 },
+      rightShin: { x: 0.08, y: 0.02, z: 0.03, max: 0.04 },
+      leftFoot: { x: 0.06, y: 0.02, z: 0.03, max: 0.03 },
+      rightFoot: { x: 0.06, y: 0.02, z: 0.03, max: 0.03 }
+    };
+
+    const MIXAMO_IDLE_GAIN = 2.4;
+
+    function clampMotion(value, limit) {
+      return BABYLON.Scalar.Clamp(value, -limit, limit);
+    }
+
+    function normalizeMixamoBoneName(name) {
+      return String(name)
+        .replace(/^.*[\\/:.|]/, "")
+        .replace(/^mixamorig/i, "")
+        .replace(/[^a-z0-9]/gi, "")
+        .toLowerCase();
+    }
+
+    function getBonePosition(bone) {
+      const scale = new BABYLON.Vector3();
+      const rotation = new BABYLON.Quaternion();
+      const position = new BABYLON.Vector3();
+      bone.getAbsoluteTransform().decompose(scale, rotation, position);
+      return position;
+    }
+
+    function createMixamoSkeletonDebug(skeleton) {
+      skeleton.prepare();
+      const root = new BABYLON.TransformNode("mixamoIdleDebugRoot", scene);
+      const bones = skeleton.bones.filter((bone) => bone.getParent());
+      const positions = skeleton.bones.map(getBonePosition);
+      const min = positions.reduce((acc, pos) => BABYLON.Vector3.Minimize(acc, pos), positions[0].clone());
+      const max = positions.reduce((acc, pos) => BABYLON.Vector3.Maximize(acc, pos), positions[0].clone());
+      const size = max.subtract(min);
+      const axes = [
+        { name: "x", size: size.x },
+        { name: "y", size: size.y },
+        { name: "z", size: size.z }
+      ].sort((a, b) => b.size - a.size);
+      const upAxis = axes[0].name;
+      const sideAxis = axes[1].name;
+      const depthAxis = axes[2].name;
+      const height = Math.max(0.001, axes[0].size);
+      const targetHeight = 2.25;
+      const scale = targetHeight / height;
+      root.position.set(3.25, 0.06, 0);
+
+      const axisValue = (pos, axis) => axis === "x" ? pos.x : axis === "y" ? pos.y : pos.z;
+      const toDebugPoint = (pos) => new BABYLON.Vector3(
+        (axisValue(pos, sideAxis) - (axisValue(min, sideAxis) + axisValue(max, sideAxis)) * 0.5) * scale,
+        (axisValue(pos, upAxis) - axisValue(min, upAxis)) * scale,
+        (axisValue(pos, depthAxis) - (axisValue(min, depthAxis) + axisValue(max, depthAxis)) * 0.5) * scale
+      );
+
+      const marker = BABYLON.MeshBuilder.CreateBox(
+        "mixamoDebugMarker",
+        { width: 0.08, height: 0.08, depth: 0.08 },
+        scene
+      );
+      marker.parent = root;
+      marker.position.set(0, 0, 0);
+      marker.material = mats.hit;
+      marker.isPickable = false;
+
+      const lines = bones.map((bone) => {
+        const parent = bone.getParent();
+        const mesh = BABYLON.MeshBuilder.CreateLines(
+          `mixamoBone_${bone.name}`,
+          { points: [toDebugPoint(getBonePosition(parent)), toDebugPoint(getBonePosition(bone))], updatable: true },
+          scene
+        );
+        mesh.parent = root;
+        mesh.color = new BABYLON.Color3(0.2, 0.8, 1);
+        mesh.isPickable = false;
+        return { bone, parent, mesh };
+      });
+
+      console.log("Mixamo debug skeleton axes:", { upAxis, sideAxis, depthAxis, size });
+      return { root, lines, toDebugPoint };
+    }
+
+    function updateMixamoSkeletonDebug(debug) {
+      if (!debug) {
+        return;
+      }
+      debug.lines.forEach(({ bone, parent, mesh }) => {
+        BABYLON.MeshBuilder.CreateLines(null, {
+          points: [debug.toDebugPoint(getBonePosition(parent)), debug.toDebugPoint(getBonePosition(bone))],
+          instance: mesh
+        });
+      });
+    }
+
+    async function loadGlbJson(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`${url} failed: ${response.status}`);
+      }
+      const buffer = await response.arrayBuffer();
+      const view = new DataView(buffer);
+      if (view.getUint32(0, true) !== 0x46546c67) {
+        throw new Error("GLB magic header is missing.");
+      }
+
+      let offset = 12;
+      let gltf = null;
+      let binary = null;
+      while (offset + 8 <= buffer.byteLength) {
+        const length = view.getUint32(offset, true);
+        const type = view.getUint32(offset + 4, true);
+        const chunk = buffer.slice(offset + 8, offset + 8 + length);
+        if (type === 0x4e4f534a) {
+          gltf = JSON.parse(new TextDecoder().decode(chunk).trim());
+        } else if (type === 0x004e4942) {
+          binary = chunk;
+        }
+        offset += 8 + length;
+      }
+      if (!gltf || !binary) {
+        throw new Error("GLB JSON or BIN chunk is missing.");
+      }
+      return { gltf, binary };
+    }
+
+    function readGlbAccessor(gltf, binary, accessorIndex) {
+      const accessor = gltf.accessors[accessorIndex];
+      const bufferView = gltf.bufferViews[accessor.bufferView];
+      const componentCount = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 }[accessor.type] ?? 1;
+      const componentSize = accessor.componentType === 5126 ? 4 : accessor.componentType === 5123 ? 2 : 4;
+      const stride = bufferView.byteStride ?? componentCount * componentSize;
+      const start = (bufferView.byteOffset ?? 0) + (accessor.byteOffset ?? 0);
+      const view = new DataView(binary, start, stride * accessor.count);
+      const values = [];
+      for (let i = 0; i < accessor.count; i++) {
+        const item = [];
+        for (let j = 0; j < componentCount; j++) {
+          const byteOffset = i * stride + j * componentSize;
+          if (accessor.componentType === 5126) {
+            item.push(view.getFloat32(byteOffset, true));
+          } else if (accessor.componentType === 5123) {
+            item.push(view.getUint16(byteOffset, true));
+          } else {
+            item.push(view.getFloat32(byteOffset, true));
+          }
+        }
+        values.push(componentCount === 1 ? item[0] : item);
+      }
+      return values;
+    }
+
+    function makeQuat(values) {
+      return new BABYLON.Quaternion(values[0], values[1], values[2], values[3]);
+    }
+
+    function sampleGlbChannel(channel, time) {
+      const times = channel.input;
+      const values = channel.output;
+      if (!times.length) {
+        return values[0];
+      }
+      const duration = times[times.length - 1] || 1;
+      const wrapped = ((time % duration) + duration) % duration;
+      let index = 0;
+      while (index < times.length - 2 && times[index + 1] < wrapped) {
+        index += 1;
+      }
+      const next = Math.min(index + 1, times.length - 1);
+      const span = Math.max(0.0001, times[next] - times[index]);
+      const amount = BABYLON.Scalar.Clamp((wrapped - times[index]) / span, 0, 1);
+      if (channel.path === "rotation") {
+        return BABYLON.Quaternion.Slerp(makeQuat(values[index]), makeQuat(values[next]), amount);
+      }
+      const a = BABYLON.Vector3.FromArray(values[index]);
+      const b = BABYLON.Vector3.FromArray(values[next]);
+      return BABYLON.Vector3.Lerp(a, b, amount);
+    }
+
+    async function createGlbMotionDebug(url) {
+      const { gltf, binary } = await loadGlbJson(url);
+      const nodes = (gltf.nodes ?? []).map((node, index) => ({
+        index,
+        name: node.name ?? `node_${index}`,
+        children: node.children ?? [],
+        parent: null,
+        translation: BABYLON.Vector3.FromArray(node.translation ?? [0, 0, 0]),
+        rotation: makeQuat(node.rotation ?? [0, 0, 0, 1]),
+        scale: BABYLON.Vector3.FromArray(node.scale ?? [1, 1, 1]),
+        world: BABYLON.Matrix.Identity(),
+        position: BABYLON.Vector3.Zero()
+      }));
+      nodes.forEach((node) => {
+        node.children.forEach((childIndex) => {
+          if (nodes[childIndex]) {
+            nodes[childIndex].parent = node.index;
+          }
+        });
+      });
+
+      const channels = [];
+      (gltf.animations?.[0]?.channels ?? []).forEach((channel) => {
+        const sampler = gltf.animations[0].samplers[channel.sampler];
+        channels.push({
+          nodeIndex: channel.target.node,
+          path: channel.target.path,
+          input: readGlbAccessor(gltf, binary, sampler.input),
+          output: readGlbAccessor(gltf, binary, sampler.output)
+        });
+      });
+      const movingChannels = channels.filter((channel) => {
+        const first = JSON.stringify(channel.output[0]);
+        return channel.output.some((value) => JSON.stringify(value) !== first);
+      }).length;
+
+      const root = new BABYLON.TransformNode("mixamoJsonDebugRoot", scene);
+      root.position.set(3.2, 0.06, 0);
+      const marker = BABYLON.MeshBuilder.CreateBox("mixamoJsonDebugMarker", { width: 0.12, height: 0.12, depth: 0.12 }, scene);
+      marker.parent = root;
+      marker.material = mats.hit;
+      const clock = BABYLON.MeshBuilder.CreateSphere("mixamoJsonDebugClock", { diameter: 0.09, segments: 10 }, scene);
+      clock.parent = root;
+      clock.position.set(-1.55, 2.55, 0);
+      clock.material = mats.lane;
+      clock.isPickable = false;
+
+      const rotateByQuaternion = (vector, quaternion) => {
+        const q = quaternion.normalize();
+        const u = new BABYLON.Vector3(q.x, q.y, q.z);
+        const s = q.w;
+        const dotUV = BABYLON.Vector3.Dot(u, vector);
+        const dotUU = BABYLON.Vector3.Dot(u, u);
+        const crossUV = BABYLON.Vector3.Cross(u, vector);
+        return u.scale(2 * dotUV)
+          .add(vector.scale(s * s - dotUU))
+          .add(crossUV.scale(2 * s));
+      };
+
+      const computePose = (time) => {
+        nodes.forEach((node, index) => {
+          const source = gltf.nodes[index];
+          node.translation = BABYLON.Vector3.FromArray(source.translation ?? [0, 0, 0]);
+          node.rotation = makeQuat(source.rotation ?? [0, 0, 0, 1]);
+          node.scale = BABYLON.Vector3.FromArray(source.scale ?? [1, 1, 1]);
+          node.worldRotation = node.rotation.clone();
+          node.position = node.translation.clone();
+        });
+        channels.forEach((channel) => {
+          const node = nodes[channel.nodeIndex];
+          if (!node) {
+            return;
+          }
+          if (!["translation", "rotation", "scale"].includes(channel.path)) {
+            return;
+          }
+          const sampled = sampleGlbChannel(channel, time);
+          if (channel.path === "translation") {
+            node.translation = sampled;
+          } else if (channel.path === "rotation") {
+            node.rotation = sampled;
+          } else if (channel.path === "scale") {
+            node.scale = sampled;
+          }
+        });
+        const updateNode = (node) => {
+          if (node.parent !== null) {
+            const parent = nodes[node.parent];
+            node.position = parent.position.add(rotateByQuaternion(node.translation, parent.worldRotation));
+            node.worldRotation = parent.worldRotation.multiply(node.rotation);
+          } else {
+            node.position = node.translation.clone();
+            node.worldRotation = node.rotation.clone();
+          }
+          node.children.forEach((childIndex) => updateNode(nodes[childIndex]));
+        };
+        nodes.filter((node) => node.parent === null).forEach(updateNode);
+      };
+
+      computePose(0);
+      const positions = nodes.map((node) => node.position);
+      const min = positions.reduce((acc, pos) => BABYLON.Vector3.Minimize(acc, pos), positions[0].clone());
+      const max = positions.reduce((acc, pos) => BABYLON.Vector3.Maximize(acc, pos), positions[0].clone());
+      const size = max.subtract(min);
+      const axes = [
+        { name: "x", size: size.x },
+        { name: "y", size: size.y },
+        { name: "z", size: size.z }
+      ].sort((a, b) => b.size - a.size);
+      const upAxis = axes[0].name;
+      const sideAxis = axes[1].name;
+      const depthAxis = axes[2].name;
+      const drawScale = 2.4 / Math.max(0.001, axes[0].size);
+      const axisValue = (pos, axis) => axis === "x" ? pos.x : axis === "y" ? pos.y : pos.z;
+      const anchorNode =
+        nodes.find((node) => normalizeMixamoBoneName(node.name) === "hips") ??
+        nodes.find((node) => normalizeMixamoBoneName(node.name).endsWith("hips")) ??
+        nodes[0];
+      const getFrameBounds = () => {
+        const framePositions = nodes.map((node) => node.position);
+        return {
+          min: framePositions.reduce((acc, pos) => BABYLON.Vector3.Minimize(acc, pos), framePositions[0].clone()),
+          max: framePositions.reduce((acc, pos) => BABYLON.Vector3.Maximize(acc, pos), framePositions[0].clone()),
+          anchor: anchorNode.position
+        };
+      };
+      const toDebugPoint = (pos, frameBounds = { min, max }) => new BABYLON.Vector3(
+        (axisValue(pos, sideAxis) - axisValue(frameBounds.anchor ?? anchorNode.position, sideAxis)) * drawScale,
+        (axisValue(pos, upAxis) - axisValue(frameBounds.min, upAxis)) * drawScale,
+        (axisValue(pos, depthAxis) - axisValue(frameBounds.anchor ?? anchorNode.position, depthAxis)) * drawScale
+      );
+
+      const lineNodes = nodes.filter((node) => node.parent !== null);
+      const initialFrameBounds = getFrameBounds();
+      const lines = lineNodes.map((node) => {
+        const mesh = BABYLON.MeshBuilder.CreateLines(
+          `mixamoJsonBone_${node.name}`,
+          { points: [toDebugPoint(nodes[node.parent].position, initialFrameBounds), toDebugPoint(node.position, initialFrameBounds)], updatable: true },
+          scene
+        );
+        mesh.parent = root;
+        mesh.color = new BABYLON.Color3(0.1, 0.9, 1);
+        mesh.isPickable = false;
+        return { node, mesh };
+      });
+      const jointMaterial = makeMaterial(
+        "mixamoJointDebugMat",
+        new BABYLON.Color3(0.1, 0.9, 1),
+        new BABYLON.Color3(0.02, 0.35, 0.5)
+      );
+      const jointNodes = nodes.filter((node) => node.parent !== null && node.children.length);
+      const joints = jointNodes.map((node) => {
+        const sphere = BABYLON.MeshBuilder.CreateSphere(
+          `mixamoJsonJoint_${node.name}`,
+          { diameter: 0.055, segments: 8 },
+          scene
+        );
+        sphere.parent = root;
+        sphere.position.copyFrom(toDebugPoint(node.position, initialFrameBounds));
+        sphere.material = jointMaterial;
+        sphere.isPickable = false;
+        return { node, sphere };
+      });
+      const normalizedNodes = new Map(nodes.map((node) => [normalizeMixamoBoneName(node.name), node]));
+      const findMotionNode = (candidates) =>
+        candidates.map((name) => normalizedNodes.get(name)).find(Boolean) ||
+        [...normalizedNodes.entries()].find(([name]) => candidates.some((candidate) => name.endsWith(candidate)))?.[1];
+      const partLookup = new Map(PARTS.map((part) => [part.id, part]));
+      const partMarkers = Object.entries(MIXAMO_PART_BONES).map(([partId, candidates]) => {
+        const node = findMotionNode(candidates);
+        if (!node) {
+          return null;
+        }
+        const part = partLookup.get(partId);
+        const markerMat = makeMaterial(
+          `mixamoPartMarker_${partId}`,
+          part?.color ?? new BABYLON.Color3(1, 1, 1),
+          part?.color?.scale(0.22) ?? new BABYLON.Color3(0.2, 0.2, 0.2)
+        );
+        const marker = BABYLON.MeshBuilder.CreateBox(
+          `mixamoPartMarkerBox_${partId}`,
+          { width: 0.11, height: 0.11, depth: 0.11 },
+          scene
+        );
+        marker.parent = root;
+        marker.position.copyFrom(toDebugPoint(node.position, initialFrameBounds));
+        marker.material = markerMat;
+        marker.isPickable = false;
+        return { partId, node, marker, baseRotation: node.rotation.clone() };
+      }).filter(Boolean);
+      const partMarkerById = new Map(partMarkers.map((marker) => [marker.partId, marker]));
+
+      return {
+        mode: "jsonDebug",
+        nodes,
+        lines,
+        joints,
+        partMarkers,
+        partMarkerById,
+        root,
+        frameBounds: initialFrameBounds,
+        startedAt: performance.now() / 1000,
+        resetClock() {
+          this.startedAt = performance.now() / 1000;
+        },
+        update(time) {
+          const localTime = time - this.startedAt;
+          computePose(localTime);
+          const frameBounds = getFrameBounds();
+          this.frameBounds = frameBounds;
+          this.lines.forEach(({ node, mesh }) => {
+            BABYLON.MeshBuilder.CreateLines(null, {
+              points: [toDebugPoint(nodes[node.parent].position, frameBounds), toDebugPoint(node.position, frameBounds)],
+              instance: mesh
+            });
+          });
+          this.joints.forEach(({ node, sphere }) => {
+            sphere.position.copyFrom(toDebugPoint(node.position, frameBounds));
+          });
+          this.partMarkers.forEach(({ node, marker }) => {
+            marker.position.copyFrom(toDebugPoint(node.position, frameBounds));
+          });
+          clock.position.x = -1.55 + (Math.sin(localTime * 4) * 0.25 + 0.25);
+        },
+        getPartPoint(partId) {
+          const marker = this.partMarkerById.get(partId);
+          return marker ? toDebugPoint(marker.node.position, this.frameBounds) : null;
+        },
+        dispose() {
+          root.dispose(false, false);
+        },
+        summary: {
+          nodes: nodes.length,
+          channels: channels.length,
+          movingChannels,
+          parts: partMarkers.length,
+          upAxis,
+          sideAxis,
+          depthAxis
+        }
+      };
+    }
+
+    function updateMixamoMotionDebug() {
+      const motion = state.mixamo.current;
+      if (!motion) {
+        return;
+      }
+      if (motion.mode === "jsonDebug") {
+        motion.update(performance.now() / 1000);
+        return;
+      }
+      motion.skeleton.prepare();
+      updateMixamoSkeletonDebug(motion.debug);
+    }
+
+    async function loadMixamoMotion(action) {
+      const motionInfo = MIXAMO_MOTION_FILES[action] ?? MIXAMO_MOTION_FILES.idle;
+      if (state.mixamo.loading) {
+        return state.mixamo.current;
+      }
+      if (state.mixamo.currentKey === action && state.mixamo.current) {
+        state.mixamo.current.resetClock?.();
+        return state.mixamo.current;
+      }
+      const cached = state.mixamo.motions.get(action);
+      if (cached) {
+        state.mixamo.current?.root?.setEnabled(false);
+        cached.root.setEnabled(true);
+        cached.root.rotation.y = motionInfo.displayYaw ?? 0;
+        cached.resetClock?.();
+        state.mixamo.current = cached;
+        state.mixamo.currentKey = action;
+        setMessage(`${motionInfo.label} selected. ${cached.summary.movingChannels}/${cached.summary.channels} moving channels, ${cached.summary.parts}/18 parts.`);
+        return cached;
+      }
+
+      state.mixamo.loading = true;
+      state.mixamo.error = null;
+      setMessage(`Loading ${motionInfo.file}...`);
+
+      try {
+        state.mixamo.current?.root?.setEnabled(false);
+        const encodedFile = motionInfo.file.split("/").map(encodeURIComponent).join("/");
+        const debug = await createGlbMotionDebug(`mixamo/${encodedFile}`);
+        debug.root.rotation.y = motionInfo.displayYaw ?? 0;
+        state.mixamo.current = debug;
+        state.mixamo.currentKey = action;
+        state.mixamo.motions.set(action, debug);
+        state.mixamo.loading = false;
+        setMessage(`${motionInfo.label} loaded. ${debug.summary.movingChannels}/${debug.summary.channels} moving channels, ${debug.summary.parts}/18 parts.`);
+        console.log(`${motionInfo.file} JSON debug:`, debug.summary);
+        return debug;
+      } catch (error) {
+        console.error(error);
+        state.mixamo.loading = false;
+        state.mixamo.error = error;
+        state.mixamo.current = null;
+        state.mixamo.currentKey = null;
+        setMessage(`${motionInfo.file} could not load: ${error.message}`);
+        return null;
+      }
+    }
+
+    function ensureMixamoIdleMotion() {
+      return loadMixamoMotion("idle");
+    }
+
+    const MIXAMO_PART_FOLLOW_TUNING = {
+      hips: { x: 0.14, y: 0.12, z: 0.1, max: 0.1 },
+      spine: { x: 0.16, y: 0.12, z: 0.1, max: 0.11 },
+      spine1: { x: 0.18, y: 0.14, z: 0.11, max: 0.12 },
+      spine2: { x: 0.22, y: 0.16, z: 0.12, max: 0.14 },
+      neck: { x: 0.14, y: 0.1, z: 0.08, max: 0.07 },
+      head: { x: 0.03, y: 0.025, z: 0.02, max: 0.025 },
+      leftShoulder: { x: 0.18, y: 0.08, z: 0.18, max: 0.13 },
+      rightShoulder: { x: 0.18, y: 0.08, z: 0.18, max: 0.13 },
+      leftUpperArm: { x: 0.28, y: 0.1, z: 0.26, max: 0.22 },
+      rightUpperArm: { x: 0.28, y: 0.1, z: 0.26, max: 0.22 },
+      leftForearm: { x: 0.28, y: 0.1, z: 0.2, max: 0.2 },
+      rightForearm: { x: 0.28, y: 0.1, z: 0.2, max: 0.2 },
+      leftHand: { x: 0.14, y: 0.08, z: 0.12, max: 0.1 },
+      rightHand: { x: 0.14, y: 0.08, z: 0.12, max: 0.1 },
+      leftThigh: { x: 0.34, y: 0.1, z: 0.12, max: 0.24 },
+      rightThigh: { x: 0.34, y: 0.1, z: 0.12, max: 0.24 },
+      leftShin: { x: 0.32, y: 0.08, z: 0.08, max: 0.22 },
+      rightShin: { x: 0.32, y: 0.08, z: 0.08, max: 0.22 },
+      leftFoot: { x: 0.22, y: 0.08, z: 0.08, max: 0.14 },
+      rightFoot: { x: 0.22, y: 0.08, z: 0.08, max: 0.14 }
+    };
+
+    const SPZ_RIG_CHILDREN = Object.entries(SPZ_RIG_PARENT).reduce((children, [partId, parentId]) => {
+      if (parentId) {
+        children[parentId] = children[parentId] ?? [];
+        children[parentId].push(partId);
+      }
+      return children;
+    }, {});
+
+    function quaternionFromUnitVectors(from, to) {
+      const vFrom = from.normalizeToNew();
+      const vTo = to.normalizeToNew();
+      const dot = BABYLON.Vector3.Dot(vFrom, vTo);
+      if (dot < -0.999999) {
+        const axis = Math.abs(vFrom.x) > 0.1
+          ? BABYLON.Vector3.Cross(BABYLON.Axis.Y, vFrom)
+          : BABYLON.Vector3.Cross(BABYLON.Axis.X, vFrom);
+        axis.normalize();
+        return BABYLON.Quaternion.RotationAxis(axis, Math.PI);
+      }
+      if (dot > 0.999999) {
+        return BABYLON.Quaternion.Identity();
+      }
+      const cross = BABYLON.Vector3.Cross(vFrom, vTo);
+      return new BABYLON.Quaternion(cross.x, cross.y, cross.z, 1 + dot).normalize();
+    }
+
+    function getSpzRigAimTarget(partId) {
+      const children = SPZ_RIG_CHILDREN[partId];
+      if (children?.length) {
+        return children[0];
+      }
+      return SPZ_RIG_PARENT[partId] ?? null;
+    }
+
+    function forceSpzJointPositionsToMotion(fighter, motion) {
+      const hips = fighter.parts.get("hips");
+      const motionHips = motion.getPartPoint("hips");
+      if (hips && motionHips) {
+        hips.node.position.copyFrom(BABYLON.Vector3.Lerp(hips.node.position, motionHips, 0.68));
+      }
+
+      Object.entries(SPZ_RIG_PARENT).forEach(([partId, parentId]) => {
+        if (!parentId) {
+          return;
+        }
+        const part = fighter.parts.get(partId);
+        const parentPart = fighter.parts.get(parentId);
+        const motionPoint = motion.getPartPoint(partId);
+        const parentMotionPoint = motion.getPartPoint(parentId);
+        if (!part || !parentPart || !motionPoint || !parentMotionPoint) {
+          return;
+        }
+
+        const forcedLocal = motionPoint.subtract(parentMotionPoint);
+        part.node.position.copyFrom(BABYLON.Vector3.Lerp(part.node.position, forcedLocal, 0.68));
+      });
+    }
+
+    function applyJsonMotionToSpzParts(fighter, motion) {
+      if (!motion?.partMarkers?.length || !fighter.parts.size) {
+        return false;
+      }
+
+      forceSpzJointPositionsToMotion(fighter, motion);
+      let headMotionPoint = null;
+
+      motion.partMarkers.forEach(({ partId, node, baseRotation }) => {
+        const part = fighter.parts.get(partId);
+        if (!part) {
+          return;
+        }
+        if (partId === "head") {
+          headMotionPoint = motion.getPartPoint("head");
+          return;
+        }
+        const aimTargetId = getSpzRigAimTarget(partId);
+        const targetPart = aimTargetId ? fighter.parts.get(aimTargetId) : null;
+        const motionPoint = motion.getPartPoint(partId);
+        const motionTargetPoint = aimTargetId ? motion.getPartPoint(aimTargetId) : null;
+        if (targetPart && motionPoint && motionTargetPoint) {
+          const hasChildTarget = SPZ_RIG_PARENT[aimTargetId] === partId;
+          const restVector = hasChildTarget
+            ? targetPart.restLocalPosition
+            : part.restLocalPosition;
+          const motionVector = hasChildTarget
+            ? motionTargetPoint.subtract(motionPoint)
+            : motionPoint.subtract(motionTargetPoint);
+          if (restVector.lengthSquared() > 0.000001 && motionVector.lengthSquared() > 0.000001) {
+            const directionRotation = quaternionFromUnitVectors(restVector, motionVector);
+            const euler = directionRotation.toEulerAngles();
+            const rotationGain = partId === "head" ? 0.12 : 1;
+            const maxAngle = partId === "head" ? 0.08 : 0.9;
+            setPartRotation(
+              fighter,
+              partId,
+              clampMotion(euler.x * rotationGain, maxAngle),
+              clampMotion(euler.y * state.frontSign * rotationGain, maxAngle),
+              clampMotion(euler.z * rotationGain, maxAngle),
+              0.24
+            );
+            return;
+          }
+        }
+
+        const base = MIXAMO_IDLE_BASE_POSE[partId] ?? { x: 0, y: 0, z: 0 };
+        const tuning = MIXAMO_PART_FOLLOW_TUNING[partId] ?? { x: 0.16, y: 0.08, z: 0.08, max: 0.1 };
+        const delta = BABYLON.Quaternion.Inverse(baseRotation).multiply(node.rotation);
+        const euler = delta.toEulerAngles();
+        setPartRotation(
+          fighter,
+          partId,
+          base.x + clampMotion(euler.x * tuning.x, tuning.max),
+          base.y + clampMotion(euler.y * tuning.y * state.frontSign, tuning.max),
+          base.z + clampMotion(euler.z * tuning.z, tuning.max),
+          0.2
+        );
+      });
+
+      const headPart = fighter.parts.get("head");
+      if (headPart && headMotionPoint) {
+        fighter.root.computeWorldMatrix(true);
+        const headWorldPoint = BABYLON.Vector3.TransformCoordinates(headMotionPoint, fighter.root.getWorldMatrix());
+        headPart.node.setAbsolutePosition(headWorldPoint);
+        setNodeWorldRotation(headPart.node, getWorldRotationQuaternion(fighter.root), 0.45);
+      }
+      return true;
+    }
+
+    function applyMixamoIdle(fighter, time) {
+      const motion = state.mixamo.current;
+      if (!motion) {
+        return false;
+      }
+      if (motion.mode === "jsonDebug") {
+        return applyJsonMotionToSpzParts(fighter, motion);
+      }
+
+      motion.skeleton.prepare();
+      updateMixamoSkeletonDebug(motion.debug);
+      const scale = new BABYLON.Vector3();
+      const rotation = new BABYLON.Quaternion();
+      const position = new BABYLON.Vector3();
+      motion.parts.forEach(({ bone, baseRotation }, partId) => {
+        bone.getAbsoluteTransform().decompose(scale, rotation, position);
+        const delta = BABYLON.Quaternion.Inverse(baseRotation).multiply(rotation);
+        const euler = delta.toEulerAngles();
+        const base = MIXAMO_IDLE_BASE_POSE[partId] ?? { x: 0, y: 0, z: 0 };
+        const tuning = MIXAMO_IDLE_TUNING[partId] ?? { x: 0.08, y: 0.04, z: 0.04, max: 0.04 };
+        setPartRotation(
+          fighter,
+          partId,
+          base.x + clampMotion(euler.x * tuning.x * MIXAMO_IDLE_GAIN, tuning.max),
+          base.y + clampMotion(euler.y * tuning.y * state.frontSign * MIXAMO_IDLE_GAIN, tuning.max),
+          base.z + clampMotion(euler.z * tuning.z * MIXAMO_IDLE_GAIN, tuning.max),
+          0.16
+        );
+      });
+
+      Object.entries(MIXAMO_IDLE_BASE_POSE).forEach(([partId, base]) => {
+        if (!motion.parts.has(partId)) {
+          setPartRotation(fighter, partId, base.x, base.y, base.z, 0.16);
+        }
+      });
+      return true;
+    }
+
+    function animatePlayerParts(fighter, deltaSeconds) {
+      const time = performance.now() / 1000;
+      const idle = fighter.action === "ready" || fighter.action === "idle" ? 1 : 0;
+      const walkForward = fighter.action === "walkForward" ? 1 : 0;
+      const jogBack = fighter.action === "jogBack" ? 1 : 0;
+      const walkCycle = Math.sin(time * 7.5) * walkForward;
+      const backCycle = Math.sin(time * 10.5) * jogBack;
+      const stride = walkCycle + backCycle * 0.62;
+      const idleBob = Math.sin(time * 3.2) * idle;
+      const front = state.frontSign;
+
+      const selectedMixamoMotion = state.mode === "test" && state.mixamo.current?.mode === "jsonDebug";
+      if ((idle || selectedMixamoMotion) && applyMixamoIdle(fighter, time)) {
+        fighter.parts.forEach((part) => {
+          part.box.visibility = ui.boxesToggle.checked ? 1 : 0;
+        });
+        if (fighter.visual && fighter.visual !== fighter.root) {
+          fighter.visual.position.y = idleBob * 0.014;
+        }
+        fighter.shadow.scaling.x = 1 + Math.max(0, fighter.root.position.y) * 0.16;
+        fighter.shadow.scaling.z = 0.48 + Math.max(0, fighter.root.position.y) * 0.06;
+        return;
+      }
+
+      setPartRotation(fighter, "hips", jogBack * -0.08, -stride * front * 0.04, 0);
+      setPartRotation(fighter, "spine", idleBob * 0.012 + jogBack * 0.03, stride * front * 0.04, 0);
+      setPartRotation(fighter, "spine1", idleBob * 0.018 + jogBack * 0.04, stride * front * 0.05, 0);
+      setPartRotation(fighter, "spine2", idleBob * 0.024 + jogBack * 0.05, stride * front * 0.06, 0);
+      setPartRotation(fighter, "neck", idleBob * 0.02, stride * front * 0.03, 0);
+      setPartRotation(fighter, "head", idleBob * 0.025, stride * front * 0.025, 0);
+      setPartRotation(fighter, "leftShoulder", -walkCycle * 0.16 + backCycle * 0.08, 0, stride * 0.06);
+      setPartRotation(fighter, "leftUpperArm", -walkCycle * 0.34 + backCycle * 0.18, 0, stride * 0.18);
+      setPartRotation(fighter, "leftForearm", -walkCycle * 0.2 + backCycle * 0.12, 0, stride * 0.08);
+      setPartRotation(fighter, "leftHand", -walkCycle * 0.08 + backCycle * 0.04, 0, 0);
+      setPartRotation(fighter, "rightShoulder", walkCycle * 0.16 - backCycle * 0.08, 0, -stride * 0.06);
+      setPartRotation(fighter, "rightUpperArm", walkCycle * 0.34 - backCycle * 0.18, 0, -stride * 0.18);
+      setPartRotation(fighter, "rightForearm", walkCycle * 0.2 - backCycle * 0.12, 0, -stride * 0.08);
+      setPartRotation(fighter, "rightHand", walkCycle * 0.08 - backCycle * 0.04, 0, 0);
+      setPartRotation(fighter, "leftThigh", walkCycle * 0.42 - backCycle * 0.26, 0, 0);
+      setPartRotation(fighter, "leftShin", Math.max(-walkCycle, 0) * 0.48 + backCycle * 0.18, 0, 0);
+      setPartRotation(fighter, "leftFoot", -Math.max(walkCycle, 0) * 0.24 + Math.max(-walkCycle, 0) * 0.16 - backCycle * 0.12, 0, 0);
+      setPartRotation(fighter, "rightThigh", -walkCycle * 0.42 + backCycle * 0.26, 0, 0);
+      setPartRotation(fighter, "rightShin", Math.max(walkCycle, 0) * 0.48 - backCycle * 0.18, 0, 0);
+      setPartRotation(fighter, "rightFoot", -Math.max(-walkCycle, 0) * 0.24 + Math.max(walkCycle, 0) * 0.16 + backCycle * 0.12, 0, 0);
+
+      fighter.parts.forEach((part) => {
+        part.node.position.copyFrom(part.restLocalPosition ?? part.node.position);
+        part.box.visibility = ui.boxesToggle.checked ? 1 : 0;
+      });
+      if (fighter.visual && fighter.visual !== fighter.root) {
+        fighter.visual.position.y = idleBob * 0.018 + Math.max(0, Math.abs(stride)) * 0.022;
+      }
+
+      fighter.shadow.scaling.x = 1 + Math.max(0, fighter.root.position.y) * 0.16;
+      fighter.shadow.scaling.z = 0.48 + Math.max(0, fighter.root.position.y) * 0.06;
+    }
+
+    function animateFallbackFighter(fighter, deltaSeconds) {
+      const time = performance.now() / 1000;
+      const bob = fighter.action === "walk" ? Math.sin(time * 16) * 0.07 : Math.sin(time * 5) * 0.025;
+      const lean =
+        fighter.action === "punch" ? -fighter.facing * 0.18 :
+        fighter.action === "kick" ? -fighter.facing * 0.28 :
+        fighter.action === "hit" ? fighter.facing * 0.22 :
+        fighter.action === "guard" ? fighter.facing * 0.12 : 0;
+      if (fighter.visual && fighter.visual !== fighter.root) {
+        fighter.visual.position.y = Math.max(0, bob);
+        fighter.visual.rotation.z = BABYLON.Scalar.Lerp(fighter.visual.rotation.z, lean, 0.24);
+        fighter.visual.rotation.x = BABYLON.Scalar.Lerp(fighter.visual.rotation.x, fighter.action === "down" ? Math.PI / 2 : 0, 0.18);
+      }
+      fighter.shadow.scaling.x = 1 + Math.max(0, fighter.root.position.y) * 0.16;
+      fighter.shadow.scaling.z = 0.48 + Math.max(0, fighter.root.position.y) * 0.06;
+    }
+
+    function animateFighter(fighter, deltaSeconds) {
+      fighter.actionTime = Math.max(0, fighter.actionTime - deltaSeconds);
+      fighter.hitCooldown = Math.max(0, fighter.hitCooldown - deltaSeconds);
+      if (fighter.actionTime <= 0 && fighter.action !== "down" && fighter.action !== "win") {
+        fighter.action = fighter.guard ? "guard" : "ready";
+      }
+      if (fighter.parts.size) {
+        animatePlayerParts(fighter, deltaSeconds);
+      } else {
+        animateFallbackFighter(fighter, deltaSeconds);
+      }
+    }
+
+    function updatePhysics(fighter, deltaSeconds) {
+      fighter.vy -= 16.5 * deltaSeconds;
+      fighter.root.position.x += fighter.vx * deltaSeconds;
+      fighter.root.position.y += fighter.vy * deltaSeconds;
+      fighter.vx *= Math.pow(0.18, deltaSeconds);
+      clampFighter(fighter);
+    }
+
+    function updateCamera() {
+      if (state.mode === "test" || state.mode === "select") {
+        camera.target = BABYLON.Vector3.Lerp(camera.target, new BABYLON.Vector3(state.p1.root.position.x, 1.55, 0), 0.08);
+        camera.radius = BABYLON.Scalar.Lerp(camera.radius, 14.5, 0.06);
+        return;
+      }
+      const mid = state.p1.root.position.add(state.p2.root.position).scale(0.5);
+      const distance = Math.abs(state.p1.root.position.x - state.p2.root.position.x);
+      camera.target = BABYLON.Vector3.Lerp(camera.target, new BABYLON.Vector3(mid.x, 1.8, 0), 0.08);
+      camera.radius = BABYLON.Scalar.Lerp(camera.radius, BABYLON.Scalar.Clamp(13 + distance * 0.9, 15, 24), 0.06);
+    }
+
+    function gameLoop() {
+      const dt = Math.min(engine.getDeltaTime() / 1000, 0.04);
+      updateMixamoMotionDebug();
+      if (state.mode === "test") {
+        updatePlayer(dt);
+        updatePhysics(state.p1, dt);
+      } else if (state.roundActive) {
+        state.roundTime = Math.max(0, state.roundTime - dt);
+        if (state.roundTime <= 0) {
+          if (state.p1.hp === state.p2.hp) {
+            endRound("Time over. Draw.");
+          } else {
+            endRound(state.p1.hp > state.p2.hp ? "Time over. Player 1 wins." : "Time over. Rival wins.");
+          }
+        }
+        updatePlayer(dt);
+        updateAi(dt);
+        updatePhysics(state.p1, dt);
+        updatePhysics(state.p2, dt);
+        setFacing();
+        if (["punch", "kick", "special"].includes(state.p1.action)) {
+          tryHit(state.p1, state.p2, state.p1.action);
+        }
+        if (state.p2.action === "punch" || state.p2.action === "kick") {
+          tryHit(state.p2, state.p1, state.p2.action);
+        }
+      }
+      animateFighter(state.p1, dt);
+      if (state.p2.root.isEnabled()) {
+        animateFighter(state.p2, dt);
+      }
+      updateSpzRigDebug(state.p1);
+      updateCamera();
+      state.flashTime = Math.max(0, state.flashTime - dt);
+      if (state.flashTime <= 0) {
+        ui.flash.classList.remove("isActive");
+      }
+      updateHud();
+    }
+
+    function initialize() {
+      createStage();
+      renderPartToggles();
+      state.p1 = createFighter("p1", -3.2, 1, null, mats.blue);
+      state.p2 = createFighter("p2", 3.2, -1, null, mats.red);
+      prepareCharacterPreview();
+      ui.startFightButton.disabled = false;
+      setSelectStatus("SPZ optional. Press Motion Test to check Fighting Idle.glb only.");
+      setMessage("Press Motion Test to check Fighting Idle.glb, or load a SPZ character.");
+    }
+
+    window.addEventListener("keydown", (event) => {
+      keys.add(event.code);
+      if (event.code === "KeyI") {
+        loadMixamoMotion("idle");
+        startAction(state.p1, "idle");
+      }
+      if (event.code === "KeyB") {
+        loadMixamoMotion("jogBack");
+        startAction(state.p1, "jogBack");
+      }
+      if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) {
+        event.preventDefault();
+      }
+    });
+
+    window.addEventListener("keyup", (event) => {
+      keys.delete(event.code);
+    });
+
+    ui.splatFile.addEventListener("change", () => {
+      const file = ui.splatFile.files[0];
+      if (file) {
+        ui.selectScreen.classList.remove("isHidden");
+        loadSplatSource(file, file.name);
+      }
+    });
+
+    ui.selectSplatFile.addEventListener("change", () => {
+      const file = ui.selectSplatFile.files[0];
+      if (file) {
+        loadSplatSource(file, file.name);
+      }
+    });
+
+    ui.scaleInput.addEventListener("input", () => {
+      ui.scaleValue.textContent = ui.scaleInput.value;
+    });
+
+    ui.scaleInput.addEventListener("change", () => {
+      if (state.splatSource) {
+        ui.selectScreen.classList.remove("isHidden");
+        loadSplatSource(state.splatSource, state.sourceName);
+      }
+    });
+
+    ui.boxesToggle.addEventListener("change", () => {
+      state.p1.parts.forEach((part) => {
+        part.box.visibility = ui.boxesToggle.checked ? 1 : 0;
+      });
+    });
+
+    ui.partsToggles.addEventListener("change", (event) => {
+      const partId = event.target?.dataset?.partId;
+      if (!partId) {
+        return;
+      }
+      if (event.target.checked) {
+        state.visibleParts.add(partId);
+      } else {
+        state.visibleParts.delete(partId);
+      }
+      applyPartVisibility();
+    });
+
+    ui.sampleButton.addEventListener("click", () => {
+      ui.selectScreen.classList.remove("isHidden");
+      loadSplatSource(SAMPLE_SPZ_URL, "asahi2_f.spz");
+    });
+
+    ui.selectSampleButton.addEventListener("click", () => {
+      loadSplatSource(SAMPLE_SPZ_URL, "asahi2_f.spz");
+    });
+
+    ui.frontSelect.addEventListener("change", () => {
+      if (state.splatSource) {
+        loadSplatSource(state.splatSource, state.sourceName);
+      }
+    });
+
+    ui.remapButton.addEventListener("click", () => {
+      if (state.splatSource) {
+        loadSplatSource(state.splatSource, state.sourceName);
+      } else {
+        setSelectStatus("Load a SPZ character first.");
+      }
+    });
+
+    ui.idleButton.addEventListener("click", () => {
+      loadMixamoMotion("idle");
+      startAction(state.p1, "idle");
+    });
+
+    ui.walkButton.addEventListener("click", () => {
+      loadMixamoMotion("walkForward");
+      startAction(state.p1, "walkForward");
+    });
+
+    ui.backButton.addEventListener("click", () => {
+      loadMixamoMotion("jogBack");
+      startAction(state.p1, "jogBack");
+    });
+
+    ui.startFightButton.addEventListener("click", startFight);
+
+    ui.reselectButton.addEventListener("click", () => {
+      if (state.characterReady) {
+        prepareCharacterPreview();
+        setSelectStatus(`${state.sourceName} ready.`);
+      } else {
+        setSelectStatus("No character loaded.");
+      }
+    });
+
+    ui.resetButton.addEventListener("click", () => {
+      if (state.mode === "test") {
+        resetMotionTest(true);
+      } else if (state.mode === "fight") {
+        resetRound(true);
+      } else {
+        returnToCharacterSelect();
+      }
+    });
+
+    initialize();
+
+    scene.onBeforeRenderObservable.add(gameLoop);
+    engine.runRenderLoop(() => scene.render());
+    window.addEventListener("resize", () => engine.resize());
+  </script>
+</body>
+</html>

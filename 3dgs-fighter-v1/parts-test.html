@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3DGS Parts Test</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f8f1e8;
+      --muted: #aeb8c4;
+      --line: rgba(255,255,255,.18);
+      --panel: rgba(10,14,20,.88);
+      --blue: #45b8ff;
+      --gold: #ffd166;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #080b10;
+      color: var(--ink);
+      font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif;
+    }
+    #renderCanvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
+    }
+    .panel {
+      position: fixed;
+      left: 12px;
+      top: 12px;
+      z-index: 5;
+      display: grid;
+      gap: 8px;
+      width: min(560px, calc(100vw - 24px));
+      max-height: calc(100vh - 24px);
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: var(--panel);
+      box-shadow: 0 16px 36px rgba(0,0,0,.35);
+      box-sizing: border-box;
+    }
+    .row, .parts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    label, button, select {
+      min-height: 32px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 6px;
+      background: #172130;
+      color: var(--ink);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 8px;
+    }
+    button, select {
+      padding: 0 10px;
+      cursor: pointer;
+    }
+    input[type="file"] {
+      width: 170px;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    input[type="range"] {
+      width: 104px;
+      accent-color: var(--blue);
+    }
+    input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      accent-color: var(--blue);
+    }
+    .parts label {
+      min-height: 27px;
+      padding: 0 7px;
+      font-size: 11px;
+      background: #101824;
+    }
+    .status {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .title {
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>
+  <div class="panel">
+    <div class="title">SPZ Parts Test</div>
+    <div class="row">
+      <label>SPZ <input id="splatFile" type="file" accept=".spz"></label>
+      <button id="sampleButton" type="button">Sample</button>
+      <select id="frontSelect">
+        <option value="auto">Front Auto</option>
+        <option value="positiveZ">Front +Z</option>
+        <option value="negativeZ">Front -Z</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Scale <input id="scaleInput" type="range" min="45" max="170" value="100"><span id="scaleValue">100</span></label>
+      <label>Head Y <input id="headYInput" type="range" min="70" max="86" value="76"><span id="headYValue">76</span></label>
+      <label>Capsule <input id="capsuleInput" type="range" min="60" max="150" value="100"><span id="capsuleValue">100</span></label>
+      <label><input id="autoSliceToggle" type="checkbox" checked>Auto</label>
+      <label><input id="rigToggle" type="checkbox" checked>Rig</label>
+    </div>
+    <div class="parts" id="partsToggles"></div>
+    <div class="status" id="status">Load a SPZ file. This page is only for static segmentation checks.</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+    const scene = new BABYLON.Scene(engine);
+    scene.clearColor = new BABYLON.Color4(0.035, 0.04, 0.055, 1);
+
+    const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.35, 7.2, new BABYLON.Vector3(0, 1.35, 0), scene);
+    camera.lowerRadiusLimit = 3.5;
+    camera.upperRadiusLimit = 16;
+    camera.wheelDeltaPercentage = 0.025;
+    camera.attachControl(canvas, true);
+
+    const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+    hemi.intensity = 0.82;
+    const floor = BABYLON.MeshBuilder.CreateBox("floor", { width: 7, height: 0.03, depth: 4 }, scene);
+    floor.position.y = -0.02;
+    const floorMat = new BABYLON.StandardMaterial("floorMat", scene);
+    floorMat.diffuseColor = new BABYLON.Color3(0.18, 0.18, 0.17);
+    floor.material = floorMat;
+
+    const ui = {
+      splatFile: document.getElementById("splatFile"),
+      sampleButton: document.getElementById("sampleButton"),
+      frontSelect: document.getElementById("frontSelect"),
+      scaleInput: document.getElementById("scaleInput"),
+      scaleValue: document.getElementById("scaleValue"),
+      headYInput: document.getElementById("headYInput"),
+      headYValue: document.getElementById("headYValue"),
+      capsuleInput: document.getElementById("capsuleInput"),
+      capsuleValue: document.getElementById("capsuleValue"),
+      autoSliceToggle: document.getElementById("autoSliceToggle"),
+      rigToggle: document.getElementById("rigToggle"),
+      partsToggles: document.getElementById("partsToggles"),
+      status: document.getElementById("status")
+    };
+
+    const SAMPLE_SPZ_URL = "../models/asahi2_f.spz";
+    const state = {
+      source: null,
+      sourceName: "none",
+      sourceBounds: null,
+      sourceBase: null,
+      frontSign: 1,
+      visibleParts: new Set(["head"]),
+      partCounts: {},
+      segmentMesh: null,
+      rigDebug: null
+    };
+
+    const PARTS = [
+      { id: "head", label: "HEAD", color: new BABYLON.Color3(1, 0.84, 0.34) },
+      { id: "neck", label: "NECK", color: new BABYLON.Color3(1, 0.72, 0.42) },
+      { id: "spine2", label: "SPINE2", color: new BABYLON.Color3(0.35, 0.75, 1) },
+      { id: "spine1", label: "SPINE1", color: new BABYLON.Color3(0.28, 0.66, 1) },
+      { id: "spine", label: "SPINE", color: new BABYLON.Color3(0.24, 0.58, 1) },
+      { id: "hips", label: "HIPS", color: new BABYLON.Color3(0.2, 0.48, 0.95) },
+      { id: "leftShoulder", label: "L SHOULDER", color: new BABYLON.Color3(1, 0.55, 0.42) },
+      { id: "leftUpperArm", label: "L UPPER ARM", color: new BABYLON.Color3(1, 0.45, 0.38) },
+      { id: "leftForearm", label: "L FOREARM", color: new BABYLON.Color3(1, 0.35, 0.28) },
+      { id: "leftHand", label: "L HAND", color: new BABYLON.Color3(1, 0.62, 0.48) },
+      { id: "rightShoulder", label: "R SHOULDER", color: new BABYLON.Color3(1, 0.55, 0.42) },
+      { id: "rightUpperArm", label: "R UPPER ARM", color: new BABYLON.Color3(1, 0.45, 0.38) },
+      { id: "rightForearm", label: "R FOREARM", color: new BABYLON.Color3(1, 0.35, 0.28) },
+      { id: "rightHand", label: "R HAND", color: new BABYLON.Color3(1, 0.62, 0.48) },
+      { id: "leftThigh", label: "L THIGH", color: new BABYLON.Color3(0.48, 1, 0.62) },
+      { id: "leftShin", label: "L SHIN", color: new BABYLON.Color3(0.36, 0.88, 0.52) },
+      { id: "leftFoot", label: "L FOOT", color: new BABYLON.Color3(0.62, 1, 0.72) },
+      { id: "rightThigh", label: "R THIGH", color: new BABYLON.Color3(0.48, 1, 0.62) },
+      { id: "rightShin", label: "R SHIN", color: new BABYLON.Color3(0.36, 0.88, 0.52) },
+      { id: "rightFoot", label: "R FOOT", color: new BABYLON.Color3(0.62, 1, 0.72) }
+    ];
+
+    const RIG_LINES = [
+      ["hips", "spine"], ["spine", "spine1"], ["spine1", "spine2"], ["spine2", "neck"], ["neck", "head"],
+      ["spine2", "leftShoulder"], ["leftShoulder", "leftUpperArm"], ["leftUpperArm", "leftForearm"], ["leftForearm", "leftHand"],
+      ["spine2", "rightShoulder"], ["rightShoulder", "rightUpperArm"], ["rightUpperArm", "rightForearm"], ["rightForearm", "rightHand"],
+      ["hips", "leftThigh"], ["leftThigh", "leftShin"], ["leftShin", "leftFoot"],
+      ["hips", "rightThigh"], ["rightThigh", "rightShin"], ["rightShin", "rightFoot"]
+    ];
+
+    function setStatus(text) {
+      ui.status.textContent = text;
+    }
+
+    function splatPointAt(floatData, index) {
+      return new BABYLON.Vector3(floatData[index * 8], floatData[index * 8 + 1], floatData[index * 8 + 2]);
+    }
+
+    function computeSplatBounds(mesh) {
+      if (!mesh?.splatsData) return null;
+      const floatData = new Float32Array(mesh.splatsData);
+      const min = new BABYLON.Vector3(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
+      const max = new BABYLON.Vector3(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY);
+      const count = floatData.length / 8;
+      const step = Math.max(1, Math.floor(count / 160000));
+      for (let i = 0; i < count; i += step) {
+        const point = splatPointAt(floatData, i);
+        min.minimizeInPlace(point);
+        max.maximizeInPlace(point);
+      }
+      return { min, max };
+    }
+
+    function makeSourceBase(bounds) {
+      const size = bounds.max.subtract(bounds.min);
+      const center = bounds.min.add(size.scale(0.5));
+      const scale = BABYLON.Scalar.Clamp(2.55 / Math.max(size.y, 0.001), 0.25, 12);
+      const offset = new BABYLON.Vector3(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
+      return { size, center, scale, offset };
+    }
+
+    function makeDisplayBase(base) {
+      const scale = base.scale * Number(ui.scaleInput.value) / 100;
+      const offset = new BABYLON.Vector3(-base.center.x * scale, -state.sourceBounds.min.y * scale, -base.center.z * scale);
+      return { ...base, scale, offset };
+    }
+
+    function estimateFrontSign(mesh, bounds, base) {
+      const mode = ui.frontSelect.value;
+      if (mode === "positiveZ") return 1;
+      if (mode === "negativeZ") return -1;
+      const floatData = new Float32Array(mesh.splatsData);
+      const count = floatData.length / 8;
+      const step = Math.max(1, Math.floor(count / 120000));
+      let positive = 0;
+      let negative = 0;
+      for (let i = 0; i < count; i += step) {
+        const point = splatPointAt(floatData, i);
+        const y = (point.y - bounds.min.y) / Math.max(base.size.y, 0.001);
+        if (y < 0.38 || y > 0.82) continue;
+        if (point.z >= base.center.z) positive++; else negative++;
+      }
+      return positive >= negative ? 1 : -1;
+    }
+
+    function localToPlayer(local, base = state.sourceBase) {
+      return local.scale(base.scale).add(base.offset);
+    }
+
+    function averageVectors(points) {
+      if (!points.length) return null;
+      const total = points.reduce((acc, point) => acc.addInPlace(point), BABYLON.Vector3.Zero());
+      return total.scale(1 / points.length);
+    }
+
+    function analyzeVerticalSlices(mesh, bounds, base) {
+      const bins = 96;
+      const slices = Array.from({ length: bins }, () => ({
+        count: 0,
+        xMin: Number.POSITIVE_INFINITY,
+        xMax: Number.NEGATIVE_INFINITY,
+        zMin: Number.POSITIVE_INFINITY,
+        zMax: Number.NEGATIVE_INFINITY,
+        sumX: 0,
+        sumZ: 0
+      }));
+      const floatData = new Float32Array(mesh.splatsData);
+      const count = floatData.length / 8;
+      const height = Math.max(base.size.y, 0.001);
+      const step = Math.max(1, Math.floor(count / 240000));
+
+      for (let i = 0; i < count; i += step) {
+        const point = splatPointAt(floatData, i);
+        const y = BABYLON.Scalar.Clamp((point.y - bounds.min.y) / height, 0, 0.999999);
+        const index = Math.floor(y * bins);
+        const slice = slices[index];
+        slice.count++;
+        slice.xMin = Math.min(slice.xMin, point.x);
+        slice.xMax = Math.max(slice.xMax, point.x);
+        slice.zMin = Math.min(slice.zMin, point.z);
+        slice.zMax = Math.max(slice.zMax, point.z);
+        slice.sumX += point.x;
+        slice.sumZ += point.z;
+      }
+
+      const valid = slices.map((slice, index) => {
+        const y = (index + 0.5) / bins;
+        const width = slice.count ? slice.xMax - slice.xMin : 0;
+        const depth = slice.count ? slice.zMax - slice.zMin : 0;
+        return {
+          ...slice,
+          index,
+          y,
+          width,
+          depth,
+          xCenter: slice.count ? slice.sumX / slice.count : base.center.x,
+          zCenter: slice.count ? slice.sumZ / slice.count : base.center.z
+        };
+      });
+      const maxCount = Math.max(1, ...valid.map((slice) => slice.count));
+      const occupied = (slice) => slice.count > maxCount * 0.018 && slice.width > base.size.x * 0.035;
+      const top = [...valid].reverse().find(occupied) ?? valid[valid.length - 1];
+
+      const shoulderCandidates = valid.filter((slice) =>
+        occupied(slice) &&
+        slice.y > 0.55 &&
+        slice.y < Math.min(0.78, top.y - 0.03)
+      );
+      const shoulder = shoulderCandidates.reduce((best, slice) =>
+        !best || slice.width > best.width ? slice : best,
+        null
+      ) ?? valid[Math.floor(0.69 * bins)];
+
+      const neckCandidates = valid.filter((slice) =>
+        occupied(slice) &&
+        slice.y > Math.max(0.62, shoulder.y + 0.015) &&
+        slice.y < Math.min(0.84, top.y - 0.015)
+      );
+      const neck = neckCandidates.reduce((best, slice) =>
+        !best || slice.width < best.width ? slice : best,
+        null
+      ) ?? valid[Math.floor(0.72 * bins)];
+
+      const headYMin = BABYLON.Scalar.Clamp(neck.y + 0.025, 0.715, 0.855);
+      const headSlices = valid.filter((slice) => occupied(slice) && slice.y >= headYMin && slice.y <= top.y + 0.02);
+      const headWeight = Math.max(1, headSlices.reduce((sum, slice) => sum + slice.count, 0));
+      const headCenterX = headSlices.reduce((sum, slice) => sum + slice.xCenter * slice.count, 0) / headWeight;
+      const headCenterZ = headSlices.reduce((sum, slice) => sum + slice.zCenter * slice.count, 0) / headWeight;
+      const headCenterY = headSlices.length
+        ? headSlices.reduce((sum, slice) => sum + slice.y * slice.count, 0) / headWeight
+        : BABYLON.Scalar.Clamp((headYMin + top.y) * 0.5, 0.78, 0.9);
+
+      return {
+        topY: top.y,
+        headYMin,
+        headCenterY,
+        headCenterX,
+        headCenterZ,
+        neckY: neck.y,
+        neckCenterX: neck.xCenter,
+        neckCenterZ: neck.zCenter,
+        shoulderY: shoulder.y,
+        shoulderWidthRatio: shoulder.width / Math.max(base.size.x, 0.001),
+        shoulderCenterX: shoulder.xCenter,
+        shoulderCenterZ: shoulder.zCenter,
+        maxSliceCount: maxCount
+      };
+    }
+
+    function headYThreshold(base = state.sourceBase) {
+      if (ui.autoSliceToggle.checked && base?.sliceProfile) {
+        return base.sliceProfile.headYMin;
+      }
+      return Number(ui.headYInput.value) / 100;
+    }
+
+    function estimatePoseRig(mesh, bounds, base) {
+      const size = base.size;
+      const center = base.center;
+      const yAt = (ratio) => bounds.min.y + size.y * ratio;
+      const profile = base.sliceProfile;
+      const bodyCenterX = profile?.neckCenterX ?? center.x;
+      const bodyCenterZ = profile?.neckCenterZ ?? center.z;
+      const pointAt = (xRatio, yRatio, z = bodyCenterZ, xCenter = bodyCenterX) => new BABYLON.Vector3(xCenter + size.x * xRatio, yAt(yRatio), z);
+      const floatData = new Float32Array(mesh.splatsData);
+      const count = floatData.length / 8;
+      const step = Math.max(1, Math.floor(count / 140000));
+      const leftArmCandidates = [];
+      const rightArmCandidates = [];
+
+      for (let i = 0; i < count; i += step) {
+        const point = splatPointAt(floatData, i);
+        const nx = (point.x - center.x) / Math.max(size.x, 0.001);
+        const y = (point.y - bounds.min.y) / Math.max(size.y, 0.001);
+        const ax = Math.abs(nx);
+        if (y < 0.32 || y > 0.82 || ax < 0.28) continue;
+        if (nx < 0) leftArmCandidates.push(point); else rightArmCandidates.push(point);
+      }
+
+      const edgeAverage = (points, side) => {
+        if (!points.length) return null;
+        const sorted = [...points].sort((a, b) => side < 0 ? a.x - b.x : b.x - a.x);
+        return averageVectors(sorted.slice(0, Math.max(8, Math.ceil(sorted.length * 0.035))));
+      };
+
+      const leftWristGuess = edgeAverage(leftArmCandidates, -1);
+      const rightWristGuess = edgeAverage(rightArmCandidates, 1);
+      const clampYRatio = (point, fallback) => point
+        ? BABYLON.Scalar.Clamp((point.y - bounds.min.y) / Math.max(size.y, 0.001), 0.36, 0.72)
+        : fallback;
+      const leftWristY = clampYRatio(leftWristGuess, 0.46);
+      const rightWristY = clampYRatio(rightWristGuess, 0.46);
+      const leftWristX = leftWristGuess ? BABYLON.Scalar.Clamp((leftWristGuess.x - center.x) / Math.max(size.x, 0.001), -0.48, -0.32) : -0.42;
+      const rightWristX = rightWristGuess ? BABYLON.Scalar.Clamp((rightWristGuess.x - center.x) / Math.max(size.x, 0.001), 0.32, 0.48) : 0.42;
+
+      const neckY = profile?.neckY ?? 0.72;
+      const shoulderY = profile?.shoulderY ?? 0.69;
+      const headCenterY = profile?.headCenterY ?? 0.83;
+      const shoulderX = BABYLON.Scalar.Clamp((profile?.shoulderWidthRatio ?? 0.48) * 0.42, 0.18, 0.3);
+      const joints = {
+        hips: pointAt(0, 0.36),
+        spine: pointAt(0, 0.46),
+        spine1: pointAt(0, 0.56),
+        spine2: pointAt(0, Math.min(shoulderY - 0.02, 0.67)),
+        neck: pointAt(0, neckY, profile?.neckCenterZ ?? bodyCenterZ, profile?.neckCenterX ?? bodyCenterX),
+        head: pointAt(0, headCenterY, profile?.headCenterZ ?? bodyCenterZ, profile?.headCenterX ?? bodyCenterX),
+        leftShoulder: pointAt(-shoulderX, shoulderY, profile?.shoulderCenterZ ?? bodyCenterZ, profile?.shoulderCenterX ?? bodyCenterX),
+        rightShoulder: pointAt(shoulderX, shoulderY, profile?.shoulderCenterZ ?? bodyCenterZ, profile?.shoulderCenterX ?? bodyCenterX),
+        leftHand: pointAt(leftWristX, leftWristY),
+        rightHand: pointAt(rightWristX, rightWristY),
+        leftThigh: pointAt(-0.13, 0.43),
+        rightThigh: pointAt(0.13, 0.43),
+        leftShin: pointAt(-0.16, 0.24),
+        rightShin: pointAt(0.16, 0.24),
+        leftFoot: pointAt(-0.17, 0.08, center.z - size.z * 0.08 * state.frontSign),
+        rightFoot: pointAt(0.17, 0.08, center.z - size.z * 0.08 * state.frontSign)
+      };
+      joints.leftUpperArm = BABYLON.Vector3.Lerp(joints.leftShoulder, joints.leftHand, 0.42);
+      joints.leftForearm = BABYLON.Vector3.Lerp(joints.leftShoulder, joints.leftHand, 0.68);
+      joints.rightUpperArm = BABYLON.Vector3.Lerp(joints.rightShoulder, joints.rightHand, 0.42);
+      joints.rightForearm = BABYLON.Vector3.Lerp(joints.rightShoulder, joints.rightHand, 0.68);
+
+      const capsuleScale = Number(ui.capsuleInput.value) / 100;
+      const radius = {
+        head: 0.09, neck: 0.045, torso: 0.105,
+        shoulder: 0.055, upperArm: 0.055, forearm: 0.052, hand: 0.06,
+        thigh: 0.078, shin: 0.065, foot: 0.075
+      };
+      Object.keys(radius).forEach((key) => { radius[key] *= capsuleScale; });
+      const headYMin = headYThreshold(base);
+      const neckLow = BABYLON.Scalar.Clamp(headYMin - 0.055, 0.66, 0.81);
+      const neckHigh = BABYLON.Scalar.Clamp(headYMin + 0.008, neckLow + 0.015, 0.87);
+      const shoulderLow = BABYLON.Scalar.Clamp(shoulderY - 0.045, 0.54, 0.75);
+      const shoulderHigh = BABYLON.Scalar.Clamp(shoulderY + 0.035, shoulderLow + 0.02, neckLow - 0.004);
+      const spine2Low = BABYLON.Scalar.Clamp(shoulderY - 0.1, 0.55, 0.7);
+      const spine2High = BABYLON.Scalar.Clamp(shoulderLow + 0.012, spine2Low + 0.025, neckLow - 0.012);
+
+      const capsules = [
+        { id: "head", a: joints.neck, b: joints.head, radius: radius.head, priority: 0.82, yMin: headYMin, yMax: 1.02, xMax: 0.3 },
+        { id: "neck", a: joints.spine2, b: joints.neck, radius: radius.neck * 0.82, priority: 0.58, yMin: neckLow, yMax: neckHigh, xMax: 0.13 },
+        { id: "spine2", a: joints.spine1, b: joints.spine2, radius: radius.torso * 0.72, priority: 1, yMin: spine2Low, yMax: spine2High, xMax: 0.22 },
+        { id: "spine1", a: joints.spine, b: joints.spine1, radius: radius.torso, priority: 1, yMin: 0.51, yMax: 0.625, xMax: 0.29 },
+        { id: "spine", a: joints.hips, b: joints.spine, radius: radius.torso, priority: 1, yMin: 0.405, yMax: 0.525, xMax: 0.3 },
+        { id: "hips", a: pointAt(0, 0.29), b: joints.hips, radius: 0.155 * capsuleScale, priority: 1, yMin: 0.285, yMax: 0.43, xMax: 0.32 },
+        { id: "leftShoulder", a: joints.spine2, b: joints.leftShoulder, radius: radius.shoulder, priority: 0.68, yMin: shoulderLow, yMax: shoulderHigh, side: "left" },
+        { id: "leftUpperArm", a: joints.leftShoulder, b: joints.leftUpperArm, radius: radius.upperArm, priority: 0.72, yMin: Math.min(0.58, leftWristY - 0.04), yMax: 0.76, side: "left" },
+        { id: "leftForearm", a: joints.leftUpperArm, b: joints.leftForearm, radius: radius.forearm, priority: 0.7, yMin: Math.min(0.42, leftWristY - 0.04), yMax: 0.68, side: "left" },
+        { id: "leftHand", a: joints.leftForearm, b: joints.leftHand, radius: radius.hand, priority: 0.66, yMin: leftWristY - 0.08, yMax: leftWristY + 0.08, side: "left" },
+        { id: "rightShoulder", a: joints.spine2, b: joints.rightShoulder, radius: radius.shoulder, priority: 0.68, yMin: shoulderLow, yMax: shoulderHigh, side: "right" },
+        { id: "rightUpperArm", a: joints.rightShoulder, b: joints.rightUpperArm, radius: radius.upperArm, priority: 0.72, yMin: Math.min(0.58, rightWristY - 0.04), yMax: 0.76, side: "right" },
+        { id: "rightForearm", a: joints.rightUpperArm, b: joints.rightForearm, radius: radius.forearm, priority: 0.7, yMin: Math.min(0.42, rightWristY - 0.04), yMax: 0.68, side: "right" },
+        { id: "rightHand", a: joints.rightForearm, b: joints.rightHand, radius: radius.hand, priority: 0.66, yMin: rightWristY - 0.08, yMax: rightWristY + 0.08, side: "right" },
+        { id: "leftThigh", a: joints.leftThigh, b: joints.leftShin, radius: radius.thigh, priority: 0.82, yMin: 0.21, yMax: 0.47, side: "left" },
+        { id: "leftShin", a: joints.leftShin, b: joints.leftFoot, radius: radius.shin, priority: 0.8, yMin: 0.075, yMax: 0.285, side: "left" },
+        { id: "leftFoot", a: joints.leftFoot, b: pointAt(-0.17, 0.025, center.z - size.z * 0.22 * state.frontSign), radius: radius.foot, priority: 0.72, yMin: -0.02, yMax: 0.125, side: "left" },
+        { id: "rightThigh", a: joints.rightThigh, b: joints.rightShin, radius: radius.thigh, priority: 0.82, yMin: 0.21, yMax: 0.47, side: "right" },
+        { id: "rightShin", a: joints.rightShin, b: joints.rightFoot, radius: radius.shin, priority: 0.8, yMin: 0.075, yMax: 0.285, side: "right" },
+        { id: "rightFoot", a: joints.rightFoot, b: pointAt(0.17, 0.025, center.z - size.z * 0.22 * state.frontSign), radius: radius.foot, priority: 0.72, yMin: -0.02, yMax: 0.125, side: "right" }
+      ].map((capsule) => ({ ...capsule, radiusWorld: Math.max(size.y * capsule.radius, 0.001) }));
+
+      return { joints, capsules };
+    }
+
+    function distanceToSegmentSquared(point, a, b) {
+      const ab = b.subtract(a);
+      const abLengthSquared = ab.lengthSquared();
+      if (abLengthSquared < 0.000001) return point.subtract(a).lengthSquared();
+      const t = BABYLON.Scalar.Clamp(BABYLON.Vector3.Dot(point.subtract(a), ab) / abLengthSquared, 0, 1);
+      return point.subtract(a.add(ab.scale(t))).lengthSquared();
+    }
+
+    function capsulePartForPoint(point, bounds, base) {
+      const rig = base.poseRig;
+      if (!rig?.capsules?.length) return null;
+      const y = (point.y - bounds.min.y) / Math.max(base.size.y, 0.001);
+      const nx = (point.x - base.center.x) / Math.max(base.size.x, 0.001);
+      let best = null;
+      rig.capsules.forEach((capsule) => {
+        if (y < capsule.yMin || y > capsule.yMax) return;
+        if (capsule.xMax !== undefined && Math.abs(nx) > capsule.xMax) return;
+        if ((capsule.side === "left" && nx > -0.04) || (capsule.side === "right" && nx < 0.04)) return;
+        const normalized = distanceToSegmentSquared(point, capsule.a, capsule.b) / (capsule.radiusWorld * capsule.radiusWorld);
+        const score = normalized * capsule.priority;
+        if (!best || score < best.score) best = { id: capsule.id, score, normalized };
+      });
+      if (best && best.normalized < 3.4) return best.id;
+      if (y > headYThreshold(base) && Math.abs(nx) < 0.32) return "head";
+      return null;
+    }
+
+    function partRegionForPoint(point, bounds, base) {
+      const capsulePart = capsulePartForPoint(point, bounds, base);
+      if (capsulePart) return capsulePart;
+      const size = base.size;
+      const nx = (point.x - base.center.x) / Math.max(size.x, 0.001);
+      const y = (point.y - bounds.min.y) / Math.max(size.y, 0.001);
+      const ax = Math.abs(nx);
+      const headYMin = headYThreshold(base);
+      const shoulderY = base.sliceProfile?.shoulderY ?? 0.69;
+      const neckLow = BABYLON.Scalar.Clamp(headYMin - 0.055, 0.66, 0.81);
+      const neckHigh = BABYLON.Scalar.Clamp(headYMin + 0.008, neckLow + 0.015, 0.87);
+      const shoulderLow = BABYLON.Scalar.Clamp(shoulderY - 0.045, 0.54, 0.75);
+      const shoulderHigh = BABYLON.Scalar.Clamp(shoulderY + 0.035, shoulderLow + 0.02, neckLow - 0.004);
+      const spine2Low = BABYLON.Scalar.Clamp(shoulderY - 0.1, 0.55, 0.7);
+      const spine2High = BABYLON.Scalar.Clamp(shoulderLow + 0.012, spine2Low + 0.025, neckLow - 0.012);
+      if (y > headYMin && ax < 0.3) return "head";
+      if (y > neckLow && y <= neckHigh && ax < 0.12) return "neck";
+      if (y > shoulderLow && y <= shoulderHigh && ax >= 0.13 && ax < 0.32) return nx < 0 ? "leftShoulder" : "rightShoulder";
+      if (y > spine2Low && y <= spine2High && ax < 0.22) return "spine2";
+      if (y > 0.56 && y <= 0.67 && ax < 0.22) return "spine1";
+      if (y > 0.45 && y <= 0.57 && ax < 0.24) return "spine";
+      if (y > 0.34 && y <= 0.46 && ax < 0.26) return "hips";
+      if (y > 0.34 && y <= 0.78 && ax >= 0.15) {
+        const side = nx < 0 ? "left" : "right";
+        if (y > 0.63) return `${side}UpperArm`;
+        if (y > 0.45) return `${side}Forearm`;
+        return `${side}Hand`;
+      }
+      if (y <= 0.43 && ax < 0.34) {
+        const side = nx < 0 ? "left" : "right";
+        if (y <= 0.1) return `${side}Foot`;
+        return y > 0.24 ? `${side}Thigh` : `${side}Shin`;
+      }
+      if (y > spine2Low && y <= spine2High) return "spine2";
+      if (y > 0.56) return "spine1";
+      if (y > 0.45) return "spine";
+      if (y > 0.34) return "hips";
+      if (y <= 0.1) return nx < 0 ? "leftFoot" : "rightFoot";
+      return nx < 0 ? (y > 0.24 ? "leftThigh" : "leftShin") : (y > 0.24 ? "rightThigh" : "rightShin");
+    }
+
+    function countSplatParts(mesh, bounds, base) {
+      const floatData = new Float32Array(mesh.splatsData);
+      const count = floatData.length / 8;
+      const counts = {};
+      PARTS.forEach((part) => { counts[part.id] = 0; });
+      for (let i = 0; i < count; i++) {
+        const partId = partRegionForPoint(splatPointAt(floatData, i), bounds, base);
+        if (counts.hasOwnProperty(partId)) counts[partId]++;
+      }
+      return counts;
+    }
+
+    function renderPartToggles() {
+      ui.partsToggles.textContent = "";
+      PARTS.forEach((part) => {
+        const label = document.createElement("label");
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.checked = state.visibleParts.has(part.id);
+        input.dataset.partId = part.id;
+        const count = state.partCounts[part.id];
+        label.append(input, `${part.label}${Number.isFinite(count) ? ` ${count}` : ""}`);
+        ui.partsToggles.append(label);
+      });
+    }
+
+    function updateSegmentMask() {
+      const mesh = state.segmentMesh;
+      if (!mesh?.sourceSplatsData || !state.sourceBounds || !state.sourceBase) return;
+      mesh.splatsData = mesh.sourceSplatsData.slice(0);
+      const floatData = new Float32Array(mesh.splatsData);
+      const view = new DataView(mesh.splatsData);
+      const count = floatData.length / 8;
+      let kept = 0;
+      for (let i = 0; i < count; i++) {
+        const point = splatPointAt(floatData, i);
+        const partId = partRegionForPoint(point, state.sourceBounds, state.sourceBase);
+        const opacityByteIndex = (i * 8 + 6) * 4 + 3;
+        if (state.visibleParts.has(partId)) {
+          kept++;
+          view.setUint8(opacityByteIndex, Math.max(view.getUint8(opacityByteIndex), 220));
+        } else {
+          view.setUint8(opacityByteIndex, 0);
+        }
+      }
+      mesh.updateData(mesh.splatsData, undefined, { flipY: false });
+      mesh.refreshBoundingInfo?.(true);
+      mesh.visibility = kept > 0 ? 0.82 : 0;
+    }
+
+    function createRigDebug(base) {
+      state.rigDebug?.dispose?.();
+      const root = new BABYLON.TransformNode("rigDebug", scene);
+      const mat = new BABYLON.StandardMaterial("rigMarkerMat", scene);
+      mat.diffuseColor = new BABYLON.Color3(1, 0.9, 0.22);
+      mat.emissiveColor = new BABYLON.Color3(0.35, 0.25, 0.04);
+      const joints = base.poseRig.joints;
+      const toWorld = (point) => localToPlayer(point, base);
+      RIG_LINES.forEach(([a, b]) => {
+        if (!joints[a] || !joints[b]) return;
+        const line = BABYLON.MeshBuilder.CreateLines(`rig_${a}_${b}`, { points: [toWorld(joints[a]), toWorld(joints[b])] }, scene);
+        line.parent = root;
+        line.color = new BABYLON.Color3(1, 0.9, 0.22);
+      });
+      Object.entries(joints).forEach(([id, point]) => {
+        const sphere = BABYLON.MeshBuilder.CreateSphere(`joint_${id}`, { diameter: 0.035, segments: 8 }, scene);
+        sphere.position.copyFrom(toWorld(point));
+        sphere.material = mat;
+        sphere.parent = root;
+      });
+      state.rigDebug = root;
+      root.setEnabled(ui.rigToggle.checked);
+    }
+
+    async function importSplat(source) {
+      const result = await BABYLON.ImportMeshAsync(source, scene, {
+        pluginOptions: { splat: { keepInRam: true } }
+      });
+      return result.meshes[0];
+    }
+
+    async function loadSplatSource(source, sourceName) {
+      state.source = source;
+      state.sourceName = sourceName;
+      setStatus(`${sourceName} loading...`);
+      try {
+        state.segmentMesh?.dispose(false, true);
+        state.rigDebug?.dispose?.();
+        state.rigDebug = null;
+        const mesh = await importSplat(source);
+        const bounds = computeSplatBounds(mesh);
+        if (!bounds) throw new Error("splatsData is not available");
+        const base = makeSourceBase(bounds);
+        state.frontSign = estimateFrontSign(mesh, bounds, base);
+        base.sliceProfile = analyzeVerticalSlices(mesh, bounds, base);
+        base.poseRig = estimatePoseRig(mesh, bounds, base);
+        state.sourceBounds = bounds;
+        state.sourceBase = base;
+        const displayBase = makeDisplayBase(base);
+        mesh.parent = null;
+        mesh.scaling.setAll(displayBase.scale);
+        mesh.position.copyFrom(displayBase.offset);
+        mesh.rotation.y = 0;
+        mesh.alwaysSelectAsActiveMesh = true;
+        mesh.sourceSplatsData = mesh.splatsData.slice(0);
+        state.segmentMesh = mesh;
+        state.partCounts = countSplatParts(mesh, bounds, base);
+        renderPartToggles();
+        updateSegmentMask();
+        createRigDebug(displayBase);
+        const total = Object.values(state.partCounts).reduce((sum, value) => sum + value, 0);
+        const profile = base.sliceProfile;
+        const neckLow = Math.round(BABYLON.Scalar.Clamp(profile.headYMin - 0.055, 0.66, 0.81) * 100);
+        const spine2Low = Math.round(BABYLON.Scalar.Clamp(profile.shoulderY - 0.1, 0.55, 0.7) * 100);
+        setStatus(`${sourceName} ready. Total assigned splats ${total}. Front ${state.frontSign > 0 ? "+Z" : "-Z"}. Auto head ${Math.round(profile.headYMin * 100)} neck ${neckLow}-${Math.round(profile.headYMin * 100)} shoulder ${Math.round(profile.shoulderY * 100)} spine2 ${spine2Low}.`);
+      } catch (error) {
+        console.error(error);
+        setStatus(`${sourceName} failed: ${error.message}`);
+      }
+    }
+
+    function reloadSegmentation() {
+      if (state.source) {
+        loadSplatSource(state.source, state.sourceName);
+      }
+    }
+
+    ui.partsToggles.addEventListener("change", (event) => {
+      const partId = event.target?.dataset?.partId;
+      if (!partId) return;
+      if (event.target.checked) state.visibleParts.add(partId); else state.visibleParts.delete(partId);
+      updateSegmentMask();
+    });
+
+    ui.splatFile.addEventListener("change", () => {
+      const file = ui.splatFile.files[0];
+      if (file) loadSplatSource(file, file.name);
+    });
+    ui.sampleButton.addEventListener("click", () => loadSplatSource(SAMPLE_SPZ_URL, "asahi2_f.spz"));
+    ui.frontSelect.addEventListener("change", reloadSegmentation);
+    ui.scaleInput.addEventListener("input", () => { ui.scaleValue.textContent = ui.scaleInput.value; });
+    ui.scaleInput.addEventListener("change", reloadSegmentation);
+    ui.headYInput.addEventListener("input", () => { ui.headYValue.textContent = ui.headYInput.value; });
+    ui.headYInput.addEventListener("change", reloadSegmentation);
+    ui.capsuleInput.addEventListener("input", () => { ui.capsuleValue.textContent = ui.capsuleInput.value; });
+    ui.capsuleInput.addEventListener("change", reloadSegmentation);
+    ui.autoSliceToggle.addEventListener("change", reloadSegmentation);
+    ui.rigToggle.addEventListener("change", () => state.rigDebug?.setEnabled(ui.rigToggle.checked));
+
+    renderPartToggles();
+    engine.runRenderLoop(() => scene.render());
+    window.addEventListener("resize", () => engine.resize());
+  </script>
+</body>
+</html>
