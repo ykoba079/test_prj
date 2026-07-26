@@ -6,7 +6,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Gradius Style Mini Shooter</title>
+    <title>karaage shooter</title>
     <style>
         html,
         body {
@@ -679,7 +679,8 @@
             gap: 12px;
         }
 
-        .startButton {
+        .startButton,
+        .titleMenuButton {
             border: 1px solid rgba(255, 235, 112, 0.9);
             border-radius: 6px;
             background: rgba(255, 213, 48, 0.92);
@@ -690,6 +691,97 @@
             font-size: 15px;
             font-weight: 900;
             cursor: pointer;
+        }
+
+        .titleMenu {
+            display: none;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .titleMenu.isVisible {
+            display: flex;
+        }
+
+        .titleMenuButton {
+            border-color: rgba(130, 242, 255, 0.42);
+            background: rgba(5, 18, 42, 0.72);
+            box-shadow: 0 0 18px rgba(33, 170, 255, 0.18);
+            color: #eafcff;
+            padding: 10px 14px;
+            font-size: 13px;
+        }
+
+        .titleMenuButton.isActive {
+            border-color: rgba(255, 235, 112, 0.78);
+            color: #fff7a8;
+            background: rgba(255, 213, 48, 0.18);
+        }
+
+        .titlePanel {
+            display: none;
+            box-sizing: border-box;
+            width: min(620px, 100%);
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid rgba(130, 242, 255, 0.28);
+            border-radius: 8px;
+            background: rgba(3, 8, 22, 0.64);
+            box-shadow: 0 0 22px rgba(33, 170, 255, 0.14);
+        }
+
+        .titlePanel.isVisible {
+            display: block;
+        }
+
+        .titlePanelActions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .soundList {
+            display: grid;
+            gap: 6px;
+        }
+
+        .soundRow {
+            display: grid;
+            grid-template-columns: 122px 18px minmax(0, 1fr);
+            align-items: center;
+            width: 100%;
+            border: 1px solid rgba(130, 242, 255, 0.18);
+            border-radius: 6px;
+            background: rgba(4, 12, 30, 0.52);
+            color: #eafcff;
+            padding: 8px 10px;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 850;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .soundRow.isPlaying {
+            border-color: rgba(255, 235, 112, 0.72);
+            color: #fff7a8;
+            background: rgba(255, 213, 48, 0.15);
+        }
+
+        .soundUse {
+            color: #aeefff;
+            white-space: nowrap;
+        }
+
+        .soundDash {
+            color: rgba(255, 247, 168, 0.82);
+            text-align: center;
+        }
+
+        .soundTitle {
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
 
         .titleHint {
@@ -1381,6 +1473,18 @@
             .intermissionPanel.hasImage:not(.isGogai) p {
                 overflow: hidden;
             }
+
+            .titlePanel {
+                width: min(92vw, 620px);
+                max-height: min(58dvh, 320px);
+                overflow: auto;
+            }
+
+            .soundRow {
+                grid-template-columns: 96px 14px minmax(0, 1fr);
+                padding: 7px 8px;
+                font-size: 10px;
+            }
         }
 
         .bossHud {
@@ -1552,6 +1656,46 @@
                 <button id="startButton" class="startButton" type="button">START</button>
                 <span class="titleHint">Z / ENTER / SPACE</span>
             </div>
+            <div id="titleExtraMenu" class="titleMenu" aria-label="clear bonus menu">
+                <button id="stageSelectButton" class="titleMenuButton" type="button">STAGE SELECT</button>
+                <button id="endingButton" class="titleMenuButton" type="button">ENDING</button>
+                <button id="soundTestButton" class="titleMenuButton" type="button">SOUND TEST</button>
+            </div>
+            <div id="stageSelectPanel" class="titlePanel" aria-label="stage select">
+                <div class="titlePanelActions">
+                    <button class="titleMenuButton" type="button" data-start-stage="1">STAGE 1</button>
+                    <button class="titleMenuButton" type="button" data-start-stage="2">STAGE 2</button>
+                    <button class="titleMenuButton" type="button" data-start-stage="3">STAGE 3</button>
+                </div>
+            </div>
+            <div id="soundTestPanel" class="titlePanel" aria-label="sound test">
+                <div class="soundList">
+                    <button class="soundRow" type="button" data-sound-src="audio/lemonnodanzai.mp3" data-sound-loop="title">
+                        <span class="soundUse">TITLE</span><span class="soundDash">-</span><span class="soundTitle">lemonnodanzai</span>
+                    </button>
+                    <button class="soundRow" type="button" data-sound-src="audio/hyperdrive-sector.mp3" data-sound-loop="true">
+                        <span class="soundUse">STAGE 1</span><span class="soundDash">-</span><span class="soundTitle">Hyperdrive Sector</span>
+                    </button>
+                    <button class="soundRow" type="button" data-sound-src="audio/asteroid-hideout.mp3" data-sound-loop="true">
+                        <span class="soundUse">LEMONJI BASE</span><span class="soundDash">-</span><span class="soundTitle">Asteroid Hideout</span>
+                    </button>
+                    <button class="soundRow" type="button" data-sound-src="audio/Fleet Breaker_ Lemon Counterstrike.mp3" data-sound-loop="true">
+                        <span class="soundUse">STAGE 2</span><span class="soundDash">-</span><span class="soundTitle">Fleet Breaker_ Lemon Counterstrike</span>
+                    </button>
+                    <button class="soundRow" type="button" data-sound-src="audio/Lemon Charge_ The Great Fleet War.mp3" data-sound-loop="true">
+                        <span class="soundUse">STAGE 3</span><span class="soundDash">-</span><span class="soundTitle">Lemon Charge_ The Great Fleet War</span>
+                    </button>
+                    <button class="soundRow" type="button" data-sound-src="audio/lemon-execution-original.mp3" data-sound-loop="boss">
+                        <span class="soundUse">BATTLESHIP</span><span class="soundDash">-</span><span class="soundTitle">lemon-execution-original</span>
+                    </button>
+                    <button class="soundRow" type="button" data-sound-src="audio/からあげ帝国国歌狂創の栄光.mp3" data-sound-loop="true">
+                        <span class="soundUse">ENDING</span><span class="soundDash">-</span><span class="soundTitle">からあげ帝国 狂創の栄光</span>
+                    </button>
+                    <button class="soundRow" type="button" data-sound-src="audio/StageClear.mp3">
+                        <span class="soundUse">STAGE CLEAR</span><span class="soundDash">-</span><span class="soundTitle">StageClear</span>
+                    </button>
+                </div>
+            </div>
             <div id="titleHighScore" class="titleHighScore">HI SCORE 0</div>
         </div>
     </div>
@@ -1629,6 +1773,14 @@
         const titleScreenEl = document.getElementById("titleScreen");
         const titleHighScoreEl = document.getElementById("titleHighScore");
         const startButtonEl = document.getElementById("startButton");
+        const titleExtraMenuEl = document.getElementById("titleExtraMenu");
+        const stageSelectButtonEl = document.getElementById("stageSelectButton");
+        const endingButtonEl = document.getElementById("endingButton");
+        const soundTestButtonEl = document.getElementById("soundTestButton");
+        const stageSelectPanelEl = document.getElementById("stageSelectPanel");
+        const soundTestPanelEl = document.getElementById("soundTestPanel");
+        const stageSelectButtons = Array.from(document.querySelectorAll("[data-start-stage]"));
+        const soundRows = Array.from(document.querySelectorAll(".soundRow"));
         const dialogueEl = document.getElementById("dialogue");
         const dialoguePortraitEl = document.getElementById("dialoguePortrait");
         const dialogueSpeakerEl = document.getElementById("dialogueSpeaker");
@@ -1950,10 +2102,12 @@ All Lemon Supporters
 
         const enemyShotFrequencyMultiplier = 1.5;
         const highScoreStorageKey = "karaageEmpireEscapeHighScore";
+        const clearedStorageKey = "karaageEmpireEscapeCleared";
 
         const state = {
             score: 0,
             highScore: 0,
+            hasClearedGame: false,
             lives: 3,
             stage: 1,
             stageElapsed: 0,
@@ -2075,7 +2229,10 @@ All Lemon Supporters
             endingMusic: null,
             endingMusicBaseVolume: 0.3,
             stageClearJingle: null,
-            stageClearJingleBaseVolume: 0.34
+            stageClearJingleBaseVolume: 0.34,
+            soundTestMusic: null,
+            soundTestRow: null,
+            soundTestLoopMode: ""
         };
 
         function initAudio() {
@@ -2396,7 +2553,22 @@ All Lemon Supporters
             }
         }
 
+        function stopSoundTestMusic() {
+            if (audioState.soundTestMusic) {
+                audioState.soundTestMusic.pause();
+                audioState.soundTestMusic.currentTime = 0;
+                audioState.soundTestMusic = null;
+            }
+            if (audioState.soundTestRow) {
+                audioState.soundTestRow.classList.remove("isPlaying");
+                audioState.soundTestRow = null;
+            }
+            audioState.soundTestLoopMode = "";
+            setProceduralMusicMuted(false);
+        }
+
         function stopAllFileMusic() {
+            stopSoundTestMusic();
             stopTitleMusic();
             stopStage1JourneyMusic();
             stopHideoutMusic();
@@ -2405,6 +2577,59 @@ All Lemon Supporters
             stopStage3BossMusic();
             stopEndingMusic();
             stopStageClearJingle();
+        }
+
+        function playSoundTestTrack(row) {
+            const src = row.dataset.soundSrc;
+            if (!src) {
+                return;
+            }
+            if (audioState.soundTestRow === row && audioState.soundTestMusic && !audioState.soundTestMusic.paused) {
+                stopSoundTestMusic();
+                playTitleMusic();
+                return;
+            }
+            initAudio();
+            stopAllFileMusic();
+            const music = new Audio(src);
+            const loopMode = row.dataset.soundLoop || "";
+            music.preload = "auto";
+            music.volume = 0.34;
+            music.loop = loopMode === "true";
+            if (loopMode === "boss") {
+                music.currentTime = 7.98;
+            }
+            music.addEventListener("timeupdate", () => {
+                if (loopMode === "title" && music.currentTime >= 30) {
+                    music.currentTime = 0;
+                    music.volume = 0.34;
+                    return;
+                }
+                if (loopMode === "title" && music.currentTime >= 26) {
+                    const fade = BABYLON.Scalar.Clamp((30 - music.currentTime) / 4, 0, 1);
+                    music.volume = 0.34 * fade;
+                } else if (loopMode === "title") {
+                    music.volume = 0.34;
+                }
+                if (loopMode === "boss" && music.currentTime >= 28.17) {
+                    music.currentTime = 7.98;
+                }
+            });
+            music.addEventListener("ended", () => {
+                if (audioState.soundTestMusic === music) {
+                    stopSoundTestMusic();
+                    playTitleMusic();
+                }
+            });
+            audioState.soundTestMusic = music;
+            audioState.soundTestRow = row;
+            audioState.soundTestLoopMode = loopMode;
+            row.classList.add("isPlaying");
+            setProceduralMusicMuted(true);
+            const playPromise = music.play();
+            if (playPromise && playPromise.catch) {
+                playPromise.catch(() => {});
+            }
         }
 
         function getUrlStageSelection() {
@@ -2983,7 +3208,40 @@ All Lemon Supporters
             showTitleControlsGuide();
         });
 
-        titleScreenEl.addEventListener("pointerdown", () => {
+        stageSelectButtonEl.addEventListener("click", (event) => {
+            event.stopPropagation();
+            toggleTitlePanel("stage");
+        });
+
+        endingButtonEl.addEventListener("click", (event) => {
+            event.stopPropagation();
+            startEndingFromTitle();
+        });
+
+        soundTestButtonEl.addEventListener("click", (event) => {
+            event.stopPropagation();
+            toggleTitlePanel("sound");
+        });
+
+        stageSelectButtons.forEach((button) => {
+            button.addEventListener("click", (event) => {
+                event.stopPropagation();
+                const stageNumber = Number(button.dataset.startStage || 1);
+                startStageFromTitle(BABYLON.Scalar.Clamp(Math.floor(stageNumber), 1, 3));
+            });
+        });
+
+        soundRows.forEach((row) => {
+            row.addEventListener("click", (event) => {
+                event.stopPropagation();
+                playSoundTestTrack(row);
+            });
+        });
+
+        titleScreenEl.addEventListener("pointerdown", (event) => {
+            if (event.target.closest("button")) {
+                return;
+            }
             playTitleMusic();
         });
 
@@ -3583,6 +3841,32 @@ All Lemon Supporters
             }
         }
 
+        function loadClearFlag() {
+            try {
+                state.hasClearedGame = window.localStorage.getItem(clearedStorageKey) === "1";
+            } catch (error) {
+                state.hasClearedGame = false;
+            }
+        }
+
+        function saveClearFlag() {
+            state.hasClearedGame = true;
+            try {
+                window.localStorage.setItem(clearedStorageKey, "1");
+            } catch (error) {
+                console.warn("Could not save clear flag.", error);
+            }
+            updateTitleMenu();
+        }
+
+        function updateTitleMenu(activePanel = "") {
+            titleExtraMenuEl.classList.toggle("isVisible", state.hasClearedGame);
+            stageSelectPanelEl.classList.toggle("isVisible", state.hasClearedGame && activePanel === "stage");
+            soundTestPanelEl.classList.toggle("isVisible", state.hasClearedGame && activePanel === "sound");
+            stageSelectButtonEl.classList.toggle("isActive", activePanel === "stage");
+            soundTestButtonEl.classList.toggle("isActive", activePanel === "sound");
+        }
+
         function updateTitleHighScore() {
             titleHighScoreEl.textContent = `HI SCORE ${state.highScore}`;
         }
@@ -3753,6 +4037,7 @@ All Lemon Supporters
             bossHudEl.classList.remove("isVisible");
             intermissionEl.classList.remove("isVisible");
             updateTitleHighScore();
+            updateTitleMenu();
             updateHud();
         }
 
@@ -3833,9 +4118,58 @@ All Lemon Supporters
                 startGame();
                 return;
             }
+            stopSoundTestMusic();
             initAudio();
             titleScreenEl.classList.add("isHidden");
             showControlsGuide();
+        }
+
+        function toggleTitlePanel(panelName) {
+            if (!state.hasClearedGame) {
+                updateTitleMenu("");
+                return;
+            }
+            const isAlreadyOpen =
+                (panelName === "stage" && stageSelectPanelEl.classList.contains("isVisible"))
+                || (panelName === "sound" && soundTestPanelEl.classList.contains("isVisible"));
+            if (isAlreadyOpen) {
+                if (panelName === "sound") {
+                    stopSoundTestMusic();
+                    playTitleMusic();
+                }
+                updateTitleMenu("");
+                return;
+            }
+            if (panelName !== "sound") {
+                stopSoundTestMusic();
+                playTitleMusic();
+            }
+            updateTitleMenu(panelName);
+        }
+
+        function startStageFromTitle(stageNumber) {
+            initAudio();
+            playStartSound();
+            stopSoundTestMusic();
+            stopTitleMusic();
+            resetGame();
+            state.hasStarted = true;
+            titleScreenEl.classList.add("isHidden");
+            if (stageNumber > 1) {
+                state.lemonUnlocked = true;
+            }
+            beginStage(stageNumber);
+        }
+
+        function startEndingFromTitle() {
+            initAudio();
+            playStartSound();
+            stopSoundTestMusic();
+            stopTitleMusic();
+            resetGame();
+            state.hasStarted = true;
+            titleScreenEl.classList.add("isHidden");
+            completeGame();
         }
 
         function showDialogue(speaker, text, duration = 4.2, portraitSrc = "") {
@@ -4871,6 +5205,7 @@ All Lemon Supporters
 
         function completeGame() {
             saveHighScore();
+            saveClearFlag();
             state.stage3IntroActive = false;
             state.stage3IntroFading = false;
             state.stage3IntroFadeTimer = 0;
@@ -7446,6 +7781,7 @@ All Lemon Supporters
         });
 
         loadHighScore();
+        loadClearFlag();
         resetGame();
         playTitleMusic();
 
