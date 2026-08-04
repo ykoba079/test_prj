@@ -53,6 +53,22 @@
             letter-spacing: 0;
         }
 
+        .site-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .site-icon {
+            width: clamp(48px, 7vw, 72px);
+            height: clamp(48px, 7vw, 72px);
+            object-fit: cover;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #eef1ed;
+            flex: 0 0 auto;
+        }
+
         .lead {
             max-width: 720px;
             margin: 12px 0 0;
@@ -208,6 +224,10 @@
         }
 
         @media (max-width: 640px) {
+            .site-brand {
+                align-items: flex-start;
+            }
+
             .event {
                 grid-template-columns: 1fr;
             }
@@ -221,7 +241,10 @@
 <body>
     <header>
         <div class="header-inner">
-            <h1>犯人はヤスのGithub</h1>
+            <div class="site-brand">
+                <img class="site-icon" src="./img/ddy.jpg" alt="犯人はヤスのGithubのアイコン">
+                <h1>犯人はヤスのGithub</h1>
+            </div>
             <p class="lead">GitHub Pagesでデモや資料などをまとめています。</p>
         </div>
     </header>
@@ -242,12 +265,14 @@
                     <span>Babylon.js勉強会で参加したときの裏側あれこれ</span>
                 </a>
                 <a class="item" href="https://qiita.com/Ykoba791" target="_blank" rel="noopener noreferrer">
+                    <img class="item-thumbnail" src="./img/qiita.jpg" alt="Qiita 投稿のプレビュー">
                     <strong>Qiita 投稿</strong>
                     <span>Babylon.js、WebXR、3D表示などの技術メモ・記事</span>
                 </a>
                 <a class="item" href="https://techbookfest.org/organization/dqewxtYMsQVP3EiYjeQyCH" target="_blank" rel="noopener noreferrer">
-                    <strong>Babylon.js 勉強会 技術同人誌</strong>
-                    <span>Babylon.js勉強会として共同制作している技術同人誌</span>
+                    <img class="item-thumbnail" src="./img/babylonjd_douzin.jpg" alt="Babylon.js 勉強会 技術同人誌のプレビュー">
+                    <strong>Babylon.js勉強会 技術同人誌</strong>
+                    <span>技術書典の同人誌</span>
                 </a>
             </div>
         </section>
@@ -257,14 +282,14 @@
             <div class="grid">
                 <a class="item" href="./WarehouseSample_drone_v1/babyWarehouseDroneSample.html">
                     <img class="item-thumbnail" src="./img/wharehouse_drone.jpg" alt="倉庫ドローン在庫サンプルのプレビュー">
-                    <strong>倉庫サンプル</strong>
-                    <span>倉庫内を可視化し、ドローンで確認するサンプル</span>
+                    <strong>倉庫表示サンプル</strong>
+                    <span>倉庫内を可視化し、ドローンでQRを読むデモ</span>
                 </a>
 
                 <a class="item" href="./nagonocanvas.html">
                     <img class="item-thumbnail" src="./img/nagono_view.jpg" alt="会場3Dモデルのプレビュー">
                     <strong>なごのCanvas 会場</strong>
-                    <span>製造業でも生成AI活用したい！名古屋LLM MeetUp 会場の現状復帰用見取り図です</span>
+                    <span>「製造業でも生成AI活用したい！名古屋LLM MeetUp」会場の現状復帰用見取り図です</span>
                 </a>
                 <a class="item" href="./babyOfficeSample.html">
                     <img class="item-thumbnail" src="./img/office_view.jpg" alt="オフィスサンプルのプレビュー">
@@ -285,10 +310,6 @@
                     <img class="item-thumbnail" src="./img/babylon_moon1.jpg" alt="WebXR Moon / Moveのプレビュー">
                     <strong>日食可視化</strong>
                     <span>月の影の位置関係を可視化するサンプル</span>
-                </a>
-                <a class="item" href="./gis_test.html">
-                    <strong>GIS テスト</strong>
-                    <span>地図・位置情報系の表示テストです。</span>
                 </a>
                 <a class="item" href="./detectsample_camera.html">
                     <strong>カメラ物体検出</strong>
