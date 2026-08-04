@@ -46,6 +46,13 @@
             padding: 36px 0 28px;
         }
 
+        .header-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+        }
+
         h1 {
             margin: 0;
             font-size: clamp(28px, 4vw, 42px);
@@ -57,6 +64,7 @@
             display: flex;
             align-items: center;
             gap: 14px;
+            min-width: 0;
         }
 
         .site-icon {
@@ -67,6 +75,43 @@
             border-radius: 8px;
             background: #eef1ed;
             flex: 0 0 auto;
+        }
+
+        .social-links {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 0 0 auto;
+        }
+
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: clamp(50px, 7vw, 70px);
+            height: clamp(50px, 7vw, 70px);
+            padding: 7px;
+            background: #111111;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            text-decoration: none;
+        }
+
+        .social-link:hover,
+        .social-link:focus-visible {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .social-link img {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .social-link.qiita {
+            background: #55c500;
         }
 
         .lead {
@@ -224,6 +269,10 @@
         }
 
         @media (max-width: 640px) {
+            .header-top {
+                align-items: flex-start;
+            }
+
             .site-brand {
                 align-items: flex-start;
             }
@@ -241,88 +290,95 @@
 <body>
     <header>
         <div class="header-inner">
-            <div class="site-brand">
-                <img class="site-icon" src="./img/ddy.jpg" alt="犯人はヤスのGithubのアイコン">
-                <h1>犯人はヤスのGithub</h1>
+            <div class="header-top">
+                <div class="site-brand">
+                    <img class="site-icon" src="./img/ddy.jpg" alt="犯人はヤスのGithubのアイコン">
+                    <h1>犯人はヤスのGithub</h1>
+                </div>
+                <nav class="social-links" aria-label="外部リンク">
+                    <a class="social-link qiita" href="https://qiita.com/Ykoba791" target="_blank" rel="noopener noreferrer" aria-label="Qiita">
+                        <img src="./img/qiita.jpg" alt="">
+                    </a>
+                    <a class="social-link" href="https://x.com/Ykoba791" target="_blank" rel="noopener noreferrer" aria-label="X">
+                        <img src="./img/X-logo-white.jpg" alt="">
+                    </a>
+                </nav>
             </div>
-            <p class="lead">GitHub Pagesでデモや資料などをまとめています。</p>
+            <p class="lead">Babylon.js、3DGSなど、Webブラウザで動く3Dデモや資料を置いています。</p>
         </div>
     </header>
 
     <main>
 
         <section aria-labelledby="docs-heading">
-            <h2 id="docs-heading">記事・資料</h2>
+            <h2 id="docs-heading">資料・記事</h2>
             <div class="grid">
                 <a class="item" href="https://docs.google.com/presentation/d/1BpP00ovQkSD-RmIayzFA6C62kiCdUk3_roL-LvjFYtw/edit?usp=sharing" target="_blank" rel="noopener noreferrer">
                     <img class="item-thumbnail" src="./img/3dgs_kashika.jpg" alt="Googleスライド資料 1 のプレビュー">
-                    <strong>3DGSをWebで表示する方法</strong>
-                    <span>XR Meetup Aichi / 土岐の可視化研究会で話した資料</span>
+                    <strong>3DGSの特性と、Webでの活用</strong>
+                    <span>XR Meetup Aichi / 土岐の可視化研究会 での登壇資料です</span>
                 </a>
                 <a class="item" href="https://docs.google.com/presentation/d/1VzdlPJsEamJs3TYCK9w8cVrf2QWNskiJ2eTmLsEosbo/edit?slide=id.g25401222e99_0_491#slide=id.g25401222e99_0_491" target="_blank" rel="noopener noreferrer">
                     <img class="item-thumbnail" src="./img/gisyoten14.jpg" alt="Googleスライド資料 2 のプレビュー">
-                    <strong>Babylon.jsで会場見取り図を3D表示</strong>
-                    <span>Babylon.js勉強会で参加したときの裏側あれこれ</span>
-                </a>
-                <a class="item" href="https://qiita.com/Ykoba791" target="_blank" rel="noopener noreferrer">
-                    <img class="item-thumbnail" src="./img/qiita.jpg" alt="Qiita 投稿のプレビュー">
-                    <strong>Qiita 投稿</strong>
-                    <span>Babylon.js、WebXR、3D表示などの技術メモ・記事</span>
+                    <strong>技術書典14 最後の8日間</strong>
+                    <span>軽い気持ちで始めた会場見取り図がまさかの公開へ。技術書典直前のドタバタ共同開発記</span>
                 </a>
                 <a class="item" href="https://techbookfest.org/organization/dqewxtYMsQVP3EiYjeQyCH" target="_blank" rel="noopener noreferrer">
                     <img class="item-thumbnail" src="./img/babylonjd_douzin.jpg" alt="Babylon.js 勉強会 技術同人誌のプレビュー">
-                    <strong>Babylon.js勉強会 技術同人誌</strong>
-                    <span>技術書典の同人誌</span>
+                    <strong>Babylon.js 技術同人誌</strong>
+                    <span>Babylon.js 勉強会が制作した技術同人誌。Web 3DやIoTなど様々。</span>
                 </a>
             </div>
         </section>
 
         <section aria-labelledby="babylon-heading">
-            <h2 id="babylon-heading">デモ 主にBabylon.js</h2>
+            <h2 id="babylon-heading">3Dデモ</h2>
             <div class="grid">
                 <a class="item" href="./WarehouseSample_drone_v1/babyWarehouseDroneSample.html">
                     <img class="item-thumbnail" src="./img/wharehouse_drone.jpg" alt="倉庫ドローン在庫サンプルのプレビュー">
-                    <strong>倉庫表示サンプル</strong>
-                    <span>倉庫内を可視化し、ドローンでQRを読むデモ</span>
+                    <strong>物流倉庫デジタルツイン Demo</strong>
+                    <span>倉庫内の分布を可視化し、あわよくばドローンでQR自動棚卸したいデモ。（機能追加中）</span>
                 </a>
 
                 <a class="item" href="./nagonocanvas.html">
                     <img class="item-thumbnail" src="./img/nagono_view.jpg" alt="会場3Dモデルのプレビュー">
-                    <strong>なごのCanvas 会場</strong>
-                    <span>「製造業でも生成AI活用したい！名古屋LLM MeetUp」会場の現状復帰用見取り図です</span>
+                    <strong>名古屋LLM MeetUp 原状復帰3Dマップ</strong>
+                    <span>なごのCanvasで行われている勉強会の会場を、原状復帰する際に確認する3D見取り図。珍しく実用している。</span>
                 </a>
                 <a class="item" href="./babyOfficeSample.html">
                     <img class="item-thumbnail" src="./img/office_view.jpg" alt="オフィスサンプルのプレビュー">
-                    <strong>オフィスサンプル</strong>
-                    <span>オフィス空間の3D表示サンプルです。</span>
+                    <strong>情シス向けオフィスPC管理ビューア</strong>
+                    <span>ソフトウェアの更新状況などを、オフィスレイアウト上で確認できたら、というデモ</span>
                 </a>
                 <a class="item" href="./minecraft-babylon/">
                     <img class="item-thumbnail" src="./img/areppoi.jpg" alt="Babylon Block Worldのプレビュー">
-                    <strong>Babylon Block World</strong>
-                    <span>ブロックワールド風の3Dデモ</span>
+                    <strong>Codex雑プロンプト実験 1</strong>
+                    <span>AIにざっくりボクセルワールドの作成を依頼。Babylon.jsでどんな実装ができるか試したデモ</span>
                 </a>
                 <a class="item" href="./babylon-code-nature-documentary/">
                     <img class="item-thumbnail" src="./img/babylon_nature.jpg" alt="自然ドキュメンタリーのプレビュー">
-                    <strong>自然ドキュメンタリー</strong>
-                    <span>コードだけで作る山・森・海の表現サンプル</span>
+                    <strong>Codex雑プロンプト実験 2</strong>
+                    <span>自然番組風の3DシーンをAIに作らせてみた実験デモ</span>
                 </a>
                 <a class="item" href="./webXRmoon_VR.html">
                     <img class="item-thumbnail" src="./img/babylon_moon1.jpg" alt="WebXR Moon / Moveのプレビュー">
-                    <strong>日食可視化</strong>
-                    <span>月の影の位置関係を可視化するサンプル</span>
-                </a>
-                <a class="item" href="./detectsample_camera.html">
-                    <strong>カメラ物体検出</strong>
-                    <span>Webカメラを使った物体検出サンプルです。</span>
+                    <strong>日食のしくみ3Dビューア</strong>
+                    <span>太陽・地球・月の位置関係と月の影を、Web 3Dで確認するデモ</span>
                 </a>
                 <a class="item" href="./detectsample_image.html">
-                    <strong>画像物体検出</strong>
-                    <span>画像を使った物体検出サンプルです。</span>
+                    <img class="item-thumbnail" src="./img/yoro_image_detect_bird.jpg" alt="画像で試すYOLO物体検出のプレビュー">
+                    <strong>画像で試すYOLO物体検出</strong>
+                    <span>画像ファイルを読み込み、YOLOの標準モデルで検出結果を確認するデモ</span>
+                </a>
+                <a class="item" href="./detectsample_camera.html">
+                    <img class="item-thumbnail" src="./img/yoro_camera_detect_bird.jpg" alt="カメラで試すYOLO物体検出のプレビュー">
+                    <strong>カメラで試すYOLO物体検出</strong>
+                    <span>Webカメラ映像を使って、YOLOの物体検出をリアルタイムに試すデモ</span>
                 </a>
                 <a class="item" href="./space-shooter/">
                     <img class="item-thumbnail" src="./space-shooter/img/title-escape-karaage-empire.jpg" alt="からあげ帝国からの脱出のプレビュー">
                     <strong>からあげ帝国からの脱出</strong>
-                    <span>3Dモデルの横スクミニシューティングゲームです</span>
+                    <span>AI・Maker系コミュニティ「からあげ帝国」をモチーフにした、3Dモデルの横スクロールシューティング</span>
                 </a>
             </div>
         </section>
@@ -353,7 +409,7 @@
         </section>
 
         <section aria-labelledby="scaniverse-heading">
-            <h2 id="scaniverse-heading">Scaniverse</h2>
+            <h2 id="scaniverse-heading">Scaniverse の3Dスキャン</h2>
             <div class="grid">
                 <a class="item" href="https://scaniverse.com/@yasud" target="_blank" rel="noopener noreferrer">
                     <img class="item-thumbnail" src="./img/scaniverse1.jpg" alt="Scaniverse スキャン 2024年までのプレビュー">
