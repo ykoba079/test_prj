@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="utf-8">
@@ -74,6 +74,11 @@
       padding: 0 10px;
       cursor: pointer;
     }
+    button.active {
+      border-color: rgba(255, 209, 102, .75);
+      background: #273248;
+      color: var(--gold);
+    }
     input[type="file"] {
       width: 170px;
       min-width: 0;
@@ -114,22 +119,40 @@
     <div class="title">SPZ Parts Test</div>
     <div class="row">
       <label>SPZ <input id="splatFile" type="file" accept=".spz"></label>
-      <button id="sampleButton" type="button">Sample</button>
+      <button id="sampleButton" type="button">&#12469;&#12531;&#12503;&#12523;</button>
       <select id="frontSelect">
-        <option value="auto">Front Auto</option>
-        <option value="positiveZ">Front +Z</option>
-        <option value="negativeZ">Front -Z</option>
+        <option value="auto">&#27491;&#38754; &#33258;&#21205;</option>
+        <option value="positiveZ">&#27491;&#38754; +Z</option>
+        <option value="negativeZ">&#27491;&#38754; -Z</option>
       </select>
+      <button id="allButton" type="button">&#20840;&#34920;&#31034;</button>
+      <button id="noneButton" type="button">&#20840;&#38750;&#34920;&#31034;</button>
     </div>
     <div class="row">
-      <label>Scale <input id="scaleInput" type="range" min="45" max="170" value="100"><span id="scaleValue">100</span></label>
-      <label>Head Y <input id="headYInput" type="range" min="70" max="86" value="76"><span id="headYValue">76</span></label>
-      <label>Capsule <input id="capsuleInput" type="range" min="60" max="150" value="100"><span id="capsuleValue">100</span></label>
-      <label><input id="autoSliceToggle" type="checkbox" checked>Auto</label>
-      <label><input id="rigToggle" type="checkbox" checked>Rig</label>
+      <label>&#25313;&#22823; <input id="scaleInput" type="range" min="45" max="170" value="100"><span id="scaleValue">100</span></label>
+      <label>&#38957;Y <input id="headYInput" type="range" min="70" max="86" value="76"><span id="headYValue">76</span></label>
+      <label>&#12459;&#12503;&#12475;&#12523; <input id="capsuleInput" type="range" min="60" max="150" value="100"><span id="capsuleValue">100</span></label>
+      <label><input id="autoSliceToggle" type="checkbox" checked>&#33258;&#21205;</label>
+      <label><input id="rigToggle" type="checkbox" checked>&#39592;&#26684;</label>
+      <label><input id="rectRangeToggle" type="checkbox">&#30697;&#24418;&#31684;&#22258;</label>
+      <label><input id="capsuleRangeToggle" type="checkbox">&#12459;&#12503;&#12475;&#12523;&#31684;&#22258;</label>
+    </div>
+    <div class="row">
+      <button class="presetButton" type="button" data-preset="headTorso">&#38957;+&#32905;&#20307;</button>
+      <button class="presetButton" type="button" data-preset="arms">&#33109;</button>
+      <button class="presetButton" type="button" data-preset="legs">&#33050;</button>
+      <button id="csvButton" type="button">CSV</button>
+      <button id="resetButton" type="button">&#21021;&#26399;&#21270;</button>
+    </div>
+    <div class="row">
+      <button class="motionButton" type="button" data-motion="idle">&#24453;&#27231;</button>
+      <button class="motionButton" type="button" data-motion="walk">&#27497;&#12367;</button>
+      <button class="motionButton" type="button" data-motion="jogBack">&#12472;&#12519;&#12464;&#24460;&#36864;</button>
+      <button class="motionButton" type="button" data-motion="stepBack">&#24460;&#36864;</button>
+      <button id="stopMotionButton" type="button">&#20572;&#27490;</button>
     </div>
     <div class="parts" id="partsToggles"></div>
-    <div class="status" id="status">Load a SPZ file. This page is only for static segmentation checks.</div>
+    <div class="status" id="status">SPZ&#12434;&#35501;&#12415;&#36796;&#12435;&#12391;&#12367;&#12384;&#12373;&#12356;&#12290;&#12497;&#12540;&#12484;&#20998;&#12369;&#12392;&#31777;&#26131;&#12514;&#12540;&#12471;&#12519;&#12531;&#12434;&#30906;&#35469;&#12375;&#12414;&#12377;&#12290;</div>
   </div>
 
   <script>
@@ -156,6 +179,8 @@
       splatFile: document.getElementById("splatFile"),
       sampleButton: document.getElementById("sampleButton"),
       frontSelect: document.getElementById("frontSelect"),
+      allButton: document.getElementById("allButton"),
+      noneButton: document.getElementById("noneButton"),
       scaleInput: document.getElementById("scaleInput"),
       scaleValue: document.getElementById("scaleValue"),
       headYInput: document.getElementById("headYInput"),
@@ -164,45 +189,79 @@
       capsuleValue: document.getElementById("capsuleValue"),
       autoSliceToggle: document.getElementById("autoSliceToggle"),
       rigToggle: document.getElementById("rigToggle"),
+      rectRangeToggle: document.getElementById("rectRangeToggle"),
+      capsuleRangeToggle: document.getElementById("capsuleRangeToggle"),
+      presetButtons: [...document.querySelectorAll(".presetButton")],
+      motionButtons: [...document.querySelectorAll(".motionButton")],
+      csvButton: document.getElementById("csvButton"),
+      resetButton: document.getElementById("resetButton"),
+      stopMotionButton: document.getElementById("stopMotionButton"),
       partsToggles: document.getElementById("partsToggles"),
       status: document.getElementById("status")
     };
 
-    const SAMPLE_SPZ_URL = "../models/asahi2_f.spz";
+    const SAMPLE_SPZ_URL = "../models/zenshin.spz";
+    const STORAGE_KEY = "spzPartsTestSettings";
+    const PART_PRESETS = {
+      headTorso: ["head", "neck", "spine2", "spine1", "spine", "hips"],
+      arms: ["leftShoulder", "leftUpperArm", "leftForearm", "leftHand", "rightShoulder", "rightUpperArm", "rightForearm", "rightHand"],
+      legs: ["leftThigh", "leftShin", "leftFoot", "rightThigh", "rightShin", "rightFoot"]
+    };
+    const MOTIONS = {
+      idle: { label: "\u5f85\u6a5f", url: "mixamo/Fighting Idle.glb" },
+      walk: { label: "\u6b69\u304f", url: "mixamo/Walking.glb" },
+      jogBack: { label: "\u30b8\u30e7\u30b0\u5f8c\u9000", url: "mixamo/Slow Jog Backwards.glb" },
+      stepBack: { label: "\u5f8c\u9000", url: "mixamo/Step Backward.glb" }
+    };
+    const DEFAULT_VISIBLE_PARTS = ["head"];
+    const savedSettings = loadSettings();
+
     const state = {
       source: null,
       sourceName: "none",
       sourceBounds: null,
       sourceBase: null,
       frontSign: 1,
-      visibleParts: new Set(["head"]),
+      visibleParts: new Set(savedSettings.visibleParts ?? DEFAULT_VISIBLE_PARTS),
       partCounts: {},
+      partIndices: null,
       segmentMesh: null,
-      rigDebug: null
+      rigDebug: null,
+      rectRangeDebug: null,
+      capsuleRangeDebug: null,
+      motionRoot: null,
+      motionGroup: null,
+      motionChannels: null,
+      motionBind: null,
+      motionActive: false,
+      lastMotionUpdate: 0,
+      templateRig: null
     };
 
     const PARTS = [
-      { id: "head", label: "HEAD", color: new BABYLON.Color3(1, 0.84, 0.34) },
-      { id: "neck", label: "NECK", color: new BABYLON.Color3(1, 0.72, 0.42) },
-      { id: "spine2", label: "SPINE2", color: new BABYLON.Color3(0.35, 0.75, 1) },
-      { id: "spine1", label: "SPINE1", color: new BABYLON.Color3(0.28, 0.66, 1) },
-      { id: "spine", label: "SPINE", color: new BABYLON.Color3(0.24, 0.58, 1) },
-      { id: "hips", label: "HIPS", color: new BABYLON.Color3(0.2, 0.48, 0.95) },
-      { id: "leftShoulder", label: "L SHOULDER", color: new BABYLON.Color3(1, 0.55, 0.42) },
-      { id: "leftUpperArm", label: "L UPPER ARM", color: new BABYLON.Color3(1, 0.45, 0.38) },
-      { id: "leftForearm", label: "L FOREARM", color: new BABYLON.Color3(1, 0.35, 0.28) },
-      { id: "leftHand", label: "L HAND", color: new BABYLON.Color3(1, 0.62, 0.48) },
-      { id: "rightShoulder", label: "R SHOULDER", color: new BABYLON.Color3(1, 0.55, 0.42) },
-      { id: "rightUpperArm", label: "R UPPER ARM", color: new BABYLON.Color3(1, 0.45, 0.38) },
-      { id: "rightForearm", label: "R FOREARM", color: new BABYLON.Color3(1, 0.35, 0.28) },
-      { id: "rightHand", label: "R HAND", color: new BABYLON.Color3(1, 0.62, 0.48) },
-      { id: "leftThigh", label: "L THIGH", color: new BABYLON.Color3(0.48, 1, 0.62) },
-      { id: "leftShin", label: "L SHIN", color: new BABYLON.Color3(0.36, 0.88, 0.52) },
-      { id: "leftFoot", label: "L FOOT", color: new BABYLON.Color3(0.62, 1, 0.72) },
-      { id: "rightThigh", label: "R THIGH", color: new BABYLON.Color3(0.48, 1, 0.62) },
-      { id: "rightShin", label: "R SHIN", color: new BABYLON.Color3(0.36, 0.88, 0.52) },
-      { id: "rightFoot", label: "R FOOT", color: new BABYLON.Color3(0.62, 1, 0.72) }
+      { id: "head", label: "\u982d", color: new BABYLON.Color3(1, 0.84, 0.34) },
+      { id: "neck", label: "\u9996", color: new BABYLON.Color3(1, 0.72, 0.42) },
+      { id: "spine2", label: "\u80f8\u4e0a", color: new BABYLON.Color3(0.35, 0.75, 1) },
+      { id: "spine1", label: "\u80f8\u4e0b", color: new BABYLON.Color3(0.28, 0.66, 1) },
+      { id: "spine", label: "\u8179", color: new BABYLON.Color3(0.24, 0.58, 1) },
+      { id: "hips", label: "\u8170", color: new BABYLON.Color3(0.2, 0.48, 0.95) },
+      { id: "leftShoulder", label: "\u5de6\u80a9", color: new BABYLON.Color3(1, 0.55, 0.42) },
+      { id: "leftUpperArm", label: "\u5de6\u4e0a\u8155", color: new BABYLON.Color3(1, 0.45, 0.38) },
+      { id: "leftForearm", label: "\u5de6\u524d\u8155", color: new BABYLON.Color3(1, 0.35, 0.28) },
+      { id: "leftHand", label: "\u5de6\u624b", color: new BABYLON.Color3(1, 0.62, 0.48) },
+      { id: "rightShoulder", label: "\u53f3\u80a9", color: new BABYLON.Color3(1, 0.55, 0.42) },
+      { id: "rightUpperArm", label: "\u53f3\u4e0a\u8155", color: new BABYLON.Color3(1, 0.45, 0.38) },
+      { id: "rightForearm", label: "\u53f3\u524d\u8155", color: new BABYLON.Color3(1, 0.35, 0.28) },
+      { id: "rightHand", label: "\u53f3\u624b", color: new BABYLON.Color3(1, 0.62, 0.48) },
+      { id: "leftThigh", label: "\u5de6\u3082\u3082", color: new BABYLON.Color3(0.48, 1, 0.62) },
+      { id: "leftShin", label: "\u5de6\u3059\u306d", color: new BABYLON.Color3(0.36, 0.88, 0.52) },
+      { id: "leftFoot", label: "\u5de6\u8db3", color: new BABYLON.Color3(0.62, 1, 0.72) },
+      { id: "rightThigh", label: "\u53f3\u3082\u3082", color: new BABYLON.Color3(0.48, 1, 0.62) },
+      { id: "rightShin", label: "\u53f3\u3059\u306d", color: new BABYLON.Color3(0.36, 0.88, 0.52) },
+      { id: "rightFoot", label: "\u53f3\u8db3", color: new BABYLON.Color3(0.62, 1, 0.72) }
     ];
+    const PART_INDEX = Object.fromEntries(PARTS.map((part, index) => [part.id, index]));
+    const INDEX_PART = PARTS.map((part) => part.id);
 
     const RIG_LINES = [
       ["hips", "spine"], ["spine", "spine1"], ["spine1", "spine2"], ["spine2", "neck"], ["neck", "head"],
@@ -214,6 +273,99 @@
 
     function setStatus(text) {
       ui.status.textContent = text;
+    }
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveSettings() {
+      const settings = {
+        front: ui.frontSelect.value,
+        scale: ui.scaleInput.value,
+        headY: ui.headYInput.value,
+        capsule: ui.capsuleInput.value,
+        autoSlice: ui.autoSliceToggle.checked,
+        rig: ui.rigToggle.checked,
+        rectRange: ui.rectRangeToggle.checked,
+        capsuleRange: ui.capsuleRangeToggle.checked,
+        visibleParts: [...state.visibleParts]
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    }
+
+    function applySavedSettings() {
+      if (savedSettings.front) ui.frontSelect.value = savedSettings.front;
+      if (savedSettings.scale) ui.scaleInput.value = savedSettings.scale;
+      if (savedSettings.headY) ui.headYInput.value = savedSettings.headY;
+      if (savedSettings.capsule) ui.capsuleInput.value = savedSettings.capsule;
+      if (typeof savedSettings.autoSlice === "boolean") ui.autoSliceToggle.checked = savedSettings.autoSlice;
+      if (typeof savedSettings.rig === "boolean") ui.rigToggle.checked = savedSettings.rig;
+      if (typeof savedSettings.rectRange === "boolean") ui.rectRangeToggle.checked = savedSettings.rectRange;
+      if (typeof savedSettings.capsuleRange === "boolean") ui.capsuleRangeToggle.checked = savedSettings.capsuleRange;
+      ui.scaleValue.textContent = ui.scaleInput.value;
+      ui.headYValue.textContent = ui.headYInput.value;
+      ui.capsuleValue.textContent = ui.capsuleInput.value;
+    }
+
+    function updatePresetButtons() {
+      ui.presetButtons.forEach((button) => {
+        const preset = PART_PRESETS[button.dataset.preset] ?? [];
+        button.classList.toggle("active", preset.length > 0 && preset.every((partId) => state.visibleParts.has(partId)));
+      });
+    }
+
+    function setVisibleParts(partIds) {
+      const validIds = new Set(PARTS.map((part) => part.id));
+      state.visibleParts = new Set(partIds.filter((partId) => validIds.has(partId)));
+      renderPartToggles();
+      updateSegmentMask();
+      saveSettings();
+    }
+
+    function exportPartCountsCsv() {
+      if (!Object.keys(state.partCounts).length) {
+        setStatus("SPZ\u3092\u8aad\u307f\u8fbc\u3093\u3067\u304b\u3089CSV\u3092\u66f8\u304d\u51fa\u3057\u3066\u304f\u3060\u3055\u3044\u3002");
+        return;
+      }
+      const total = Object.values(state.partCounts).reduce((sum, value) => sum + value, 0);
+      const rows = [["part_id", "label", "visible", "splats", "percent"]];
+      PARTS.forEach((part) => {
+        const count = state.partCounts[part.id] ?? 0;
+        const percent = total ? (count / total * 100).toFixed(3) : "0.000";
+        rows.push([part.id, part.label, state.visibleParts.has(part.id) ? "1" : "0", String(count), percent]);
+      });
+      const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${state.sourceName.replace(/\.[^.]+$/, "") || "parts"}-counts.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function resetSettings() {
+      ui.frontSelect.value = "auto";
+      ui.scaleInput.value = "100";
+      ui.headYInput.value = "76";
+      ui.capsuleInput.value = "100";
+      ui.autoSliceToggle.checked = true;
+      ui.rigToggle.checked = true;
+      ui.rectRangeToggle.checked = false;
+      ui.capsuleRangeToggle.checked = false;
+      ui.scaleValue.textContent = ui.scaleInput.value;
+      ui.headYValue.textContent = ui.headYInput.value;
+      ui.capsuleValue.textContent = ui.capsuleInput.value;
+      state.visibleParts = new Set(DEFAULT_VISIBLE_PARTS);
+      localStorage.removeItem(STORAGE_KEY);
+      renderPartToggles();
+      reloadSegmentation();
     }
 
     function splatPointAt(floatData, index) {
@@ -325,25 +477,27 @@
       const occupied = (slice) => slice.count > maxCount * 0.018 && slice.width > base.size.x * 0.035;
       const top = [...valid].reverse().find(occupied) ?? valid[valid.length - 1];
 
-      const shoulderCandidates = valid.filter((slice) =>
+      const upperCandidates = valid.filter((slice) =>
         occupied(slice) &&
-        slice.y > 0.55 &&
-        slice.y < Math.min(0.78, top.y - 0.03)
-      );
-      const shoulder = shoulderCandidates.reduce((best, slice) =>
-        !best || slice.width > best.width ? slice : best,
-        null
-      ) ?? valid[Math.floor(0.69 * bins)];
-
-      const neckCandidates = valid.filter((slice) =>
-        occupied(slice) &&
-        slice.y > Math.max(0.62, shoulder.y + 0.015) &&
+        slice.y > 0.62 &&
         slice.y < Math.min(0.84, top.y - 0.015)
       );
-      const neck = neckCandidates.reduce((best, slice) =>
+      const neck = upperCandidates.reduce((best, slice) =>
         !best || slice.width < best.width ? slice : best,
         null
       ) ?? valid[Math.floor(0.72 * bins)];
+
+      const shoulderCandidates = valid.filter((slice) =>
+        occupied(slice) &&
+        slice.y > Math.max(0.58, neck.y - 0.105) &&
+        slice.y < Math.min(neck.y - 0.015, 0.75)
+      );
+      const shoulder = shoulderCandidates.reduce((best, slice) => {
+        const widthScore = slice.width / Math.max(base.size.x, 0.001);
+        const heightScore = 1 - Math.abs(slice.y - BABYLON.Scalar.Clamp(neck.y - 0.055, 0.61, 0.72)) * 4;
+        const score = widthScore * 0.72 + heightScore * 0.28;
+        return !best || score > best.score ? { ...slice, score } : best;
+      }, null) ?? valid[Math.floor(0.67 * bins)];
 
       const headYMin = BABYLON.Scalar.Clamp(neck.y + 0.025, 0.715, 0.855);
       const headSlices = valid.filter((slice) => occupied(slice) && slice.y >= headYMin && slice.y <= top.y + 0.02);
@@ -378,6 +532,47 @@
       return Number(ui.headYInput.value) / 100;
     }
 
+    function templateRatio(base, jointId, fallback) {
+      const ratio = base.templateRig?.ratios?.[jointId];
+      return ratio?.y ?? fallback;
+    }
+
+    function templateXRatio(base, jointId, fallback) {
+      const ratio = base.templateRig?.ratios?.[jointId];
+      if (!ratio) return fallback;
+      return BABYLON.Scalar.Clamp(ratio.xHeight * base.size.y / Math.max(base.size.x, 0.001), -0.5, 0.5);
+    }
+
+    function densePointNear(mesh, bounds, base, options) {
+      const {
+        yTarget,
+        yWindow = 0.055,
+        xTarget = 0,
+        xWindow = 0.18,
+        side = 0,
+        zTarget = base.center.z
+      } = options;
+      const floatData = new Float32Array(mesh.splatsData);
+      const count = floatData.length / 8;
+      const step = Math.max(1, Math.floor(count / 180000));
+      let best = null;
+      for (let i = 0; i < count; i += step) {
+        const point = splatPointAt(floatData, i);
+        const y = (point.y - bounds.min.y) / Math.max(base.size.y, 0.001);
+        const nx = (point.x - base.center.x) / Math.max(base.size.x, 0.001);
+        if (Math.abs(y - yTarget) > yWindow) continue;
+        if (side < 0 && nx > -0.03) continue;
+        if (side > 0 && nx < 0.03) continue;
+        if (Math.abs(nx - xTarget) > xWindow) continue;
+        const dy = Math.abs(y - yTarget) / Math.max(yWindow, 0.001);
+        const dx = Math.abs(nx - xTarget) / Math.max(xWindow, 0.001);
+        const dz = Math.abs(point.z - zTarget) / Math.max(base.size.z, 0.001);
+        const score = dy * 0.48 + dx * 0.38 + dz * 0.14;
+        if (!best || score < best.score) best = { point, y, nx, score };
+      }
+      return best?.point ?? null;
+    }
+
     function estimatePoseRig(mesh, bounds, base) {
       const size = base.size;
       const center = base.center;
@@ -391,12 +586,17 @@
       const step = Math.max(1, Math.floor(count / 140000));
       const leftArmCandidates = [];
       const rightArmCandidates = [];
+      const leftShoulderCandidates = [];
+      const rightShoulderCandidates = [];
 
       for (let i = 0; i < count; i += step) {
         const point = splatPointAt(floatData, i);
         const nx = (point.x - center.x) / Math.max(size.x, 0.001);
         const y = (point.y - bounds.min.y) / Math.max(size.y, 0.001);
         const ax = Math.abs(nx);
+        if (y > 0.58 && y < 0.76 && ax > 0.11 && ax < 0.46) {
+          if (nx < 0) leftShoulderCandidates.push(point); else rightShoulderCandidates.push(point);
+        }
         if (y < 0.32 || y > 0.82 || ax < 0.28) continue;
         if (nx < 0) leftArmCandidates.push(point); else rightArmCandidates.push(point);
       }
@@ -417,27 +617,73 @@
       const leftWristX = leftWristGuess ? BABYLON.Scalar.Clamp((leftWristGuess.x - center.x) / Math.max(size.x, 0.001), -0.48, -0.32) : -0.42;
       const rightWristX = rightWristGuess ? BABYLON.Scalar.Clamp((rightWristGuess.x - center.x) / Math.max(size.x, 0.001), 0.32, 0.48) : 0.42;
 
-      const neckY = profile?.neckY ?? 0.72;
-      const shoulderY = profile?.shoulderY ?? 0.69;
-      const headCenterY = profile?.headCenterY ?? 0.83;
-      const shoulderX = BABYLON.Scalar.Clamp((profile?.shoulderWidthRatio ?? 0.48) * 0.42, 0.18, 0.3);
+      const neckTemplateY = templateRatio(base, "neck", 0.74);
+      const neckY = BABYLON.Scalar.Clamp((profile?.neckY ?? neckTemplateY) * 0.58 + neckTemplateY * 0.42, 0.68, 0.82);
+      const shoulderTemplateY = Math.min(templateRatio(base, "leftShoulder", 0.69), templateRatio(base, "rightShoulder", 0.69));
+      const shoulderY = BABYLON.Scalar.Clamp((profile?.shoulderY ?? shoulderTemplateY) * 0.42 + shoulderTemplateY * 0.58, neckY - 0.09, neckY - 0.025);
+      const headTemplateY = templateRatio(base, "head", 0.87);
+      const headCenterY = BABYLON.Scalar.Clamp((profile?.headCenterY ?? headTemplateY) * 0.68 + headTemplateY * 0.32, 0.78, 0.94);
+      const shoulderPoint = (points, side) => {
+        const band = points.filter((point) => {
+          const y = (point.y - bounds.min.y) / Math.max(size.y, 0.001);
+          return y > shoulderY - 0.035 && y < shoulderY + 0.06;
+        });
+        if (!band.length) return null;
+        const sorted = [...band].sort((a, b) => a.x - b.x);
+        const index = side < 0
+          ? Math.floor(sorted.length * 0.18)
+          : Math.floor(sorted.length * 0.82);
+        return sorted[BABYLON.Scalar.Clamp(index, 0, sorted.length - 1)];
+      };
+      const leftShoulderTargetX = templateXRatio(base, "leftShoulder", -0.21);
+      const rightShoulderTargetX = templateXRatio(base, "rightShoulder", 0.21);
+      const leftShoulderGuess = densePointNear(mesh, bounds, base, {
+        yTarget: shoulderY,
+        yWindow: 0.055,
+        xTarget: leftShoulderTargetX,
+        xWindow: 0.16,
+        side: -1,
+        zTarget: profile?.shoulderCenterZ ?? bodyCenterZ
+      }) ?? shoulderPoint(leftShoulderCandidates, -1);
+      const rightShoulderGuess = densePointNear(mesh, bounds, base, {
+        yTarget: shoulderY,
+        yWindow: 0.055,
+        xTarget: rightShoulderTargetX,
+        xWindow: 0.16,
+        side: 1,
+        zTarget: profile?.shoulderCenterZ ?? bodyCenterZ
+      }) ?? shoulderPoint(rightShoulderCandidates, 1);
+      const fallbackShoulderX = BABYLON.Scalar.Clamp(Math.max(Math.abs(leftShoulderTargetX), Math.abs(rightShoulderTargetX), (profile?.shoulderWidthRatio ?? 0.48) * 0.32), 0.16, 0.27);
+      const shoulderRatioX = (point, fallback, side) => point
+        ? BABYLON.Scalar.Clamp((point.x - center.x) / Math.max(size.x, 0.001), side < 0 ? -0.29 : 0.17, side < 0 ? -0.17 : 0.29)
+        : fallback * side;
+      const shoulderZ = (point, fallback) => point ? point.z : fallback;
+      const hipY = BABYLON.Scalar.Clamp(templateRatio(base, "hips", 0.48), 0.42, 0.56);
+      const leftThighY = BABYLON.Scalar.Clamp(templateRatio(base, "leftThigh", hipY - 0.035), hipY - 0.065, hipY + 0.01);
+      const rightThighY = BABYLON.Scalar.Clamp(templateRatio(base, "rightThigh", hipY - 0.035), hipY - 0.065, hipY + 0.01);
+      const leftShinY = BABYLON.Scalar.Clamp(templateRatio(base, "leftShin", 0.25), 0.18, Math.min(leftThighY - 0.08, 0.36));
+      const rightShinY = BABYLON.Scalar.Clamp(templateRatio(base, "rightShin", 0.25), 0.18, Math.min(rightThighY - 0.08, 0.36));
+      const leftFootY = BABYLON.Scalar.Clamp(templateRatio(base, "leftFoot", 0.06), 0.025, 0.13);
+      const rightFootY = BABYLON.Scalar.Clamp(templateRatio(base, "rightFoot", 0.06), 0.025, 0.13);
+      const leftHipX = BABYLON.Scalar.Clamp(templateXRatio(base, "leftThigh", -0.12), -0.19, -0.08);
+      const rightHipX = BABYLON.Scalar.Clamp(templateXRatio(base, "rightThigh", 0.12), 0.08, 0.19);
       const joints = {
-        hips: pointAt(0, 0.36),
-        spine: pointAt(0, 0.46),
-        spine1: pointAt(0, 0.56),
+        hips: pointAt(0, hipY),
+        spine: pointAt(0, BABYLON.Scalar.Clamp(templateRatio(base, "spine", 0.56), hipY + 0.04, 0.62)),
+        spine1: pointAt(0, BABYLON.Scalar.Clamp(templateRatio(base, "spine1", 0.63), hipY + 0.1, 0.7)),
         spine2: pointAt(0, Math.min(shoulderY - 0.02, 0.67)),
         neck: pointAt(0, neckY, profile?.neckCenterZ ?? bodyCenterZ, profile?.neckCenterX ?? bodyCenterX),
         head: pointAt(0, headCenterY, profile?.headCenterZ ?? bodyCenterZ, profile?.headCenterX ?? bodyCenterX),
-        leftShoulder: pointAt(-shoulderX, shoulderY, profile?.shoulderCenterZ ?? bodyCenterZ, profile?.shoulderCenterX ?? bodyCenterX),
-        rightShoulder: pointAt(shoulderX, shoulderY, profile?.shoulderCenterZ ?? bodyCenterZ, profile?.shoulderCenterX ?? bodyCenterX),
+        leftShoulder: pointAt(shoulderRatioX(leftShoulderGuess, fallbackShoulderX, -1), shoulderY, shoulderZ(leftShoulderGuess, profile?.shoulderCenterZ ?? bodyCenterZ), center.x),
+        rightShoulder: pointAt(shoulderRatioX(rightShoulderGuess, fallbackShoulderX, 1), shoulderY, shoulderZ(rightShoulderGuess, profile?.shoulderCenterZ ?? bodyCenterZ), center.x),
         leftHand: pointAt(leftWristX, leftWristY),
         rightHand: pointAt(rightWristX, rightWristY),
-        leftThigh: pointAt(-0.13, 0.43),
-        rightThigh: pointAt(0.13, 0.43),
-        leftShin: pointAt(-0.16, 0.24),
-        rightShin: pointAt(0.16, 0.24),
-        leftFoot: pointAt(-0.17, 0.08, center.z - size.z * 0.08 * state.frontSign),
-        rightFoot: pointAt(0.17, 0.08, center.z - size.z * 0.08 * state.frontSign)
+        leftThigh: pointAt(leftHipX, leftThighY),
+        rightThigh: pointAt(rightHipX, rightThighY),
+        leftShin: pointAt(BABYLON.Scalar.Clamp(templateXRatio(base, "leftShin", -0.16), -0.24, -0.08), leftShinY),
+        rightShin: pointAt(BABYLON.Scalar.Clamp(templateXRatio(base, "rightShin", 0.16), 0.08, 0.24), rightShinY),
+        leftFoot: pointAt(BABYLON.Scalar.Clamp(templateXRatio(base, "leftFoot", -0.17), -0.26, -0.07), leftFootY, center.z - size.z * 0.08 * state.frontSign),
+        rightFoot: pointAt(BABYLON.Scalar.Clamp(templateXRatio(base, "rightFoot", 0.17), 0.07, 0.26), rightFootY, center.z - size.z * 0.08 * state.frontSign)
       };
       joints.leftUpperArm = BABYLON.Vector3.Lerp(joints.leftShoulder, joints.leftHand, 0.42);
       joints.leftForearm = BABYLON.Vector3.Lerp(joints.leftShoulder, joints.leftHand, 0.68);
@@ -454,32 +700,39 @@
       const headYMin = headYThreshold(base);
       const neckLow = BABYLON.Scalar.Clamp(headYMin - 0.055, 0.66, 0.81);
       const neckHigh = BABYLON.Scalar.Clamp(headYMin + 0.008, neckLow + 0.015, 0.87);
-      const shoulderLow = BABYLON.Scalar.Clamp(shoulderY - 0.045, 0.54, 0.75);
-      const shoulderHigh = BABYLON.Scalar.Clamp(shoulderY + 0.035, shoulderLow + 0.02, neckLow - 0.004);
+      const shoulderLow = BABYLON.Scalar.Clamp(shoulderY - 0.025, 0.57, 0.75);
+      const shoulderHigh = BABYLON.Scalar.Clamp(shoulderY + 0.055, shoulderLow + 0.02, neckLow + 0.018);
       const spine2Low = BABYLON.Scalar.Clamp(shoulderY - 0.1, 0.55, 0.7);
       const spine2High = BABYLON.Scalar.Clamp(shoulderLow + 0.012, spine2Low + 0.025, neckLow - 0.012);
+      const hipLow = BABYLON.Scalar.Clamp(hipY - 0.08, 0.34, 0.52);
+      const hipHigh = BABYLON.Scalar.Clamp(hipY + 0.035, hipLow + 0.04, 0.59);
+      const thighLow = Math.min(leftShinY, rightShinY) + 0.03;
+      const thighHigh = Math.max(leftThighY, rightThighY) + 0.065;
+      const shinLow = Math.min(leftFootY, rightFootY) + 0.025;
+      const shinHigh = Math.max(leftShinY, rightShinY) + 0.055;
+      const footHigh = Math.max(leftFootY, rightFootY) + 0.055;
 
       const capsules = [
         { id: "head", a: joints.neck, b: joints.head, radius: radius.head, priority: 0.82, yMin: headYMin, yMax: 1.02, xMax: 0.3 },
         { id: "neck", a: joints.spine2, b: joints.neck, radius: radius.neck * 0.82, priority: 0.58, yMin: neckLow, yMax: neckHigh, xMax: 0.13 },
         { id: "spine2", a: joints.spine1, b: joints.spine2, radius: radius.torso * 0.72, priority: 1, yMin: spine2Low, yMax: spine2High, xMax: 0.22 },
         { id: "spine1", a: joints.spine, b: joints.spine1, radius: radius.torso, priority: 1, yMin: 0.51, yMax: 0.625, xMax: 0.29 },
-        { id: "spine", a: joints.hips, b: joints.spine, radius: radius.torso, priority: 1, yMin: 0.405, yMax: 0.525, xMax: 0.3 },
-        { id: "hips", a: pointAt(0, 0.29), b: joints.hips, radius: 0.155 * capsuleScale, priority: 1, yMin: 0.285, yMax: 0.43, xMax: 0.32 },
-        { id: "leftShoulder", a: joints.spine2, b: joints.leftShoulder, radius: radius.shoulder, priority: 0.68, yMin: shoulderLow, yMax: shoulderHigh, side: "left" },
+        { id: "spine", a: joints.hips, b: joints.spine, radius: radius.torso, priority: 1, yMin: hipY - 0.035, yMax: Math.max(0.525, hipY + 0.095), xMax: 0.3 },
+        { id: "hips", a: pointAt(0, hipLow), b: joints.hips, radius: 0.155 * capsuleScale, priority: 1, yMin: hipLow, yMax: hipHigh, xMax: 0.32 },
+        { id: "leftShoulder", a: joints.spine2, b: joints.leftShoulder, radius: radius.shoulder * 1.08, priority: 0.58, yMin: shoulderLow, yMax: shoulderHigh, side: "left" },
         { id: "leftUpperArm", a: joints.leftShoulder, b: joints.leftUpperArm, radius: radius.upperArm, priority: 0.72, yMin: Math.min(0.58, leftWristY - 0.04), yMax: 0.76, side: "left" },
         { id: "leftForearm", a: joints.leftUpperArm, b: joints.leftForearm, radius: radius.forearm, priority: 0.7, yMin: Math.min(0.42, leftWristY - 0.04), yMax: 0.68, side: "left" },
         { id: "leftHand", a: joints.leftForearm, b: joints.leftHand, radius: radius.hand, priority: 0.66, yMin: leftWristY - 0.08, yMax: leftWristY + 0.08, side: "left" },
-        { id: "rightShoulder", a: joints.spine2, b: joints.rightShoulder, radius: radius.shoulder, priority: 0.68, yMin: shoulderLow, yMax: shoulderHigh, side: "right" },
+        { id: "rightShoulder", a: joints.spine2, b: joints.rightShoulder, radius: radius.shoulder * 1.08, priority: 0.58, yMin: shoulderLow, yMax: shoulderHigh, side: "right" },
         { id: "rightUpperArm", a: joints.rightShoulder, b: joints.rightUpperArm, radius: radius.upperArm, priority: 0.72, yMin: Math.min(0.58, rightWristY - 0.04), yMax: 0.76, side: "right" },
         { id: "rightForearm", a: joints.rightUpperArm, b: joints.rightForearm, radius: radius.forearm, priority: 0.7, yMin: Math.min(0.42, rightWristY - 0.04), yMax: 0.68, side: "right" },
         { id: "rightHand", a: joints.rightForearm, b: joints.rightHand, radius: radius.hand, priority: 0.66, yMin: rightWristY - 0.08, yMax: rightWristY + 0.08, side: "right" },
-        { id: "leftThigh", a: joints.leftThigh, b: joints.leftShin, radius: radius.thigh, priority: 0.82, yMin: 0.21, yMax: 0.47, side: "left" },
-        { id: "leftShin", a: joints.leftShin, b: joints.leftFoot, radius: radius.shin, priority: 0.8, yMin: 0.075, yMax: 0.285, side: "left" },
-        { id: "leftFoot", a: joints.leftFoot, b: pointAt(-0.17, 0.025, center.z - size.z * 0.22 * state.frontSign), radius: radius.foot, priority: 0.72, yMin: -0.02, yMax: 0.125, side: "left" },
-        { id: "rightThigh", a: joints.rightThigh, b: joints.rightShin, radius: radius.thigh, priority: 0.82, yMin: 0.21, yMax: 0.47, side: "right" },
-        { id: "rightShin", a: joints.rightShin, b: joints.rightFoot, radius: radius.shin, priority: 0.8, yMin: 0.075, yMax: 0.285, side: "right" },
-        { id: "rightFoot", a: joints.rightFoot, b: pointAt(0.17, 0.025, center.z - size.z * 0.22 * state.frontSign), radius: radius.foot, priority: 0.72, yMin: -0.02, yMax: 0.125, side: "right" }
+        { id: "leftThigh", a: joints.leftThigh, b: joints.leftShin, radius: radius.thigh, priority: 0.82, yMin: thighLow, yMax: thighHigh, side: "left" },
+        { id: "leftShin", a: joints.leftShin, b: joints.leftFoot, radius: radius.shin, priority: 0.8, yMin: shinLow, yMax: shinHigh, side: "left" },
+        { id: "leftFoot", a: joints.leftFoot, b: pointAt(BABYLON.Scalar.Clamp(templateXRatio(base, "leftFoot", -0.17), -0.26, -0.07), 0.025, center.z - size.z * 0.22 * state.frontSign), radius: radius.foot, priority: 0.72, yMin: -0.02, yMax: footHigh, side: "left" },
+        { id: "rightThigh", a: joints.rightThigh, b: joints.rightShin, radius: radius.thigh, priority: 0.82, yMin: thighLow, yMax: thighHigh, side: "right" },
+        { id: "rightShin", a: joints.rightShin, b: joints.rightFoot, radius: radius.shin, priority: 0.8, yMin: shinLow, yMax: shinHigh, side: "right" },
+        { id: "rightFoot", a: joints.rightFoot, b: pointAt(BABYLON.Scalar.Clamp(templateXRatio(base, "rightFoot", 0.17), 0.07, 0.26), 0.025, center.z - size.z * 0.22 * state.frontSign), radius: radius.foot, priority: 0.72, yMin: -0.02, yMax: footHigh, side: "right" }
       ].map((capsule) => ({ ...capsule, radiusWorld: Math.max(size.y * capsule.radius, 0.001) }));
 
       return { joints, capsules };
@@ -523,46 +776,59 @@
       const shoulderY = base.sliceProfile?.shoulderY ?? 0.69;
       const neckLow = BABYLON.Scalar.Clamp(headYMin - 0.055, 0.66, 0.81);
       const neckHigh = BABYLON.Scalar.Clamp(headYMin + 0.008, neckLow + 0.015, 0.87);
-      const shoulderLow = BABYLON.Scalar.Clamp(shoulderY - 0.045, 0.54, 0.75);
-      const shoulderHigh = BABYLON.Scalar.Clamp(shoulderY + 0.035, shoulderLow + 0.02, neckLow - 0.004);
+      const shoulderLow = BABYLON.Scalar.Clamp(shoulderY - 0.025, 0.57, 0.75);
+      const shoulderHigh = BABYLON.Scalar.Clamp(shoulderY + 0.055, shoulderLow + 0.02, neckLow + 0.018);
       const spine2Low = BABYLON.Scalar.Clamp(shoulderY - 0.1, 0.55, 0.7);
       const spine2High = BABYLON.Scalar.Clamp(shoulderLow + 0.012, spine2Low + 0.025, neckLow - 0.012);
+      const hipY = BABYLON.Scalar.Clamp(templateRatio(base, "hips", 0.48), 0.42, 0.56);
+      const leftThighY = BABYLON.Scalar.Clamp(templateRatio(base, "leftThigh", hipY - 0.035), hipY - 0.065, hipY + 0.01);
+      const rightThighY = BABYLON.Scalar.Clamp(templateRatio(base, "rightThigh", hipY - 0.035), hipY - 0.065, hipY + 0.01);
+      const kneeY = Math.max(
+        BABYLON.Scalar.Clamp(templateRatio(base, "leftShin", 0.25), 0.18, 0.36),
+        BABYLON.Scalar.Clamp(templateRatio(base, "rightShin", 0.25), 0.18, 0.36)
+      );
+      const footY = Math.max(
+        BABYLON.Scalar.Clamp(templateRatio(base, "leftFoot", 0.06), 0.025, 0.13),
+        BABYLON.Scalar.Clamp(templateRatio(base, "rightFoot", 0.06), 0.025, 0.13)
+      );
       if (y > headYMin && ax < 0.3) return "head";
       if (y > neckLow && y <= neckHigh && ax < 0.12) return "neck";
-      if (y > shoulderLow && y <= shoulderHigh && ax >= 0.13 && ax < 0.32) return nx < 0 ? "leftShoulder" : "rightShoulder";
+      if (y > shoulderLow && y <= shoulderHigh && ax >= 0.1 && ax < 0.34) return nx < 0 ? "leftShoulder" : "rightShoulder";
       if (y > spine2Low && y <= spine2High && ax < 0.22) return "spine2";
-      if (y > 0.56 && y <= 0.67 && ax < 0.22) return "spine1";
-      if (y > 0.45 && y <= 0.57 && ax < 0.24) return "spine";
-      if (y > 0.34 && y <= 0.46 && ax < 0.26) return "hips";
+      if (y > Math.max(hipY + 0.11, 0.56) && y <= 0.67 && ax < 0.22) return "spine1";
+      if (y > hipY + 0.02 && y <= Math.max(hipY + 0.12, 0.57) && ax < 0.24) return "spine";
+      if (y > hipY - 0.08 && y <= hipY + 0.04 && ax < 0.28) return "hips";
       if (y > 0.34 && y <= 0.78 && ax >= 0.15) {
         const side = nx < 0 ? "left" : "right";
         if (y > 0.63) return `${side}UpperArm`;
         if (y > 0.45) return `${side}Forearm`;
         return `${side}Hand`;
       }
-      if (y <= 0.43 && ax < 0.34) {
+      if (y <= Math.max(leftThighY, rightThighY) + 0.055 && ax < 0.34) {
         const side = nx < 0 ? "left" : "right";
-        if (y <= 0.1) return `${side}Foot`;
-        return y > 0.24 ? `${side}Thigh` : `${side}Shin`;
+        if (y <= footY + 0.055) return `${side}Foot`;
+        return y > kneeY + 0.03 ? `${side}Thigh` : `${side}Shin`;
       }
       if (y > spine2Low && y <= spine2High) return "spine2";
       if (y > 0.56) return "spine1";
-      if (y > 0.45) return "spine";
-      if (y > 0.34) return "hips";
-      if (y <= 0.1) return nx < 0 ? "leftFoot" : "rightFoot";
-      return nx < 0 ? (y > 0.24 ? "leftThigh" : "leftShin") : (y > 0.24 ? "rightThigh" : "rightShin");
+      if (y > hipY + 0.02) return "spine";
+      if (y > hipY - 0.08) return "hips";
+      if (y <= footY + 0.055) return nx < 0 ? "leftFoot" : "rightFoot";
+      return nx < 0 ? (y > kneeY + 0.03 ? "leftThigh" : "leftShin") : (y > kneeY + 0.03 ? "rightThigh" : "rightShin");
     }
 
-    function countSplatParts(mesh, bounds, base) {
+    function assignSplatParts(mesh, bounds, base) {
       const floatData = new Float32Array(mesh.splatsData);
       const count = floatData.length / 8;
       const counts = {};
       PARTS.forEach((part) => { counts[part.id] = 0; });
+      const indices = new Uint16Array(count);
       for (let i = 0; i < count; i++) {
         const partId = partRegionForPoint(splatPointAt(floatData, i), bounds, base);
+        indices[i] = PART_INDEX[partId] ?? 0;
         if (counts.hasOwnProperty(partId)) counts[partId]++;
       }
-      return counts;
+      return { indices, counts };
     }
 
     function renderPartToggles() {
@@ -577,6 +843,136 @@
         label.append(input, `${part.label}${Number.isFinite(count) ? ` ${count}` : ""}`);
         ui.partsToggles.append(label);
       });
+      updatePresetButtons();
+    }
+
+    function partAnchorId(partId) {
+      if (partId === "head") return "head";
+      if (partId === "neck") return "neck";
+      if (partId === "hips") return "hips";
+      if (partId.startsWith("left")) return partId.replace(/^left/, "left");
+      if (partId.startsWith("right")) return partId.replace(/^right/, "right");
+      return partId;
+    }
+
+    function fallbackRects(base) {
+      const headYMin = headYThreshold(base);
+      const shoulderY = base.sliceProfile?.shoulderY ?? 0.69;
+      const neckLow = BABYLON.Scalar.Clamp(headYMin - 0.055, 0.66, 0.81);
+      const neckHigh = BABYLON.Scalar.Clamp(headYMin + 0.008, neckLow + 0.015, 0.87);
+      const shoulderLow = BABYLON.Scalar.Clamp(shoulderY - 0.025, 0.57, 0.75);
+      const shoulderHigh = BABYLON.Scalar.Clamp(shoulderY + 0.055, shoulderLow + 0.02, neckLow + 0.018);
+      const spine2Low = BABYLON.Scalar.Clamp(shoulderY - 0.1, 0.55, 0.7);
+      const spine2High = BABYLON.Scalar.Clamp(shoulderLow + 0.012, spine2Low + 0.025, neckLow - 0.012);
+      const hipY = BABYLON.Scalar.Clamp(templateRatio(base, "hips", 0.48), 0.42, 0.56);
+      const thighY = Math.max(
+        BABYLON.Scalar.Clamp(templateRatio(base, "leftThigh", hipY - 0.035), hipY - 0.065, hipY + 0.01),
+        BABYLON.Scalar.Clamp(templateRatio(base, "rightThigh", hipY - 0.035), hipY - 0.065, hipY + 0.01)
+      );
+      const kneeY = Math.max(
+        BABYLON.Scalar.Clamp(templateRatio(base, "leftShin", 0.25), 0.18, 0.36),
+        BABYLON.Scalar.Clamp(templateRatio(base, "rightShin", 0.25), 0.18, 0.36)
+      );
+      const footY = Math.max(
+        BABYLON.Scalar.Clamp(templateRatio(base, "leftFoot", 0.06), 0.025, 0.13),
+        BABYLON.Scalar.Clamp(templateRatio(base, "rightFoot", 0.06), 0.025, 0.13)
+      );
+      return [
+        { id: "head", yMin: headYMin, yMax: 1, xMin: -0.3, xMax: 0.3 },
+        { id: "neck", yMin: neckLow, yMax: neckHigh, xMin: -0.12, xMax: 0.12 },
+        { id: "leftShoulder", yMin: shoulderLow, yMax: shoulderHigh, xMin: -0.34, xMax: -0.1 },
+        { id: "rightShoulder", yMin: shoulderLow, yMax: shoulderHigh, xMin: 0.1, xMax: 0.34 },
+        { id: "spine2", yMin: spine2Low, yMax: spine2High, xMin: -0.22, xMax: 0.22 },
+        { id: "spine1", yMin: Math.max(hipY + 0.11, 0.56), yMax: 0.67, xMin: -0.22, xMax: 0.22 },
+        { id: "spine", yMin: hipY + 0.02, yMax: Math.max(hipY + 0.12, 0.57), xMin: -0.24, xMax: 0.24 },
+        { id: "hips", yMin: hipY - 0.08, yMax: hipY + 0.04, xMin: -0.28, xMax: 0.28 },
+        { id: "leftThigh", yMin: kneeY + 0.03, yMax: thighY + 0.055, xMin: -0.34, xMax: 0 },
+        { id: "leftShin", yMin: footY + 0.055, yMax: kneeY + 0.03, xMin: -0.34, xMax: 0 },
+        { id: "leftFoot", yMin: 0, yMax: footY + 0.055, xMin: -0.34, xMax: 0 },
+        { id: "rightThigh", yMin: kneeY + 0.03, yMax: thighY + 0.055, xMin: 0, xMax: 0.34 },
+        { id: "rightShin", yMin: footY + 0.055, yMax: kneeY + 0.03, xMin: 0, xMax: 0.34 },
+        { id: "rightFoot", yMin: 0, yMax: footY + 0.055, xMin: 0, xMax: 0.34 }
+      ];
+    }
+
+    function rectToLocalBox(rect, base) {
+      const xMin = base.center.x + base.size.x * rect.xMin;
+      const xMax = base.center.x + base.size.x * rect.xMax;
+      const yMin = state.sourceBounds.min.y + base.size.y * rect.yMin;
+      const yMax = state.sourceBounds.min.y + base.size.y * rect.yMax;
+      const zPad = base.size.z * 0.52;
+      return {
+        min: new BABYLON.Vector3(xMin, yMin, base.center.z - zPad),
+        max: new BABYLON.Vector3(xMax, yMax, base.center.z + zPad)
+      };
+    }
+
+    function capsuleToLocalBox(capsule) {
+      const radius = capsule.radiusWorld;
+      const min = BABYLON.Vector3.Minimize(capsule.a, capsule.b).subtractFromFloats(radius, radius, radius);
+      const max = BABYLON.Vector3.Maximize(capsule.a, capsule.b).addInPlaceFromFloats(radius, radius, radius);
+      return { min, max };
+    }
+
+    function createWireBox(name, box, color, root, alpha = 0.18) {
+      const displayBase = makeDisplayBase(state.sourceBase);
+      const min = localToPlayer(box.min, displayBase);
+      const max = localToPlayer(box.max, displayBase);
+      const center = min.add(max).scale(0.5);
+      const size = max.subtract(min);
+      const mesh = BABYLON.MeshBuilder.CreateBox(name, { width: Math.abs(size.x), height: Math.abs(size.y), depth: Math.abs(size.z) }, scene);
+      const mat = new BABYLON.StandardMaterial(`${name}Mat`, scene);
+      mat.diffuseColor = color;
+      mat.emissiveColor = color.scale(0.25);
+      mat.alpha = alpha;
+      mat.wireframe = true;
+      mesh.position.copyFrom(center);
+      mesh.material = mat;
+      mesh.parent = root;
+      return mesh;
+    }
+
+    function refreshRangeDebug() {
+      state.rectRangeDebug?.dispose?.();
+      state.capsuleRangeDebug?.dispose?.();
+      state.rectRangeDebug = null;
+      state.capsuleRangeDebug = null;
+      if (!state.sourceBase?.poseRig || !state.sourceBounds) return;
+
+      if (ui.rectRangeToggle.checked) {
+        const root = new BABYLON.TransformNode("rectRangeDebug", scene);
+        fallbackRects(state.sourceBase).forEach((rect) => {
+          const part = PARTS[PART_INDEX[rect.id]];
+          createWireBox(`rect_${rect.id}`, rectToLocalBox(rect, state.sourceBase), part?.color ?? BABYLON.Color3.White(), root, 0.14);
+        });
+        state.rectRangeDebug = root;
+      }
+
+      if (ui.capsuleRangeToggle.checked) {
+        const root = new BABYLON.TransformNode("capsuleRangeDebug", scene);
+        state.sourceBase.poseRig.capsules.forEach((capsule) => {
+          const part = PARTS[PART_INDEX[capsule.id]];
+          createWireBox(`capsuleBox_${capsule.id}`, capsuleToLocalBox(capsule), part?.color ?? BABYLON.Color3.White(), root, 0.22);
+          const line = BABYLON.MeshBuilder.CreateLines(`capsuleAxis_${capsule.id}`, {
+            points: [localToPlayer(capsule.a, makeDisplayBase(state.sourceBase)), localToPlayer(capsule.b, makeDisplayBase(state.sourceBase))]
+          }, scene);
+          line.color = part?.color ?? BABYLON.Color3.White();
+          line.parent = root;
+        });
+        state.capsuleRangeDebug = root;
+      }
+    }
+
+    function currentMotionOffsets(base) {
+      if (!state.motionActive || !state.motionChannels || !state.motionBind) return null;
+      const offsets = {};
+      Object.entries(state.motionChannels).forEach(([jointId, channel]) => {
+        const bind = state.motionBind[jointId];
+        if (!bind) return;
+        const current = channel.position();
+        offsets[jointId] = current.subtract(bind).scale(base.size.y / Math.max(state.motionBind.height, 0.001) * 0.34);
+      });
+      return offsets;
     }
 
     function updateSegmentMask() {
@@ -587,9 +983,16 @@
       const view = new DataView(mesh.splatsData);
       const count = floatData.length / 8;
       let kept = 0;
+      const motionOffsets = currentMotionOffsets(state.sourceBase);
       for (let i = 0; i < count; i++) {
-        const point = splatPointAt(floatData, i);
-        const partId = partRegionForPoint(point, state.sourceBounds, state.sourceBase);
+        const partId = state.partIndices ? INDEX_PART[state.partIndices[i]] : partRegionForPoint(splatPointAt(floatData, i), state.sourceBounds, state.sourceBase);
+        const motionOffset = motionOffsets?.[partAnchorId(partId)];
+        if (motionOffset) {
+          const offset = i * 8;
+          floatData[offset] += motionOffset.x;
+          floatData[offset + 1] += motionOffset.y;
+          floatData[offset + 2] += motionOffset.z * state.frontSign;
+        }
         const opacityByteIndex = (i * 8 + 6) * 4 + 3;
         if (state.visibleParts.has(partId)) {
           kept++;
@@ -610,16 +1013,17 @@
       mat.diffuseColor = new BABYLON.Color3(1, 0.9, 0.22);
       mat.emissiveColor = new BABYLON.Color3(0.35, 0.25, 0.04);
       const joints = base.poseRig.joints;
-      const toWorld = (point) => localToPlayer(point, base);
+      const motionOffsets = currentMotionOffsets(state.sourceBase);
+      const toWorld = (id, point) => localToPlayer(point.add(motionOffsets?.[id] ?? BABYLON.Vector3.Zero()), base);
       RIG_LINES.forEach(([a, b]) => {
         if (!joints[a] || !joints[b]) return;
-        const line = BABYLON.MeshBuilder.CreateLines(`rig_${a}_${b}`, { points: [toWorld(joints[a]), toWorld(joints[b])] }, scene);
+        const line = BABYLON.MeshBuilder.CreateLines(`rig_${a}_${b}`, { points: [toWorld(a, joints[a]), toWorld(b, joints[b])] }, scene);
         line.parent = root;
         line.color = new BABYLON.Color3(1, 0.9, 0.22);
       });
       Object.entries(joints).forEach(([id, point]) => {
         const sphere = BABYLON.MeshBuilder.CreateSphere(`joint_${id}`, { diameter: 0.035, segments: 8 }, scene);
-        sphere.position.copyFrom(toWorld(point));
+        sphere.position.copyFrom(toWorld(id, point));
         sphere.material = mat;
         sphere.parent = root;
       });
@@ -634,19 +1038,181 @@
       return result.meshes[0];
     }
 
+    function normalizedNodeName(name) {
+      return String(name).toLowerCase().replace(/^mixamorig[:_]/, "").replace(/[^a-z0-9]/g, "");
+    }
+
+    const MIXAMO_ALIASES = {
+      hips: ["Hips"],
+      spine: ["Spine"],
+      spine1: ["Spine1", "Spine"],
+      spine2: ["Spine2", "Spine1", "Spine"],
+      neck: ["Neck"],
+      head: ["Head"],
+      leftShoulder: ["LeftShoulder"],
+      leftUpperArm: ["LeftArm"],
+      leftForearm: ["LeftForeArm", "LeftForearm"],
+      leftHand: ["LeftHand"],
+      rightShoulder: ["RightShoulder"],
+      rightUpperArm: ["RightArm"],
+      rightForearm: ["RightForeArm", "RightForearm"],
+      rightHand: ["RightHand"],
+      leftThigh: ["LeftUpLeg"],
+      leftShin: ["LeftLeg"],
+      leftFoot: ["LeftFoot"],
+      rightThigh: ["RightUpLeg"],
+      rightShin: ["RightLeg"],
+      rightFoot: ["RightFoot"]
+    };
+
+    function findMotionChannel(result, aliases) {
+      const wanted = aliases.map(normalizedNodeName);
+      const transformNodes = [...result.transformNodes, ...result.meshes].filter(Boolean);
+      const node = transformNodes.find((item) => wanted.includes(normalizedNodeName(item.name)));
+      if (node?.getAbsolutePosition) {
+        return { position: () => node.getAbsolutePosition().clone() };
+      }
+      const mesh = result.meshes.find((item) => item.skeleton) ?? result.meshes[0];
+      const bones = result.skeletons.flatMap((skeleton) => skeleton.bones);
+      const bone = bones.find((item) => wanted.includes(normalizedNodeName(item.name)));
+      if (bone?.getAbsolutePosition) {
+        return { position: () => bone.getAbsolutePosition(mesh).clone() };
+      }
+      return null;
+    }
+
+    function motionChannelsFromResult(result) {
+      const channels = {};
+      Object.entries(MIXAMO_ALIASES).forEach(([jointId, names]) => {
+        const channel = findMotionChannel(result, names);
+        if (channel) channels[jointId] = channel;
+      });
+      return channels;
+    }
+
+    async function loadTemplateRig() {
+      if (state.templateRig) return state.templateRig;
+      try {
+        const result = await BABYLON.ImportMeshAsync(MOTIONS.idle.url, scene);
+        result.animationGroups.forEach((group) => {
+          group.stop();
+          group.goToFrame(group.from ?? 0);
+        });
+        const channels = motionChannelsFromResult(result);
+        const points = {};
+        Object.entries(channels).forEach(([jointId, channel]) => {
+          points[jointId] = channel.position();
+        });
+        const footPoints = [points.leftFoot, points.rightFoot].filter(Boolean);
+        const top = points.head?.y ?? Math.max(...Object.values(points).map((point) => point.y));
+        const bottom = footPoints.length
+          ? Math.min(...footPoints.map((point) => point.y))
+          : Math.min(...Object.values(points).map((point) => point.y));
+        const height = Math.max(top - bottom, 0.001);
+        const centerX = points.hips?.x ?? 0;
+        const centerZ = points.hips?.z ?? 0;
+        const ratios = {};
+        Object.entries(points).forEach(([jointId, point]) => {
+          ratios[jointId] = {
+            xHeight: (point.x - centerX) / height,
+            y: BABYLON.Scalar.Clamp((point.y - bottom) / height, 0, 1),
+            zHeight: (point.z - centerZ) / height
+          };
+        });
+        state.templateRig = { ratios };
+        [...result.meshes, ...result.transformNodes].forEach((node) => node.dispose?.(false, true));
+      } catch (error) {
+        console.warn("Template rig failed", error);
+        state.templateRig = { ratios: {} };
+      }
+      return state.templateRig;
+    }
+
+    function captureMotionBind(channels) {
+      const bind = {};
+      Object.entries(channels).forEach(([jointId, channel]) => {
+        bind[jointId] = channel.position();
+      });
+      const points = Object.values(bind);
+      const yValues = points.map((point) => point.y);
+      bind.height = Math.max(...yValues) - Math.min(...yValues);
+      return bind;
+    }
+
+    function disposeMotion() {
+      state.motionGroup?.stop?.();
+      state.motionRoot?.dispose?.(false, true);
+      state.motionRoot = null;
+      state.motionGroup = null;
+      state.motionChannels = null;
+      state.motionBind = null;
+      state.motionActive = false;
+      ui.motionButtons.forEach((button) => button.classList.remove("active"));
+      updateSegmentMask();
+      if (state.sourceBase) createRigDebug(makeDisplayBase(state.sourceBase));
+    }
+
+    async function loadMotion(key) {
+      const motion = MOTIONS[key];
+      if (!motion) return;
+      if (!state.segmentMesh || !state.sourceBase) {
+        setStatus("\u30e2\u30fc\u30b7\u30e7\u30f3\u3092\u958b\u59cb\u3059\u308b\u524d\u306bSPZ\u3092\u8aad\u307f\u8fbc\u3093\u3067\u304f\u3060\u3055\u3044\u3002");
+        return;
+      }
+      disposeMotion();
+      setStatus(`${motion.label} loading...`);
+      try {
+        const result = await BABYLON.ImportMeshAsync(motion.url, scene);
+        const root = new BABYLON.TransformNode(`motion_${key}`, scene);
+        result.meshes.forEach((mesh) => {
+          mesh.parent = root;
+          mesh.visibility = 0;
+          mesh.isPickable = false;
+        });
+        result.transformNodes.forEach((node) => {
+          if (!node.parent) node.parent = root;
+        });
+        const group = result.animationGroups[0];
+        if (!group) throw new Error("AnimationGroup is not available");
+        group.start(true);
+        group.goToFrame(group.from ?? 0);
+        const channels = motionChannelsFromResult(result);
+        if (!channels.hips || Object.keys(channels).length < 8) {
+          throw new Error("Mixamo joint channels are not enough");
+        }
+        state.motionRoot = root;
+        state.motionGroup = group;
+        state.motionChannels = channels;
+        state.motionBind = captureMotionBind(channels);
+        state.motionActive = true;
+        ui.motionButtons.forEach((button) => button.classList.toggle("active", button.dataset.motion === key));
+        setStatus(`${motion.label} motion applied to loaded SPZ parts.`);
+      } catch (error) {
+        console.error(error);
+        disposeMotion();
+        setStatus(`${motion.label} motion failed: ${error.message}`);
+      }
+    }
+
     async function loadSplatSource(source, sourceName) {
       state.source = source;
       state.sourceName = sourceName;
       setStatus(`${sourceName} loading...`);
       try {
+        disposeMotion();
         state.segmentMesh?.dispose(false, true);
         state.rigDebug?.dispose?.();
+        state.rectRangeDebug?.dispose?.();
+        state.capsuleRangeDebug?.dispose?.();
         state.rigDebug = null;
+        state.rectRangeDebug = null;
+        state.capsuleRangeDebug = null;
         const mesh = await importSplat(source);
         const bounds = computeSplatBounds(mesh);
         if (!bounds) throw new Error("splatsData is not available");
         const base = makeSourceBase(bounds);
         state.frontSign = estimateFrontSign(mesh, bounds, base);
+        base.templateRig = await loadTemplateRig();
         base.sliceProfile = analyzeVerticalSlices(mesh, bounds, base);
         base.poseRig = estimatePoseRig(mesh, bounds, base);
         state.sourceBounds = bounds;
@@ -659,10 +1225,13 @@
         mesh.alwaysSelectAsActiveMesh = true;
         mesh.sourceSplatsData = mesh.splatsData.slice(0);
         state.segmentMesh = mesh;
-        state.partCounts = countSplatParts(mesh, bounds, base);
+        const assignment = assignSplatParts(mesh, bounds, base);
+        state.partIndices = assignment.indices;
+        state.partCounts = assignment.counts;
         renderPartToggles();
         updateSegmentMask();
         createRigDebug(displayBase);
+        refreshRangeDebug();
         const total = Object.values(state.partCounts).reduce((sum, value) => sum + value, 0);
         const profile = base.sliceProfile;
         const neckLow = Math.round(BABYLON.Scalar.Clamp(profile.headYMin - 0.055, 0.66, 0.81) * 100);
@@ -685,26 +1254,58 @@
       if (!partId) return;
       if (event.target.checked) state.visibleParts.add(partId); else state.visibleParts.delete(partId);
       updateSegmentMask();
+      updatePresetButtons();
+      saveSettings();
     });
 
     ui.splatFile.addEventListener("change", () => {
       const file = ui.splatFile.files[0];
       if (file) loadSplatSource(file, file.name);
     });
-    ui.sampleButton.addEventListener("click", () => loadSplatSource(SAMPLE_SPZ_URL, "asahi2_f.spz"));
-    ui.frontSelect.addEventListener("change", reloadSegmentation);
-    ui.scaleInput.addEventListener("input", () => { ui.scaleValue.textContent = ui.scaleInput.value; });
-    ui.scaleInput.addEventListener("change", reloadSegmentation);
-    ui.headYInput.addEventListener("input", () => { ui.headYValue.textContent = ui.headYInput.value; });
-    ui.headYInput.addEventListener("change", reloadSegmentation);
-    ui.capsuleInput.addEventListener("input", () => { ui.capsuleValue.textContent = ui.capsuleInput.value; });
-    ui.capsuleInput.addEventListener("change", reloadSegmentation);
-    ui.autoSliceToggle.addEventListener("change", reloadSegmentation);
-    ui.rigToggle.addEventListener("change", () => state.rigDebug?.setEnabled(ui.rigToggle.checked));
+    ui.sampleButton.addEventListener("click", () => loadSplatSource(SAMPLE_SPZ_URL, "zenshin.spz"));
+    ui.allButton.addEventListener("click", () => setVisibleParts(PARTS.map((part) => part.id)));
+    ui.noneButton.addEventListener("click", () => setVisibleParts([]));
+      ui.presetButtons.forEach((button) => {
+        button.addEventListener("click", () => setVisibleParts(PART_PRESETS[button.dataset.preset] ?? []));
+      });
+      ui.motionButtons.forEach((button) => {
+        button.addEventListener("click", () => loadMotion(button.dataset.motion));
+      });
+      ui.csvButton.addEventListener("click", exportPartCountsCsv);
+      ui.resetButton.addEventListener("click", resetSettings);
+      ui.stopMotionButton.addEventListener("click", disposeMotion);
+      ui.frontSelect.addEventListener("change", () => { saveSettings(); reloadSegmentation(); });
+      ui.scaleInput.addEventListener("input", () => { ui.scaleValue.textContent = ui.scaleInput.value; saveSettings(); });
+      ui.scaleInput.addEventListener("change", reloadSegmentation);
+      ui.headYInput.addEventListener("input", () => { ui.headYValue.textContent = ui.headYInput.value; saveSettings(); });
+      ui.headYInput.addEventListener("change", reloadSegmentation);
+      ui.capsuleInput.addEventListener("input", () => { ui.capsuleValue.textContent = ui.capsuleInput.value; saveSettings(); });
+      ui.capsuleInput.addEventListener("change", reloadSegmentation);
+      ui.autoSliceToggle.addEventListener("change", () => { saveSettings(); reloadSegmentation(); });
+      ui.rectRangeToggle.addEventListener("change", () => { saveSettings(); refreshRangeDebug(); });
+      ui.capsuleRangeToggle.addEventListener("change", () => { saveSettings(); refreshRangeDebug(); });
+      ui.rigToggle.addEventListener("change", () => {
+        state.rigDebug?.setEnabled(ui.rigToggle.checked);
+        saveSettings();
+      });
 
+    applySavedSettings();
     renderPartToggles();
-    engine.runRenderLoop(() => scene.render());
+    loadSplatSource(SAMPLE_SPZ_URL, "zenshin.spz");
+    engine.runRenderLoop(() => {
+      if (state.motionActive) {
+        const now = performance.now();
+        if (now - state.lastMotionUpdate > 33) {
+          state.lastMotionUpdate = now;
+          updateSegmentMask();
+          if (ui.rigToggle.checked && state.sourceBase) createRigDebug(makeDisplayBase(state.sourceBase));
+        }
+      }
+      scene.render();
+    });
     window.addEventListener("resize", () => engine.resize());
   </script>
 </body>
 </html>
+
+

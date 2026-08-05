@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="980" viewBox="0 0 1400 980" role="img" aria-labelledby="title desc">
+  <title id="title">人体骨格と3DGSパーツ分割の対応ガイド</title>
+  <desc id="desc">AポーズまたはTポーズの人体骨格に、3DGS分割用の頭、首、上胸、胸、腹、腰、肩、腕、脚の想定範囲を重ねた日本語ガイド図。</desc>
+  <defs>
+    <style>
+      .bg { fill: #0b1118; }
+      .panel { fill: rgba(255,255,255,.045); stroke: rgba(255,255,255,.16); stroke-width: 2; }
+      .grid { stroke: rgba(255,255,255,.07); stroke-width: 1; }
+      .part { stroke: #09111a; stroke-width: 4; opacity: .86; }
+      .bone { stroke: #f6f2e8; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .bone-soft { stroke: rgba(246,242,232,.45); stroke-width: 16; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .joint { fill: #fff7df; stroke: #1a1f26; stroke-width: 4; }
+      .joint-key { fill: #ffdd72; stroke: #1a1f26; stroke-width: 4; }
+      .label { fill: #f8f1e8; font: 700 24px "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif; }
+      .small { fill: #b9c4d0; font: 700 18px "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif; }
+      .tiny { fill: #dfe7ef; font: 700 15px "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif; }
+      .callout { stroke: rgba(255,255,255,.58); stroke-width: 2; fill: none; }
+      .head { fill: #ffd65a; }
+      .neck { fill: #ffb86b; }
+      .spine2 { fill: #5ec6ff; }
+      .spine1 { fill: #409fff; }
+      .spine { fill: #2c75e6; }
+      .hips { fill: #2459bd; }
+      .shoulder { fill: #ff806a; }
+      .upperarm { fill: #f46052; }
+      .forearm { fill: #dd493d; }
+      .hand { fill: #ff9a7e; }
+      .thigh { fill: #70e884; }
+      .shin { fill: #48c96d; }
+      .foot { fill: #9affaa; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1400" height="980"/>
+  <rect class="panel" x="44" y="32" width="1312" height="904" rx="14"/>
+  <text class="label" x="74" y="76">人体骨格と3DGSパーツ分割の対応ガイド</text>
+  <text class="small" x="74" y="108">Aポーズ/Tポーズ前提。色の面がスプラット分類範囲、白線が想定骨格と関節位置です。</text>
+
+  <g opacity=".75">
+    <path class="grid" d="M150 180H1240M150 300H1240M150 420H1240M150 540H1240M150 660H1240M150 780H1240"/>
+    <path class="grid" d="M300 150V880M480 150V880M660 150V880M840 150V880M1020 150V880"/>
+  </g>
+
+  <g id="body" transform="translate(90 34)">
+    <path class="part shoulder" d="M574 286 C500 312 438 355 390 420 L442 462 C486 404 538 370 590 350 Z"/>
+    <path class="part upperarm" d="M390 420 C340 490 316 570 308 650 L368 656 C382 575 406 510 442 462 Z"/>
+    <path class="part forearm" d="M308 650 C300 704 296 746 296 786 L358 792 C358 744 362 698 368 656 Z"/>
+    <ellipse class="part hand" cx="327" cy="827" rx="42" ry="34"/>
+
+    <path class="part shoulder" d="M706 286 C780 312 842 355 890 420 L838 462 C794 404 742 370 690 350 Z"/>
+    <path class="part upperarm" d="M890 420 C940 490 964 570 972 650 L912 656 C898 575 874 510 838 462 Z"/>
+    <path class="part forearm" d="M972 650 C980 704 984 746 984 786 L922 792 C922 744 918 698 912 656 Z"/>
+    <ellipse class="part hand" cx="953" cy="827" rx="42" ry="34"/>
+
+    <ellipse class="part head" cx="640" cy="168" rx="72" ry="86"/>
+    <rect class="part neck" x="604" y="248" width="72" height="58" rx="28"/>
+    <path class="part spine2" d="M574 286 C604 270 676 270 706 286 L690 350 C660 370 620 370 590 350 Z"/>
+    <path class="part spine1" d="M590 350 C620 370 660 370 690 350 L708 468 C668 500 612 500 572 468 Z"/>
+    <path class="part spine" d="M572 468 C612 500 668 500 708 468 L690 594 C656 620 624 620 590 594 Z"/>
+    <path class="part hips" d="M590 594 C622 620 658 620 690 594 L732 674 C678 716 602 716 548 674 Z"/>
+
+    <path class="part thigh" d="M548 674 C578 700 614 710 640 706 L620 818 L538 818 Z"/>
+    <path class="part shin" d="M538 818 L620 818 L612 888 L538 888 Z"/>
+    <path class="part foot" d="M524 884 L628 884 L650 920 L504 920 Z"/>
+
+    <path class="part thigh" d="M732 674 C702 700 666 710 640 706 L660 818 L742 818 Z"/>
+    <path class="part shin" d="M742 818 L660 818 L668 888 L742 888 Z"/>
+    <path class="part foot" d="M756 884 L652 884 L630 920 L776 920 Z"/>
+
+    <g id="skeleton">
+      <path class="bone-soft" d="M640 248V296M640 296V350M640 350V468M640 468V594M640 594V674"/>
+      <path class="bone-soft" d="M640 296L574 330M640 296L706 330"/>
+      <path class="bone-soft" d="M574 330L442 462L368 656L327 827"/>
+      <path class="bone-soft" d="M706 330L838 462L912 656L953 827"/>
+      <path class="bone-soft" d="M640 674L584 818L575 888"/>
+      <path class="bone-soft" d="M640 674L696 818L705 888"/>
+
+      <path class="bone" d="M640 248V296M640 296V350M640 350V468M640 468V594M640 594V674"/>
+      <path class="bone" d="M640 296L574 330M640 296L706 330"/>
+      <path class="bone" d="M574 330L442 462L368 656L327 827"/>
+      <path class="bone" d="M706 330L838 462L912 656L953 827"/>
+      <path class="bone" d="M640 674L584 818L575 888"/>
+      <path class="bone" d="M640 674L696 818L705 888"/>
+
+      <circle class="joint-key" cx="640" cy="248" r="12"/>
+      <circle class="joint-key" cx="640" cy="296" r="12"/>
+      <circle class="joint" cx="640" cy="350" r="10"/>
+      <circle class="joint" cx="640" cy="468" r="10"/>
+      <circle class="joint-key" cx="640" cy="594" r="12"/>
+      <circle class="joint-key" cx="640" cy="674" r="12"/>
+      <circle class="joint-key" cx="574" cy="330" r="12"/>
+      <circle class="joint-key" cx="706" cy="330" r="12"/>
+      <circle class="joint" cx="442" cy="462" r="10"/>
+      <circle class="joint" cx="838" cy="462" r="10"/>
+      <circle class="joint" cx="368" cy="656" r="10"/>
+      <circle class="joint" cx="912" cy="656" r="10"/>
+      <circle class="joint" cx="327" cy="827" r="10"/>
+      <circle class="joint" cx="953" cy="827" r="10"/>
+      <circle class="joint" cx="584" cy="818" r="10"/>
+      <circle class="joint" cx="696" cy="818" r="10"/>
+      <circle class="joint" cx="575" cy="888" r="10"/>
+      <circle class="joint" cx="705" cy="888" r="10"/>
+    </g>
+
+    <path class="callout" d="M720 168H1110"/>
+    <text class="label" x="1130" y="176">頭</text>
+    <text class="small" x="1130" y="204">頭蓋骨。顎下で首へ切替。</text>
+
+    <path class="callout" d="M684 272H1110"/>
+    <text class="label" x="1130" y="280">首</text>
+    <text class="small" x="1130" y="308">頚椎。幅/奥行きが細い谷。</text>
+
+    <path class="callout" d="M710 318H1110"/>
+    <text class="label" x="1130" y="326">上胸</text>
+    <text class="small" x="1130" y="354">鎖骨・肩甲帯の中央。</text>
+
+    <path class="callout" d="M714 430H1110"/>
+    <text class="label" x="1130" y="438">胸</text>
+    <text class="small" x="1130" y="466">胸郭。上胸の下。</text>
+
+    <path class="callout" d="M708 535H1110"/>
+    <text class="label" x="1130" y="543">腹</text>
+    <text class="small" x="1130" y="571">胸郭下から骨盤上。</text>
+
+    <path class="callout" d="M730 640H1110"/>
+    <text class="label" x="1130" y="648">腰</text>
+    <text class="small" x="1130" y="676">骨盤。脚の付け根。</text>
+
+    <path class="callout" d="M566 330H120"/>
+    <text class="label" x="80" y="338">肩</text>
+    <text class="small" x="80" y="366">肩関節まわり。首下で横幅が広がる。</text>
+
+    <path class="callout" d="M442 462H120"/>
+    <text class="label" x="80" y="470">上腕</text>
+    <text class="small" x="80" y="498">肩から肘。</text>
+
+    <path class="callout" d="M368 656H120"/>
+    <text class="label" x="80" y="664">前腕</text>
+    <text class="small" x="80" y="692">肘から手首。</text>
+
+    <path class="callout" d="M584 818H120"/>
+    <text class="label" x="80" y="826">太もも</text>
+    <text class="small" x="80" y="854">骨盤から膝。</text>
+  </g>
+
+  <g transform="translate(82 865)">
+    <circle class="joint-key" cx="0" cy="0" r="10"/>
+    <text class="tiny" x="18" y="6">主要関節</text>
+    <path class="bone" d="M140 0H210"/>
+    <text class="tiny" x="224" y="6">想定骨格</text>
+    <rect class="spine2" x="350" y="-13" width="28" height="26" rx="4"/>
+    <text class="tiny" x="390" y="6">色面: スプラット分類範囲</text>
+  </g>
+</svg>
