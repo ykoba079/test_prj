@@ -108,6 +108,16 @@
       pointer-events: auto;
     }
 
+    .controlsToggle {
+      display: none;
+      width: 42px;
+      min-height: 42px;
+      padding: 0;
+      pointer-events: auto;
+      font-size: 20px;
+      line-height: 1;
+    }
+
     .row {
       display: grid;
       grid-template-columns: 88px minmax(0, 1fr);
@@ -225,15 +235,75 @@
 
     @media (max-width: 760px) {
       .topbar {
-        grid-template-columns: 1fr;
+        inset: 8px 8px auto 8px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
       }
 
       .panel {
+        grid-column: 1 / -1;
         width: auto;
+        max-height: calc(100dvh - 92px);
+        overflow-y: auto;
+        padding: 8px;
+      }
+
+      body:not(.controls-open) .topbar > .panel .row {
+        display: none;
+      }
+
+      .controlsToggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .title {
+        padding: 8px 10px;
+      }
+
+      h1 {
+        font-size: 14px;
+      }
+
+      .meta {
+        gap: 4px;
+        margin-top: 5px;
+        font-size: 10px;
+      }
+
+      .pill {
+        min-height: 20px;
+        padding: 2px 6px;
+      }
+
+      .row {
+        grid-template-columns: 70px minmax(0, 1fr);
+        gap: 6px;
+        margin-bottom: 7px;
+        font-size: 12px;
+      }
+
+      .buttonGrid {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+
+      button {
+        min-height: 34px;
       }
 
       .ideas {
         display: none;
+      }
+
+      .toast {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        max-width: none;
+        padding: 8px 10px;
+        font-size: 12px;
       }
     }
   </style>
@@ -252,7 +322,9 @@
       </div>
     </section>
 
-    <section class="panel">
+    <button id="controlsToggle" class="controlsToggle secondary" type="button" aria-expanded="false" aria-controls="controlPanel">☰</button>
+
+    <section id="controlPanel" class="panel">
       <div class="row">
         <span>SPZ</span>
         <input id="fileInput" type="file" accept=".spz,.splat,.ply">
@@ -337,12 +409,36 @@
       dropButton: document.getElementById("dropButton"),
       cookieButton: document.getElementById("cookieButton"),
       clearBallsButton: document.getElementById("clearBallsButton"),
+      controlsToggle: document.getElementById("controlsToggle"),
       sourceLabel: document.getElementById("sourceLabel"),
       countLabel: document.getElementById("countLabel"),
       boundsLabel: document.getElementById("boundsLabel"),
       densityLabel: document.getElementById("densityLabel"),
       message: document.getElementById("message")
     };
+
+    const compactQuery = window.matchMedia("(max-width: 760px)");
+
+    function setControlsOpen(open) {
+      document.body.classList.toggle("controls-open", open);
+      ui.controlsToggle.setAttribute("aria-expanded", String(open));
+      ui.controlsToggle.textContent = open ? "×" : "☰";
+    }
+
+    function syncControlsLayout() {
+      setControlsOpen(!compactQuery.matches);
+    }
+
+    ui.controlsToggle.addEventListener("click", () => {
+      setControlsOpen(!document.body.classList.contains("controls-open"));
+    });
+
+    if (compactQuery.addEventListener) {
+      compactQuery.addEventListener("change", syncControlsLayout);
+    } else {
+      compactQuery.addListener(syncControlsLayout);
+    }
+    syncControlsLayout();
 
     const scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0.065, 0.08, 0.065, 1);
