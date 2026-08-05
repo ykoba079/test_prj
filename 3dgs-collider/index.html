@@ -1,0 +1,1470 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>五畳座敷前手水鉢 SPZ Viewer</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <script src="https://cdn.babylonjs.com/havok/HavokPhysics_umd.js"></script>
+  <style>
+    :root {
+      --ink: #f4f7f2;
+      --muted: #b9c2b5;
+      --panel: rgba(23, 27, 24, 0.82);
+      --line: rgba(255, 255, 255, 0.16);
+      --accent: #75d6a3;
+      --warn: #f0b35a;
+      --cyan: #79c8d8;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #111512;
+      color: var(--ink);
+      font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif;
+    }
+
+    #renderCanvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
+      outline: none;
+    }
+
+    .topbar {
+      position: fixed;
+      inset: 12px 12px auto 12px;
+      z-index: 5;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      pointer-events: none;
+    }
+
+    .title,
+    .panel,
+    .toast {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(12px);
+    }
+
+    .title {
+      min-width: 0;
+      padding: 10px 12px;
+    }
+
+    h1 {
+      margin: 0;
+      overflow: hidden;
+      color: var(--ink);
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.2;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: rgba(255, 255, 255, 0.1);
+      white-space: nowrap;
+    }
+
+    .pill.good {
+      color: var(--accent);
+    }
+
+    .pill.warn {
+      color: var(--warn);
+    }
+
+    .panel {
+      width: min(360px, calc(100vw - 24px));
+      padding: 10px;
+      pointer-events: auto;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 88px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 9px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .row:last-child {
+      margin-bottom: 0;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    input[type="file"] {
+      min-width: 0;
+      color: var(--ink);
+      font-size: 12px;
+    }
+
+    .buttonGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .checkRow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 800;
+      user-select: none;
+    }
+
+    .checkRow input {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 7px;
+      background: #d9a441;
+      color: #18130a;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #27352f;
+      color: var(--ink);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.58;
+    }
+
+    .ideas {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      z-index: 4;
+      width: min(420px, calc(100vw - 24px));
+      border-top: 3px solid rgba(117, 214, 163, 0.85);
+      padding: 12px;
+      pointer-events: none;
+    }
+
+    .ideas h2 {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .ideas p {
+      margin: 0 0 6px;
+      color: var(--ink);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .ideas p:last-child {
+      margin-bottom: 0;
+      color: var(--muted);
+    }
+
+    .toast {
+      position: fixed;
+      left: 12px;
+      bottom: 12px;
+      z-index: 6;
+      max-width: min(620px, calc(100vw - 24px));
+      padding: 10px 12px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.45;
+      pointer-events: none;
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        width: auto;
+      }
+
+      .ideas {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>
+
+  <div class="topbar">
+    <section class="title">
+      <h1>五畳座敷前手水鉢 3D Gaussian Splat</h1>
+      <div class="meta">
+        <span id="sourceLabel" class="pill good">五畳座敷前手水鉢.spz</span>
+        <span id="countLabel" class="pill">splats ...</span>
+        <span id="boundsLabel" class="pill">bounds ...</span>
+        <span id="densityLabel" class="pill warn">density preview off</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="row">
+        <span>SPZ</span>
+        <input id="fileInput" type="file" accept=".spz,.splat,.ply">
+      </div>
+      <div class="row">
+        <span>Scale <b id="scaleValue">100</b>%</span>
+        <input id="scaleInput" type="range" min="30" max="180" value="100">
+      </div>
+      <div class="row">
+        <span>Density <b id="densityValue">42</b></span>
+        <input id="densityInput" type="range" min="8" max="120" value="42">
+      </div>
+      <div class="row">
+        <span>Solid <b id="solidThresholdValue">70</b>%</span>
+        <input id="solidThresholdInput" type="range" min="50" max="95" value="70">
+      </div>
+      <div class="row">
+        <span>Split</span>
+        <label class="checkRow">
+          <input id="splitInput" type="checkbox" checked>
+          <span>8分割</span>
+        </label>
+      </div>
+      <div class="row">
+        <span>X <b id="pointerXValue">0.0</b></span>
+        <input id="pointerXInput" type="range" min="-6" max="6" step="0.1" value="0">
+      </div>
+      <div class="row">
+        <span>Z <b id="pointerZValue">0.0</b></span>
+        <input id="pointerZInput" type="range" min="-6" max="6" step="0.1" value="0">
+      </div>
+      <div class="row">
+        <span>Height <b id="pointerYValue">4.0</b></span>
+        <input id="pointerYInput" type="range" min="0.5" max="10" step="0.1" value="4">
+      </div>
+      <div class="buttonGrid">
+        <button id="resetButton" type="button">Reset View</button>
+        <button id="densityButton" class="secondary" type="button">Density Preview</button>
+        <button id="dropButton" type="button">Drop 50</button>
+        <button id="cookieButton" type="button">Drop Cookies</button>
+        <button id="clearBallsButton" class="secondary" type="button">Clear Balls</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="ideas panel">
+    <h2>Castle / Moat Work Concept</h2>
+    <p>石垣、堀、橋、階段を3DGSで記録し、密度から安全確認用の粗いコライダーを生成。</p>
+    <p>玉や水位マーカーを落として、転がりやすい傾斜、落下リスク、排水方向、立入禁止ラインを現場感のある3Dで共有する。</p>
+  </section>
+
+  <div id="message" class="toast">Loading Scaniverse SPZ...</div>
+
+  <script type="module">
+    const BABYLON = window.BABYLON;
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true, {
+      antialias: true,
+      preserveDrawingBuffer: true,
+      stencil: true
+    });
+
+    const DEFAULT_SPZ = "../models/%E4%BA%94%E7%95%B3%E5%BA%A7%E6%95%B7%E5%89%8D%E6%89%8B%E6%B0%B4%E9%89%A2.spz";
+
+    const ui = {
+      fileInput: document.getElementById("fileInput"),
+      scaleInput: document.getElementById("scaleInput"),
+      scaleValue: document.getElementById("scaleValue"),
+      densityInput: document.getElementById("densityInput"),
+      densityValue: document.getElementById("densityValue"),
+      solidThresholdInput: document.getElementById("solidThresholdInput"),
+      solidThresholdValue: document.getElementById("solidThresholdValue"),
+      splitInput: document.getElementById("splitInput"),
+      pointerXInput: document.getElementById("pointerXInput"),
+      pointerXValue: document.getElementById("pointerXValue"),
+      pointerZInput: document.getElementById("pointerZInput"),
+      pointerZValue: document.getElementById("pointerZValue"),
+      pointerYInput: document.getElementById("pointerYInput"),
+      pointerYValue: document.getElementById("pointerYValue"),
+      resetButton: document.getElementById("resetButton"),
+      densityButton: document.getElementById("densityButton"),
+      dropButton: document.getElementById("dropButton"),
+      cookieButton: document.getElementById("cookieButton"),
+      clearBallsButton: document.getElementById("clearBallsButton"),
+      sourceLabel: document.getElementById("sourceLabel"),
+      countLabel: document.getElementById("countLabel"),
+      boundsLabel: document.getElementById("boundsLabel"),
+      densityLabel: document.getElementById("densityLabel"),
+      message: document.getElementById("message")
+    };
+
+    const scene = new BABYLON.Scene(engine);
+    scene.clearColor = new BABYLON.Color4(0.065, 0.08, 0.065, 1);
+
+    const camera = new BABYLON.ArcRotateCamera(
+      "camera",
+      -1.2,
+      1.15,
+      11,
+      new BABYLON.Vector3(0, 0, 0),
+      scene
+    );
+    camera.attachControl(canvas, true);
+    camera.lowerRadiusLimit = 0.6;
+    camera.upperRadiusLimit = 80;
+    camera.wheelDeltaPercentage = 0.03;
+    camera.pinchDeltaPercentage = 0.015;
+    camera.minZ = 0.02;
+    camera.maxZ = 500;
+
+    const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0.2, 1, 0.1), scene);
+    hemi.intensity = 0.8;
+
+    const groundMat = new BABYLON.StandardMaterial("groundMat", scene);
+    groundMat.diffuseColor = new BABYLON.Color3(0.18, 0.22, 0.18);
+    groundMat.alpha = 0.22;
+
+    const ground = BABYLON.MeshBuilder.CreateGround("referenceGround", { width: 16, height: 16, subdivisions: 16 }, scene);
+    ground.material = groundMat;
+    ground.position.y = -1.6;
+    ground.isPickable = false;
+
+    const densityRoot = new BABYLON.TransformNode("densityRoot", scene);
+    const state = {
+      mesh: null,
+      sourceName: "",
+      bounds: null,
+      baseScale: 1,
+      offset: new BABYLON.Vector3(),
+      densityVisible: false,
+      densityBoxes: [],
+      physicsReady: false,
+      balls: []
+    };
+
+    const pointerRoot = new BABYLON.TransformNode("dropPointer", scene);
+    const pointerMat = new BABYLON.StandardMaterial("dropPointerMat", scene);
+    pointerMat.diffuseColor = new BABYLON.Color3(1, 0.72, 0.22);
+    pointerMat.emissiveColor = new BABYLON.Color3(0.55, 0.3, 0.04);
+    const pointerSphere = BABYLON.MeshBuilder.CreateSphere("dropPointerSphere", { diameter: 0.18, segments: 16 }, scene);
+    pointerSphere.material = pointerMat;
+    pointerSphere.parent = pointerRoot;
+    pointerSphere.isPickable = false;
+    const pointerRing = BABYLON.MeshBuilder.CreateTorus("dropPointerRing", { diameter: 0.65, thickness: 0.018, tessellation: 48 }, scene);
+    pointerRing.material = pointerMat;
+    pointerRing.rotation.x = Math.PI / 2;
+    pointerRing.parent = pointerRoot;
+    pointerRing.isPickable = false;
+
+    function setMessage(text) {
+      ui.message.textContent = text;
+    }
+
+    async function initPhysics() {
+      try {
+        if (!window.HavokPhysics) {
+          throw new Error("HavokPhysics is not loaded");
+        }
+        const havok = await window.HavokPhysics();
+        const plugin = new BABYLON.HavokPlugin(true, havok);
+        scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), plugin);
+        state.physicsReady = true;
+        rebuildPhysicsColliders();
+        setMessage("Physics ready. Density Previewを作ると立方体がコライダーになります。");
+      } catch (error) {
+        console.error(error);
+        state.physicsReady = false;
+        setMessage(`Physics failed: ${error.message}`);
+      }
+    }
+
+    function pointerPosition() {
+      return new BABYLON.Vector3(
+        Number(ui.pointerXInput.value),
+        Number(ui.pointerYInput.value),
+        Number(ui.pointerZInput.value)
+      );
+    }
+
+    function updatePointer() {
+      pointerRoot.position.copyFrom(pointerPosition());
+      ui.pointerXValue.textContent = Number(ui.pointerXInput.value).toFixed(1);
+      ui.pointerYValue.textContent = Number(ui.pointerYInput.value).toFixed(1);
+      ui.pointerZValue.textContent = Number(ui.pointerZInput.value).toFixed(1);
+    }
+
+    function disposeBoxAggregate(box) {
+      box.aggregate?.dispose();
+      box.aggregate = null;
+    }
+
+    function rebuildPhysicsColliders() {
+      state.densityBoxes.forEach(disposeBoxAggregate);
+      if (!state.physicsReady || !state.densityVisible) return;
+      for (const box of state.densityBoxes) {
+        box.mesh.computeWorldMatrix(true);
+        box.aggregate = new BABYLON.PhysicsAggregate(
+          box.mesh,
+          BABYLON.PhysicsShapeType.BOX,
+          { mass: 0, friction: 0.85, restitution: 0.08 },
+          scene
+        );
+      }
+    }
+
+    function clearBalls() {
+      for (const ball of state.balls) {
+        ball.aggregate?.dispose();
+        ball.mesh.dispose(false, true);
+      }
+      state.balls = [];
+    }
+
+    function trimPhysicsItems() {
+      while (state.balls.length > 260) {
+        const old = state.balls.shift();
+        old.aggregate?.dispose();
+        old.mesh.dispose(false, true);
+      }
+    }
+
+    function spawnBall(position, index) {
+      const mesh = BABYLON.MeshBuilder.CreateSphere(`dropBall_${Date.now()}_${index}`, {
+        diameter: 0.18,
+        segments: 16
+      }, scene);
+      mesh.position.copyFrom(position);
+      const mat = scene.getMaterialByName("dropBallMat") ?? new BABYLON.StandardMaterial("dropBallMat", scene);
+      mat.diffuseColor = new BABYLON.Color3(0.95, 0.72, 0.28);
+      mat.emissiveColor = new BABYLON.Color3(0.12, 0.06, 0.01);
+      mesh.material = mat;
+      const aggregate = new BABYLON.PhysicsAggregate(
+        mesh,
+        BABYLON.PhysicsShapeType.SPHERE,
+        { mass: 0.32, friction: 0.52, restitution: 0.2 },
+        scene
+      );
+      state.balls.push({ mesh, aggregate });
+      trimPhysicsItems();
+    }
+
+    const cookieTextureCache = new Map();
+
+    function hash2(x, y, seed) {
+      let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ seed;
+      h = Math.imul(h ^ (h >>> 13), 1274126177);
+      return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+    }
+
+    function valueNoise(x, y, seed) {
+      const xi = Math.floor(x);
+      const yi = Math.floor(y);
+      const xf = x - xi;
+      const yf = y - yi;
+      const sx = xf * xf * (3 - 2 * xf);
+      const sy = yf * yf * (3 - 2 * yf);
+      const a = hash2(xi, yi, seed);
+      const b = hash2(xi + 1, yi, seed);
+      const c = hash2(xi, yi + 1, seed);
+      const d = hash2(xi + 1, yi + 1, seed);
+      return BABYLON.Scalar.Lerp(
+        BABYLON.Scalar.Lerp(a, b, sx),
+        BABYLON.Scalar.Lerp(c, d, sx),
+        sy
+      );
+    }
+
+    function smoothstep(a, b, x) {
+      const t = BABYLON.Scalar.Clamp((x - a) / Math.max(0.00001, b - a), 0, 1);
+      return t * t * (3 - 2 * t);
+    }
+
+    function fract(x) {
+      return x - Math.floor(x);
+    }
+
+    function blendColor(a, b, t) {
+      return new BABYLON.Color3(
+        BABYLON.Scalar.Lerp(a.r, b.r, t),
+        BABYLON.Scalar.Lerp(a.g, b.g, t),
+        BABYLON.Scalar.Lerp(a.b, b.b, t)
+      );
+    }
+
+    function cookiePatternColor(u, v, type) {
+      const dx = u - 0.5;
+      const dy = v - 0.5;
+      const r = Math.hypot(dx, dy) * 2;
+
+      if (type.pattern === "checker") {
+        const cell = type.patternCell ?? 0.5;
+        const x = dx / cell;
+        const y = dy / cell;
+        const edge = Math.min(Math.abs(fract(x + 0.5) - 0.5), Math.abs(fract(y + 0.5) - 0.5));
+        const odd = ((Math.floor(x) + Math.floor(y)) & 1) === 0 ? 0 : 1;
+        return blendColor(type.base, type.alt, BABYLON.Scalar.Lerp(0.5, odd, smoothstep(0, type.patternSoft ?? 0.045, edge)));
+      }
+
+      return type.base;
+    }
+
+    function cookieHeightAt(u, v, type) {
+      const dx = u - 0.5;
+      const dy = v - 0.5;
+      const r = Math.hypot(dx, dy) * 2;
+      const grain = valueNoise(u * 22, v * 22, type.seed) * 0.45
+        + valueNoise(u * 72, v * 72, type.seed + 17) * 0.38
+        + valueNoise(u * 150, v * 150, type.seed + 29) * 0.17;
+      let height = 0.52 + (grain - 0.5) * 0.3;
+
+      if (type.cracks) {
+        const cell = Math.abs(valueNoise(u * 8 + 4, v * 8 - 2, type.seed + 31)
+          - valueNoise(u * 8 - 1, v * 8 + 6, type.seed + 53));
+        const crack = (cell < 0.052 && r < 0.9) ? 1 - cell / 0.052 : 0;
+        height -= crack * 0.42;
+      }
+
+      if (type.ripple) {
+        const angle = Math.atan2(dy, dx);
+        const wave = Math.sin((r * type.rippleFreq + Math.sin(angle * 2) * 0.14) * Math.PI * 2);
+        height += wave * 0.08 * smoothstep(0.35, 0.92, r);
+      }
+
+      if (type.emboss === "lattice") {
+        const gx = Math.abs(((u - 0.5) + (v - 0.5)) * 8);
+        const gy = Math.abs(((u - 0.5) - (v - 0.5)) * 8);
+        const line = Math.max(
+          1 - BABYLON.Scalar.SmoothStep(0.05, 0.2, Math.abs(gx - Math.round(gx))),
+          1 - BABYLON.Scalar.SmoothStep(0.05, 0.2, Math.abs(gy - Math.round(gy)))
+        );
+        height += line * 0.16 * (1 - smoothstep(0.82, 1, r));
+      }
+
+      if (type.dock) {
+        const pitch = type.dock;
+        const px = Math.abs(((u - 0.5) * 8) % pitch);
+        const py = Math.abs(((v - 0.5) * 8) % pitch);
+        const hole = Math.exp(-(px * px + py * py) / 0.018);
+        height -= hole * 0.36 * (1 - smoothstep(0.78, 1, r));
+      }
+
+      const sugar = valueNoise(u * type.sugarScale + 9, v * type.sugarScale + 3, type.seed + 71) > 0.965 ? type.sugar : 0;
+      height += sugar * 0.24;
+      return BABYLON.Scalar.Clamp(height, 0, 1);
+    }
+
+    function cookieTexture(name, type) {
+      const key = `${name}_${type.name}`;
+      const cached = cookieTextureCache.get(key);
+      if (cached) {
+        return cached;
+      }
+
+      const size = 512;
+      const texture = new BABYLON.DynamicTexture(key, { width: size, height: size }, scene, false);
+      const ctx = texture.getContext();
+      const image = ctx.createImageData(size, size);
+      const data = image.data;
+      const seed = type.seed;
+
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const u = x / (size - 1);
+          const v = y / (size - 1);
+          const dx = u - 0.5;
+          const dy = v - 0.5;
+          const r = Math.hypot(dx, dy) * 2;
+          const edge = smoothstep(0.58, 1, r);
+          const grain = valueNoise(u * 18, v * 18, seed) * 0.55 + valueNoise(u * 54, v * 54, seed + 17) * 0.45;
+          const bake = BABYLON.Scalar.Clamp(type.brown + edge * 0.34 + (grain - 0.5) * 0.24, 0, 1);
+          let base = cookiePatternColor(u, v, type);
+
+          let rr = BABYLON.Scalar.Lerp(base.r, type.baked.r, bake);
+          let gg = BABYLON.Scalar.Lerp(base.g, type.baked.g, bake);
+          let bb = BABYLON.Scalar.Lerp(base.b, type.baked.b, bake);
+
+          if (type.cracks) {
+            const cell = Math.abs(valueNoise(u * 7 + 4, v * 7 - 2, seed + 31) - valueNoise(u * 7 - 1, v * 7 + 6, seed + 53));
+            const crack = (cell < 0.055 && r < 0.9) ? 1 - cell / 0.055 : 0;
+            rr = BABYLON.Scalar.Lerp(rr, type.raw.r, crack * 0.72);
+            gg = BABYLON.Scalar.Lerp(gg, type.raw.g, crack * 0.72);
+            bb = BABYLON.Scalar.Lerp(bb, type.raw.b, crack * 0.72);
+          }
+
+          if (type.emboss === "lattice") {
+            const gx = Math.abs(((u - 0.5) + (v - 0.5)) * 8);
+            const gy = Math.abs(((u - 0.5) - (v - 0.5)) * 8);
+            const line = Math.max(
+              1 - BABYLON.Scalar.SmoothStep(0.05, 0.2, Math.abs(gx - Math.round(gx))),
+              1 - BABYLON.Scalar.SmoothStep(0.05, 0.2, Math.abs(gy - Math.round(gy)))
+            ) * (1 - smoothstep(0.82, 1, r));
+            rr = BABYLON.Scalar.Lerp(rr, type.baked.r, line * 0.35);
+            gg = BABYLON.Scalar.Lerp(gg, type.baked.g, line * 0.35);
+            bb = BABYLON.Scalar.Lerp(bb, type.baked.b, line * 0.35);
+          }
+
+          if (type.dock) {
+            const pitch = type.dock;
+            const px = Math.abs(((u - 0.5) * 8) % pitch);
+            const py = Math.abs(((v - 0.5) * 8) % pitch);
+            const hole = Math.exp(-(px * px + py * py) / 0.018) * (1 - smoothstep(0.78, 1, r));
+            rr = BABYLON.Scalar.Lerp(rr, type.hole.r, hole * 0.72);
+            gg = BABYLON.Scalar.Lerp(gg, type.hole.g, hole * 0.72);
+            bb = BABYLON.Scalar.Lerp(bb, type.hole.b, hole * 0.72);
+          }
+
+          const sugar = valueNoise(u * type.sugarScale + 9, v * type.sugarScale + 3, seed + 71) > 0.965 ? type.sugar : 0;
+          rr = BABYLON.Scalar.Lerp(rr, 0.98, sugar);
+          gg = BABYLON.Scalar.Lerp(gg, 0.95, sugar);
+          bb = BABYLON.Scalar.Lerp(bb, 0.86, sugar);
+
+          const i = (y * size + x) * 4;
+          const pore = 0.94 + grain * 0.1;
+          data[i] = BABYLON.Scalar.Clamp(rr * pore, 0, 1) * 255;
+          data[i + 1] = BABYLON.Scalar.Clamp(gg * pore, 0, 1) * 255;
+          data[i + 2] = BABYLON.Scalar.Clamp(bb * pore, 0, 1) * 255;
+          data[i + 3] = 255;
+        }
+      }
+
+      ctx.putImageData(image, 0, 0);
+      texture.update(false);
+      texture.hasAlpha = true;
+      texture.anisotropicFilteringLevel = 4;
+      cookieTextureCache.set(key, texture);
+      return texture;
+    }
+
+    function cookieNormalTexture(type) {
+      const key = `cookieNormal_${type.name}`;
+      const cached = cookieTextureCache.get(key);
+      if (cached) {
+        return cached;
+      }
+
+      const size = 512;
+      const texture = new BABYLON.DynamicTexture(key, { width: size, height: size }, scene, false);
+      const ctx = texture.getContext();
+      const image = ctx.createImageData(size, size);
+      const data = image.data;
+      const strength = type.normalStrength ?? 2.4;
+
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const u = x / (size - 1);
+          const v = y / (size - 1);
+          const e = 1 / size;
+          const hl = cookieHeightAt(Math.max(0, u - e), v, type);
+          const hr = cookieHeightAt(Math.min(1, u + e), v, type);
+          const hd = cookieHeightAt(u, Math.max(0, v - e), type);
+          const hu = cookieHeightAt(u, Math.min(1, v + e), type);
+          let nx = (hl - hr) * strength;
+          let ny = (hd - hu) * strength;
+          let nz = 1;
+          const len = Math.hypot(nx, ny, nz) || 1;
+          nx /= len;
+          ny /= len;
+          nz /= len;
+          const i = (y * size + x) * 4;
+          data[i] = (nx * 0.5 + 0.5) * 255;
+          data[i + 1] = (ny * 0.5 + 0.5) * 255;
+          data[i + 2] = (nz * 0.5 + 0.5) * 255;
+          data[i + 3] = 255;
+        }
+      }
+
+      ctx.putImageData(image, 0, 0);
+      texture.update(false);
+      texture.gammaSpace = false;
+      texture.anisotropicFilteringLevel = 4;
+      cookieTextureCache.set(key, texture);
+      return texture;
+    }
+
+    function cookieMaterial(type) {
+      const matName = `cookieMat_${type.name}`;
+      const mat = scene.getMaterialByName(matName) ?? new BABYLON.PBRMaterial(matName, scene);
+      mat.albedoColor = BABYLON.Color3.White();
+      mat.albedoTexture = cookieTexture("cookieAlbedo", type);
+      mat.bumpTexture = cookieNormalTexture(type);
+      mat.bumpTexture.level = 0.82;
+      mat.metallic = 0;
+      mat.roughness = type.roughness;
+      mat.useAlphaFromAlbedoTexture = false;
+      mat.transparencyMode = BABYLON.PBRMaterial.PBRMATERIAL_OPAQUE;
+      mat.sheen.isEnabled = true;
+      mat.sheen.intensity = 0.12;
+      mat.sheen.roughness = 0.78;
+      mat.sheen.color = type.raw;
+      mat.backFaceCulling = true;
+      return mat;
+    }
+
+    function chipMaterial(type) {
+      const matName = `cookieChipMat_${type.name}`;
+      const mat = scene.getMaterialByName(matName) ?? new BABYLON.PBRMaterial(matName, scene);
+      mat.albedoColor = type.chips;
+      mat.metallic = 0;
+      mat.roughness = type.name === "choco" ? 0.38 : 0.58;
+      mat.clearCoat.isEnabled = type.name === "choco";
+      mat.clearCoat.intensity = type.name === "choco" ? 0.28 : 0;
+      mat.clearCoat.roughness = 0.24;
+      return mat;
+    }
+
+    function addCookieChip(parent, x, z, y, size, mat) {
+      const chip = BABYLON.MeshBuilder.CreateSphere("cookieChip", {
+        diameter: size,
+        segments: 8
+      }, scene);
+      chip.position.set(x, y, z);
+      chip.scaling.set(
+        BABYLON.Scalar.RandomRange(1.0, 1.28),
+        BABYLON.Scalar.RandomRange(0.18, 0.3),
+        BABYLON.Scalar.RandomRange(0.78, 1.05)
+      );
+      chip.rotation.y = Math.random() * Math.PI;
+      chip.material = mat;
+      chip.parent = parent;
+      chip.isPickable = false;
+    }
+
+    function makeCookieMesh(name, radius, thickness, type) {
+      const segments = 144;
+      const rings = 42;
+      const positions = [];
+      const indices = [];
+      const colors = [];
+      const uvs = [];
+      const topY = thickness * 0.62;
+      const bottomY = -thickness * 0.38;
+      const outlinePhase = Math.random() * Math.PI * 2;
+      const warpAngle = Math.random() * Math.PI * 2;
+      const warpAmount = thickness * BABYLON.Scalar.RandomRange(0.03, 0.08);
+
+      function outlineRadius(angle) {
+        const nExp = type.nExp ?? 2;
+        const aspect = type.aspect ?? 1;
+        const c = Math.abs(Math.cos(angle));
+        const s = Math.abs(Math.sin(angle));
+        const superEllipse = 1 / Math.pow(Math.pow(c / aspect, nExp) + Math.pow(s, nExp), 1 / nExp);
+        const scallop = type.scallop
+          ? Math.cos(angle * type.scallop + outlinePhase) * 0.018
+          : 0;
+        const low = Math.sin(angle * 3.1 + outlinePhase) * type.outlineJitter;
+        const high = Math.sin(angle * 8.7 - outlinePhase * 0.6) * type.outlineJitter * 0.36;
+        const bakedNoise = (valueNoise(Math.cos(angle) * 4.5 + 12, Math.sin(angle) * 4.5 - 5, type.seed + 211) - 0.5)
+          * type.outlineJitter * 0.55;
+        return radius * superEllipse * (1 + scallop + low + high + bakedNoise);
+      }
+
+      function pushVertex(x, y, z, color) {
+        const wx = x / Math.max(radius, 0.001);
+        const wz = z / Math.max(radius, 0.001);
+        const ca = Math.cos(warpAngle);
+        const sa = Math.sin(warpAngle);
+        const ux = wx * ca + wz * sa;
+        const uz = -wx * sa + wz * ca;
+        y += warpAmount * (ux * ux - uz * uz * 0.55);
+        positions.push(x, y, z);
+        colors.push(color.r, color.g, color.b, 1);
+        uvs.push(x / (radius * 2.25) + 0.5, z / (radius * 2.25) + 0.5);
+        return positions.length / 3 - 1;
+      }
+
+      const ringIndices = [];
+      for (let ri = 0; ri <= rings; ri++) {
+        const t = ri / rings;
+        const ring = [];
+        for (let si = 0; si < segments; si++) {
+          const angle = si / segments * Math.PI * 2;
+          const outer = outlineRadius(angle);
+          const radial = Math.sin(t * Math.PI);
+          const face = t < 0.58 ? "top" : t > 0.82 ? "bottom" : "rim";
+          let r;
+          let y;
+
+          if (face === "top") {
+            const q = t / 0.58;
+            r = outer * q * (1 - type.rimBulge * 0.045);
+            const dome = (1 - q * q) * thickness * type.dome;
+            const ripple = type.ripple
+              ? Math.sin((q * type.rippleFreq + Math.sin(angle * 2.0) * 0.12) * Math.PI * 2) * thickness * 0.035 * q
+              : 0;
+            y = topY + dome + ripple + (valueNoise(Math.cos(angle) * q * 5, Math.sin(angle) * q * 5, type.seed + ri) - 0.5) * thickness * 0.045;
+          } else if (face === "rim") {
+            const q = (t - 0.58) / 0.24;
+            const bulge = Math.sin(q * Math.PI) * type.rimBulge * 0.075;
+            r = outer * (0.955 + bulge);
+            y = BABYLON.Scalar.Lerp(topY, bottomY + thickness * 0.18, q);
+          } else {
+            const q = (t - 0.82) / 0.18;
+            r = outer * (1 - q) * 0.94;
+            const contactRing = Math.exp(-Math.pow((1 - q) - 0.82, 2) / 0.02) * thickness * 0.035;
+            y = bottomY + contactRing;
+          }
+
+          const x = Math.cos(angle) * r;
+          const z = Math.sin(angle) * r;
+          const radial01 = BABYLON.Scalar.Clamp(Math.hypot(x, z) / Math.max(radius, 0.001), 0, 1);
+          const brown = 0.96 + 0.14 * smoothstep(0.62, 1, radial01) + (valueNoise(x * 18, z * 18, type.seed + 99) - 0.5) * 0.08;
+          const color = new BABYLON.Color3(
+            BABYLON.Scalar.Clamp(brown, 0.78, 1.16),
+            BABYLON.Scalar.Clamp(brown * 0.99, 0.78, 1.14),
+            BABYLON.Scalar.Clamp(brown * 0.97, 0.76, 1.12)
+          );
+          ring.push(pushVertex(x, y, z, color));
+        }
+        ringIndices.push(ring);
+      }
+
+      for (let ri = 0; ri < rings; ri++) {
+        for (let si = 0; si < segments; si++) {
+          const next = (si + 1) % segments;
+          const a = ringIndices[ri][si];
+          const b = ringIndices[ri][next];
+          const c = ringIndices[ri + 1][si];
+          const d = ringIndices[ri + 1][next];
+          indices.push(a, c, b, b, c, d);
+        }
+      }
+
+      const mesh = new BABYLON.Mesh(name, scene);
+      const vertexData = new BABYLON.VertexData();
+      vertexData.positions = positions;
+      vertexData.indices = indices;
+      vertexData.normals = [];
+      BABYLON.VertexData.ComputeNormals(positions, indices, vertexData.normals);
+      vertexData.colors = colors;
+      vertexData.uvs = uvs;
+      vertexData.applyToMesh(mesh);
+      mesh.hasVertexAlpha = false;
+      return mesh;
+    }
+
+    function spawnCookie(position, index) {
+      const cookieTypes = [
+        {
+          name: "choco",
+          base: new BABYLON.Color3(0.77, 0.48, 0.24),
+          baked: new BABYLON.Color3(0.52, 0.31, 0.13),
+          raw: new BABYLON.Color3(0.92, 0.78, 0.55),
+          chips: new BABYLON.Color3(0.16, 0.08, 0.045),
+          chipCount: 12,
+          cracks: true,
+          brown: 0.3,
+          roughness: 0.82,
+          seed: 301,
+          sugar: 0.08,
+          sugarScale: 54,
+          dome: 0.34,
+          rimBulge: 0.95,
+          outlineJitter: 0.038,
+          ripple: true,
+          rippleFreq: 5.2
+        },
+        {
+          name: "cream",
+          base: new BABYLON.Color3(0.88, 0.73, 0.48),
+          alt: new BABYLON.Color3(0.34, 0.23, 0.16),
+          baked: new BABYLON.Color3(0.62, 0.41, 0.19),
+          raw: new BABYLON.Color3(0.95, 0.86, 0.67),
+          chips: new BABYLON.Color3(0.96, 0.88, 0.7),
+          chipCount: 4,
+          pattern: "checker",
+          cracks: false,
+          brown: 0.24,
+          roughness: 0.83,
+          seed: 701,
+          sugar: 0.12,
+          sugarScale: 62,
+          dome: 0.1,
+          rimBulge: 0.72,
+          outlineJitter: 0.014,
+          nExp: 5.5,
+          aspect: 1,
+          ripple: false,
+          rippleFreq: 4.4
+        },
+        {
+          name: "sable",
+          base: new BABYLON.Color3(0.87, 0.76, 0.55),
+          baked: new BABYLON.Color3(0.58, 0.36, 0.16),
+          raw: new BABYLON.Color3(0.93, 0.84, 0.66),
+          chips: new BABYLON.Color3(0.96, 0.94, 0.88),
+          chipCount: 0,
+          cracks: true,
+          brown: 0.34,
+          roughness: 0.86,
+          seed: 911,
+          sugar: 0.42,
+          sugarScale: 76,
+          dome: 0.18,
+          rimBulge: 0.88,
+          outlineJitter: 0.02,
+          scallop: 26,
+          ripple: false,
+          rippleFreq: 4.8
+        },
+        {
+          name: "biscuit",
+          base: new BABYLON.Color3(0.86, 0.72, 0.5),
+          baked: new BABYLON.Color3(0.58, 0.38, 0.18),
+          raw: new BABYLON.Color3(0.94, 0.84, 0.66),
+          hole: new BABYLON.Color3(0.34, 0.2, 0.1),
+          chips: new BABYLON.Color3(0.9, 0.82, 0.58),
+          chipCount: 0,
+          emboss: "lattice",
+          cracks: false,
+          brown: 0.38,
+          roughness: 0.86,
+          seed: 1217,
+          sugar: 0,
+          sugarScale: 52,
+          dome: 0.06,
+          rimBulge: 0.62,
+          outlineJitter: 0.008,
+          scallop: 22,
+          ripple: false,
+          rippleFreq: 4.8,
+          normalStrength: 3.2
+        },
+        {
+          name: "cracker",
+          base: new BABYLON.Color3(0.9, 0.8, 0.58),
+          baked: new BABYLON.Color3(0.64, 0.44, 0.22),
+          raw: new BABYLON.Color3(0.94, 0.86, 0.68),
+          hole: new BABYLON.Color3(0.36, 0.23, 0.12),
+          chips: new BABYLON.Color3(0.98, 0.97, 0.94),
+          chipCount: 0,
+          dock: 0.86,
+          cracks: false,
+          brown: 0.3,
+          roughness: 0.88,
+          seed: 1511,
+          sugar: 0.28,
+          sugarScale: 34,
+          dome: 0.025,
+          rimBulge: 0.54,
+          outlineJitter: 0.01,
+          ripple: false,
+          rippleFreq: 4.8,
+          normalStrength: 3.4
+        },
+      ];
+      const type = cookieTypes[index % cookieTypes.length];
+      const radius = BABYLON.Scalar.RandomRange(0.2, 0.28);
+      const thickness = BABYLON.Scalar.RandomRange(0.075, 0.115);
+      const cookie = makeCookieMesh(`dropCookie_${Date.now()}_${index}`, radius, thickness, type);
+      cookie.position.copyFrom(position);
+      cookie.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      );
+      cookie.material = cookieMaterial(type);
+      cookie.isPickable = false;
+
+      const chipMat = chipMaterial(type);
+      for (let i = 0; i < type.chipCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.sqrt(Math.random()) * radius * 0.68;
+        addCookieChip(
+          cookie,
+          Math.cos(angle) * distance,
+          Math.sin(angle) * distance,
+          thickness * 0.72,
+          BABYLON.Scalar.RandomRange(0.026, 0.044),
+          chipMat
+        );
+      }
+
+      const shapeType = BABYLON.PhysicsShapeType.CYLINDER ?? BABYLON.PhysicsShapeType.BOX;
+      const aggregate = new BABYLON.PhysicsAggregate(
+        cookie,
+        shapeType,
+        { mass: 0.22, friction: 0.72, restitution: 0.12 },
+        scene
+      );
+      state.balls.push({ mesh: cookie, aggregate });
+      trimPhysicsItems();
+    }
+
+    function ensurePhysicsColliders() {
+      if (!state.physicsReady) {
+        setMessage("Physics is still loading.");
+        return false;
+      }
+      if (!state.densityBoxes.length) {
+        buildDensityPreview();
+      } else {
+        rebuildPhysicsColliders();
+      }
+      return true;
+    }
+
+    function dropBalls() {
+      if (!state.physicsReady) {
+        setMessage("Physics is still loading. 少し待ってからもう一度押してください。");
+        return;
+      }
+      if (!state.densityBoxes.length) {
+        buildDensityPreview();
+      } else {
+        rebuildPhysicsColliders();
+      }
+      const origin = pointerPosition();
+      for (let i = 0; i < 50; i++) {
+        setTimeout(() => {
+          const jitter = new BABYLON.Vector3(
+            (Math.random() - 0.5) * 0.28,
+            i * 0.012,
+            (Math.random() - 0.5) * 0.28
+          );
+          spawnBall(origin.add(jitter), i);
+        }, i * 55);
+      }
+      setMessage("空中ポインターから球体を50個落とします。Density Previewの立方体がHavokコライダーです。");
+    }
+
+    function dropCookies() {
+      if (!ensurePhysicsColliders()) {
+        return;
+      }
+      const origin = pointerPosition();
+      for (let i = 0; i < 30; i++) {
+        setTimeout(() => {
+          const jitter = new BABYLON.Vector3(
+            (Math.random() - 0.5) * 0.34,
+            i * 0.018,
+            (Math.random() - 0.5) * 0.34
+          );
+          spawnCookie(origin.add(jitter), i);
+        }, i * 70);
+      }
+      setMessage("複数種類のクッキーを空中ポインターから落とします。");
+    }
+
+    function splatPointAt(floatData, index) {
+      return new BABYLON.Vector3(
+        floatData[index * 8],
+        floatData[index * 8 + 1],
+        floatData[index * 8 + 2]
+      );
+    }
+
+    function localToWorld(point) {
+      return point.scale(displayScale()).add(state.offset);
+    }
+
+    function displayScale() {
+      return state.baseScale * Number(ui.scaleInput.value) / 100;
+    }
+
+    function computeSplatBounds(mesh) {
+      if (!mesh?.splatsData) return null;
+      const floatData = new Float32Array(mesh.splatsData);
+      const count = Math.floor(floatData.length / 8);
+      const min = new BABYLON.Vector3(Infinity, Infinity, Infinity);
+      const max = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
+      const step = Math.max(1, Math.floor(count / 220000));
+
+      for (let i = 0; i < count; i += step) {
+        const p = splatPointAt(floatData, i);
+        min.minimizeInPlace(p);
+        max.maximizeInPlace(p);
+      }
+      return { min, max, sampled: Math.ceil(count / step), count };
+    }
+
+    function formatSize(size) {
+      return `${size.x.toFixed(1)} x ${size.y.toFixed(1)} x ${size.z.toFixed(1)}m`;
+    }
+
+    function applySplatTransform() {
+      if (!state.mesh || !state.bounds) return;
+      const size = state.bounds.max.subtract(state.bounds.min);
+      const center = state.bounds.min.add(size.scale(0.5));
+      const scale = displayScale();
+      state.offset.set(-center.x * scale, -center.y * scale, -center.z * scale);
+      state.mesh.scaling.set(scale, scale, scale);
+      state.mesh.position.copyFrom(state.offset);
+      state.mesh.rotation.set(0, 0, 0);
+      state.mesh.alwaysSelectAsActiveMesh = true;
+      state.mesh.isPickable = false;
+      state.mesh.computeWorldMatrix(true);
+      densityRoot.scaling.setAll(1);
+      updateDensityBoxTransforms();
+    }
+
+    function resetCamera() {
+      if (!state.bounds) {
+        camera.setTarget(BABYLON.Vector3.Zero());
+        camera.radius = 11;
+        return;
+      }
+      const size = state.bounds.max.subtract(state.bounds.min).scale(displayScale());
+      const radius = Math.max(size.x, size.y, size.z, 1) * 1.35;
+      camera.setTarget(BABYLON.Vector3.Zero());
+      camera.radius = BABYLON.Scalar.Clamp(radius, 3.5, 60);
+      camera.alpha = -1.2;
+      camera.beta = 1.12;
+    }
+
+    function clearDensityBoxes() {
+      state.densityBoxes.forEach((box) => {
+        disposeBoxAggregate(box);
+        box.mesh.dispose();
+      });
+      state.densityBoxes = [];
+      state.densityVisible = false;
+      ui.densityLabel.textContent = "density preview off";
+      ui.densityButton.textContent = "Density Preview";
+    }
+
+    function percentile(values, ratio) {
+      if (!values.length) return 0;
+      const sorted = [...values].sort((a, b) => a - b);
+      return sorted[Math.floor((sorted.length - 1) * ratio)];
+    }
+
+    function makePreviewMaterial(name, color, alpha) {
+      const mat = scene.getMaterialByName(name) ?? new BABYLON.StandardMaterial(name, scene);
+      mat.diffuseColor = color;
+      mat.emissiveColor = color.scale(0.12);
+      mat.alpha = alpha;
+      mat.backFaceCulling = false;
+      return mat;
+    }
+
+    function makePreviewBox(name, localCenter, localSize, material, edgeColor, density) {
+      const mesh = BABYLON.MeshBuilder.CreateBox(name, { size: 1 }, scene);
+      mesh.material = material;
+      mesh.enableEdgesRendering();
+      mesh.edgesWidth = 0.25;
+      mesh.edgesColor = edgeColor;
+      mesh.isPickable = false;
+      state.densityBoxes.push({ mesh, localCenter, localSize, density });
+    }
+
+    function buildDensityPreview() {
+      clearDensityBoxes();
+      if (!state.mesh?.splatsData || !state.bounds) return;
+
+      const floatData = new Float32Array(state.mesh.splatsData);
+      const count = Math.floor(floatData.length / 8);
+      const size = state.bounds.max.subtract(state.bounds.min);
+      const targetCells = Number(ui.densityInput.value);
+      const solidThreshold = Number(ui.solidThresholdInput.value) / 100;
+      const splitSolids = ui.splitInput.checked;
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const objectCellSize = Math.max(maxDim / (targetCells * 1.35), 0.045);
+      const fineObjectCellSize = objectCellSize * 0.5;
+      const floorCellSize = objectCellSize * 2.8;
+      const step = Math.max(1, Math.floor(count / 240000));
+      const objectCells = new Map();
+      const floorColumns = new Map();
+
+      for (let i = 0; i < count; i += step) {
+        const p = splatPointAt(floatData, i);
+        const ogx = Math.floor((p.x - state.bounds.min.x) / objectCellSize);
+        const ogy = Math.floor((p.y - state.bounds.min.y) / objectCellSize);
+        const ogz = Math.floor((p.z - state.bounds.min.z) / objectCellSize);
+        const objectKey = `${ogx},${ogy},${ogz}`;
+        let objectCell = objectCells.get(objectKey);
+        if (!objectCell) {
+          objectCell = { gx: ogx, gy: ogy, gz: ogz, count: 0, fineCells: new Map() };
+          objectCells.set(objectKey, objectCell);
+        }
+        objectCell.count++;
+        const localMinX = state.bounds.min.x + ogx * objectCellSize;
+        const localMinY = state.bounds.min.y + ogy * objectCellSize;
+        const localMinZ = state.bounds.min.z + ogz * objectCellSize;
+        const fx = BABYLON.Scalar.Clamp(Math.floor((p.x - localMinX) / fineObjectCellSize), 0, 1);
+        const fy = BABYLON.Scalar.Clamp(Math.floor((p.y - localMinY) / fineObjectCellSize), 0, 1);
+        const fz = BABYLON.Scalar.Clamp(Math.floor((p.z - localMinZ) / fineObjectCellSize), 0, 1);
+        const fineKey = `${fx},${fy},${fz}`;
+        objectCell.fineCells.set(fineKey, (objectCell.fineCells.get(fineKey) ?? 0) + 1);
+
+        const fgx = Math.floor((p.x - state.bounds.min.x) / floorCellSize);
+        const fgy = Math.floor((p.y - state.bounds.min.y) / floorCellSize);
+        const fgz = Math.floor((p.z - state.bounds.min.z) / floorCellSize);
+        const columnKey = `${fgx},${fgz}`;
+        let column = floorColumns.get(columnKey);
+        if (!column) {
+          column = { gx: fgx, gz: fgz, yBins: new Map() };
+          floorColumns.set(columnKey, column);
+        }
+        column.yBins.set(fgy, (column.yBins.get(fgy) ?? 0) + 1);
+      }
+
+      const objectCounts = Array.from(objectCells.values()).map((cell) => cell.count);
+      const floorBinCounts = Array.from(floorColumns.values()).flatMap((column) => Array.from(column.yBins.values()));
+      const objectMinCount = Math.max(4, percentile(objectCounts, solidThreshold));
+      const highObjectCount = objectMinCount;
+      const floorMinCount = Math.max(1, percentile(floorBinCounts, 0.16));
+      const objectMat = makePreviewMaterial("objectColliderCandidateMat", new BABYLON.Color3(0.42, 0.82, 0.6), 0.05);
+      const floorMat = makePreviewMaterial("floorColliderCandidateMat", new BABYLON.Color3(0.32, 0.72, 0.95), 0.035);
+      let objectMade = 0;
+      let floorMade = 0;
+      const maxObjectBoxes = 4200;
+      const maxFloorBoxes = 1800;
+
+      for (const column of floorColumns.values()) {
+        if (floorMade >= maxFloorBoxes) break;
+        const floorBins = Array.from(column.yBins.entries())
+          .filter(([, density]) => density >= floorMinCount)
+          .sort((a, b) => a[0] - b[0]);
+        const floorBin = floorBins[0];
+        if (!floorBin) continue;
+        const [gy, density] = floorBin;
+        const localCenter = new BABYLON.Vector3(
+          state.bounds.min.x + (column.gx + 0.5) * floorCellSize,
+          state.bounds.min.y + (gy + 0.5) * floorCellSize,
+          state.bounds.min.z + (column.gz + 0.5) * floorCellSize
+        );
+        const localSize = new BABYLON.Vector3(
+          floorCellSize,
+          Math.max(objectCellSize * 0.45, 0.025),
+          floorCellSize
+        );
+        makePreviewBox(
+          `floorCandidate_${floorMade}`,
+          localCenter,
+          localSize,
+          floorMat,
+          new BABYLON.Color4(0.48, 0.88, 1, 0.12),
+          density
+        );
+        floorMade++;
+      }
+
+      for (const cell of objectCells.values()) {
+        const density = cell.count;
+        if (density < objectMinCount || objectMade >= maxObjectBoxes) continue;
+        const localCenter = new BABYLON.Vector3(
+          state.bounds.min.x + (cell.gx + 0.5) * objectCellSize,
+          state.bounds.min.y + (cell.gy + 0.5) * objectCellSize,
+          state.bounds.min.z + (cell.gz + 0.5) * objectCellSize
+        );
+        if (splitSolids && density >= highObjectCount) {
+          const fineMinCount = objectMinCount;
+          const localMin = new BABYLON.Vector3(
+            state.bounds.min.x + cell.gx * objectCellSize,
+            state.bounds.min.y + cell.gy * objectCellSize,
+            state.bounds.min.z + cell.gz * objectCellSize
+          );
+          const fineEntries = Array.from(cell.fineCells.entries())
+            .filter(([, fineDensity]) => fineDensity >= fineMinCount)
+            .sort((a, b) => b[1] - a[1]);
+
+          if (fineEntries.length === 0 || fineEntries.length === 8) {
+            makePreviewBox(
+              `objectCandidate_${objectMade}`,
+              localCenter,
+              new BABYLON.Vector3(objectCellSize, objectCellSize, objectCellSize),
+              objectMat,
+              new BABYLON.Color4(0.68, 1, 0.78, 0.16),
+              density
+            );
+            objectMade++;
+          } else {
+            for (const [fineKey, fineDensity] of fineEntries) {
+              if (objectMade >= maxObjectBoxes) break;
+              const [fx, fy, fz] = fineKey.split(",").map(Number);
+              makePreviewBox(
+                `objectFineCandidate_${objectMade}`,
+                new BABYLON.Vector3(
+                  localMin.x + (fx + 0.5) * fineObjectCellSize,
+                  localMin.y + (fy + 0.5) * fineObjectCellSize,
+                  localMin.z + (fz + 0.5) * fineObjectCellSize
+                ),
+                new BABYLON.Vector3(fineObjectCellSize, fineObjectCellSize, fineObjectCellSize),
+                objectMat,
+                new BABYLON.Color4(0.68, 1, 0.78, 0.14),
+                fineDensity
+              );
+              objectMade++;
+            }
+          }
+        } else {
+          makePreviewBox(
+            `objectCandidate_${objectMade}`,
+            localCenter,
+            new BABYLON.Vector3(objectCellSize, objectCellSize, objectCellSize),
+            objectMat,
+            new BABYLON.Color4(0.68, 1, 0.78, 0.16),
+            density
+          );
+          objectMade++;
+        }
+      }
+
+      state.densityVisible = true;
+      updateDensityBoxTransforms();
+      ui.densityLabel.textContent = `${floorMade.toLocaleString()} floor / ${objectMade.toLocaleString()} solid`;
+      ui.densityButton.textContent = "Hide Density";
+      setMessage(`床候補 ${floorMade.toLocaleString()} 個、立体物候補 ${objectMade.toLocaleString()} 個を表示しました。立体判定は${ui.solidThresholdInput.value}%、8分割は${splitSolids ? "ON" : "OFF"}です。`);
+    }
+
+    function updateDensityBoxTransforms() {
+      if (!state.densityBoxes.length) return;
+      const scale = displayScale();
+      for (const box of state.densityBoxes) {
+        disposeBoxAggregate(box);
+        box.mesh.position.copyFrom(localToWorld(box.localCenter));
+        const sx = Math.max(box.localSize.x * scale, 0.025);
+        const sy = Math.max(box.localSize.y * scale, 0.025);
+        const sz = Math.max(box.localSize.z * scale, 0.025);
+        box.mesh.scaling.set(sx, sy, sz);
+      }
+      rebuildPhysicsColliders();
+    }
+
+    function updateHud() {
+      ui.scaleValue.textContent = ui.scaleInput.value;
+      ui.densityValue.textContent = ui.densityInput.value;
+      ui.solidThresholdValue.textContent = ui.solidThresholdInput.value;
+      ui.pointerXValue.textContent = Number(ui.pointerXInput.value).toFixed(1);
+      ui.pointerYValue.textContent = Number(ui.pointerYInput.value).toFixed(1);
+      ui.pointerZValue.textContent = Number(ui.pointerZInput.value).toFixed(1);
+      if (state.bounds) {
+        const size = state.bounds.max.subtract(state.bounds.min);
+        ui.countLabel.textContent = `${state.bounds.count.toLocaleString()} splats`;
+        ui.boundsLabel.textContent = formatSize(size);
+      }
+    }
+
+    async function loadSplat(source, sourceName) {
+      ui.resetButton.disabled = true;
+      ui.densityButton.disabled = true;
+      setMessage(`${sourceName} loading...`);
+      try {
+        clearDensityBoxes();
+        state.mesh?.dispose(false, true);
+        const result = await BABYLON.ImportMeshAsync(source, scene, {
+          pluginOptions: { splat: { keepInRam: true } }
+        });
+        state.mesh = result.meshes[0];
+        state.sourceName = sourceName;
+        state.bounds = computeSplatBounds(state.mesh);
+        if (!state.bounds) throw new Error("splatsData is not available");
+        const size = state.bounds.max.subtract(state.bounds.min);
+        state.baseScale = BABYLON.Scalar.Clamp(8 / Math.max(size.x, size.z, 0.001), 0.25, 4);
+        ui.sourceLabel.textContent = sourceName;
+        applySplatTransform();
+        resetCamera();
+        updateHud();
+        setMessage(`${sourceName} ready. 3DGS表示ができました。Density Previewで物理コライダー候補の荒い占有セルを確認できます。`);
+      } catch (error) {
+        console.error(error);
+        setMessage(`${sourceName} failed: ${error.message}`);
+      } finally {
+        ui.resetButton.disabled = false;
+        ui.densityButton.disabled = false;
+      }
+    }
+
+    ui.fileInput.addEventListener("change", () => {
+      const file = ui.fileInput.files[0];
+      if (file) loadSplat(file, file.name);
+    });
+
+    ui.scaleInput.addEventListener("input", () => {
+      applySplatTransform();
+      updateHud();
+    });
+
+    ui.scaleInput.addEventListener("change", resetCamera);
+
+    ui.densityInput.addEventListener("input", updateHud);
+    ui.densityInput.addEventListener("change", () => {
+      if (state.densityVisible) buildDensityPreview();
+    });
+
+    ui.solidThresholdInput.addEventListener("input", updateHud);
+    ui.solidThresholdInput.addEventListener("change", () => {
+      if (state.densityVisible) buildDensityPreview();
+    });
+
+    ui.splitInput.addEventListener("change", () => {
+      if (state.densityVisible) buildDensityPreview();
+    });
+
+    [ui.pointerXInput, ui.pointerYInput, ui.pointerZInput].forEach((input) => {
+      input.addEventListener("input", updatePointer);
+    });
+
+    ui.resetButton.addEventListener("click", resetCamera);
+    ui.densityButton.addEventListener("click", () => {
+      if (state.densityVisible) {
+        clearDensityBoxes();
+        setMessage("密度プレビューを非表示にしました。");
+      } else {
+        buildDensityPreview();
+      }
+    });
+    ui.dropButton.addEventListener("click", dropBalls);
+    ui.cookieButton.addEventListener("click", dropCookies);
+    ui.clearBallsButton.addEventListener("click", clearBalls);
+
+    scene.onBeforeRenderObservable.add(() => {
+      pointerRing.rotation.z += 0.018;
+    });
+
+    engine.runRenderLoop(() => scene.render());
+    addEventListener("resize", () => engine.resize());
+
+    updateHud();
+    updatePointer();
+    initPhysics();
+    loadSplat(DEFAULT_SPZ, "五畳座敷前手水鉢.spz");
+  </script>
+</body>
+</html>
