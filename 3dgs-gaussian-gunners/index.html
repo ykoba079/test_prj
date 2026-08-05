@@ -185,6 +185,46 @@
       pointer-events: none;
     }
 
+    #gameOverOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      place-items: center;
+      background: rgba(5, 8, 10, 0.44);
+      pointer-events: auto;
+    }
+
+    #gameOverOverlay.visible {
+      display: grid;
+    }
+
+    .gameOverPanel {
+      width: min(420px, calc(100vw - 32px));
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      padding: 22px;
+      background: rgba(19, 25, 29, 0.9);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+      color: #f6efe4;
+      text-align: center;
+      backdrop-filter: blur(12px);
+    }
+
+    .gameOverTitle {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.2;
+      font-weight: 900;
+    }
+
+    .gameOverText {
+      margin: 0 0 18px;
+      font-size: 16px;
+      line-height: 1.5;
+      color: #d9d1c3;
+    }
+
     @media (max-width: 720px) {
       #hud {
         grid-template-columns: 1fr;
@@ -250,10 +290,16 @@
       </div>
     </div>
   </div>
+  <div id="gameOverOverlay" aria-hidden="true">
+    <div class="gameOverPanel" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+      <h2 id="gameOverTitle" class="gameOverTitle">GAME SET</h2>
+      <p id="gameOverText" class="gameOverText">Player 1 Wins</p>
+      <button id="restartButton" type="button">Restart</button>
+    </div>
+  </div>
   <div id="message">3DGSのサイズを調整してStartを押すと、スプラット分布から判定BOXを生成します。</div>
 
-  <script>
-    const canvas = document.getElementById("renderCanvas");
+  <script>const canvas = document.getElementById("renderCanvas");
     const engine = new BABYLON.Engine(canvas, true, {
       preserveDrawingBuffer: true,
       stencil: true,
@@ -279,7 +325,10 @@
       hp1: document.getElementById("hp1"),
       hp2: document.getElementById("hp2"),
       windLabel: document.getElementById("windLabel"),
-      modeLabel: document.getElementById("modeLabel")
+      modeLabel: document.getElementById("modeLabel"),
+      gameOverOverlay: document.getElementById("gameOverOverlay"),
+      gameOverText: document.getElementById("gameOverText"),
+      restartButton: document.getElementById("restartButton")
     };
 
     // 砲撃ゲーム用の判定BOX群です。
@@ -296,7 +345,7 @@
       material: null,
       started: false,
       destroyCount: 20,
-      blastRadius: 2.24
+      blastRadius: 1.25
     };
 
     // 読み込んだ3DGSの情報です。
@@ -306,9 +355,12 @@
       transform: null,
       bounds: null,
       densityCenter: null,
+      groundFill: null,
       baseScale: 1,
       scale: 1,
       offset: new BABYLON.Vector3(),
+      source: null,
+      loadOptions: {},
       sourceName: "sample"
     };
 
@@ -338,7 +390,7 @@
       new BABYLON.Vector3(0, -1.4, 0),
       scene
     );
-    camera.lowerRadiusLimit = 18;
+    camera.lowerRadiusLimit = 9;
     camera.upperRadiusLimit = 52;
     camera.wheelDeltaPercentage = 0.03;
     camera.panningSensibility = 80;
@@ -636,6 +688,260 @@
       mesh.computeWorldMatrix(true);
     }
 
+    // サンプルの竪穴住居データ向けに、上空の白から水色系フロートノイズを透明化します。
+    // 遠方の背景球と地面は残すため、密集部分の上半分・中距離・色味で絞ります。
+    function eraseSampleFloatingNoise(mesh) {
+      if (!mesh?.splatsData) {
+        return 0;
+      }
+
+      const floatData = new Float32Array(mesh.splatsData);
+      const view = new DataView(mesh.splatsData);
+      const splatCount = floatData.length / 8;
+      const sampleStep = Math.max(1, Math.floor(splatCount / 180000));
+      const centralHeights = [];
+      const horizontalDistances = [];
+
+      for (let i = 0; i < splatCount; i += sampleStep) {
+        const p = toGamePoint(splatPointAt(floatData, i));
+        const horizontalDistance = Math.hypot(p.x, p.z);
+        horizontalDistances.push(horizontalDistance);
+
+        if (horizontalDistance < 7.5 && p.y > -4 && p.y < 5.5) {
+          centralHeights.push(p.y);
+        }
+      }
+
+      const coreUpperHalfY = Math.max(
+        0.15,
+        percentile(centralHeights, 0.52) ?? 0.15
+      );
+      const backgroundStartDistance = BABYLON.Scalar.Clamp(
+        percentile(horizontalDistances, 0.84) ?? 26,
+        18,
+        34
+      );
+      const extendedSkyNoiseDistance = backgroundStartDistance * 2;
+
+      let erased = 0;
+      for (let i = 0; i < splatCount; i++) {
+        const p = toGamePoint(splatPointAt(floatData, i));
+        const horizontalDistance = Math.hypot(p.x, p.z);
+        const colorByteIndex = (i * 8 + 6) * 4;
+        const c0 = view.getUint8(colorByteIndex);
+        const c1 = view.getUint8(colorByteIndex + 1);
+        const c2 = view.getUint8(colorByteIndex + 2);
+        const brightness = (c0 + c1 + c2) / 3;
+        const whiteToBlue = brightness >= 135
+          && c1 >= 105
+          && c2 >= 118
+          && c0 >= 82
+          && c2 >= c0 - 35;
+        const highBlueFloat = p.y > coreUpperHalfY + 0.65
+          && brightness >= 92
+          && c1 >= 74
+          && c2 >= 108
+          && c2 >= c0 + 12;
+        const isMidFloatingBand = p.y > coreUpperHalfY
+          && horizontalDistance > 4.25
+          && horizontalDistance < extendedSkyNoiseDistance;
+
+        if (isMidFloatingBand && (whiteToBlue || highBlueFloat)) {
+          const opacityByteIndex = (i * 8 + 6) * 4 + 3;
+          view.setUint8(opacityByteIndex, 0);
+          erased++;
+        }
+      }
+
+      if (erased > 0) {
+        mesh.updateData(mesh.splatsData, undefined, { flipY: false });
+        mesh.computeWorldMatrix(true);
+      }
+      return erased;
+    }
+
+    function disposeGroundFill() {
+      if (splat.groundFill) {
+        splat.groundFill.dispose(false, true);
+        splat.groundFill = null;
+      }
+    }
+
+    function updateSampleGroundFill(mesh) {
+      disposeGroundFill();
+      if (!mesh?.splatsData) {
+        return;
+      }
+
+      const floatData = new Float32Array(mesh.splatsData);
+      const view = new DataView(mesh.splatsData);
+      const splatCount = floatData.length / 8;
+      const sampleStep = Math.max(1, Math.floor(splatCount / 160000));
+      const heights = [];
+      const distances = [];
+
+      for (let i = 0; i < splatCount; i += sampleStep) {
+        const opacityByteIndex = (i * 8 + 6) * 4 + 3;
+        if (view.getUint8(opacityByteIndex) === 0) {
+          continue;
+        }
+
+        const p = toGamePoint(splatPointAt(floatData, i));
+        const horizontalDistance = Math.hypot(p.x, p.z);
+        distances.push(horizontalDistance);
+        if (horizontalDistance < 28 && p.y > -5 && p.y < 3) {
+          heights.push(p.y);
+        }
+      }
+
+      const groundY = (percentile(heights, 0.18) ?? -1.8) - 0.08;
+      const fillSize = BABYLON.Scalar.Clamp((percentile(distances, 0.72) ?? 22) * 1.35, 22, 44);
+      const fillRadius = fillSize * 0.5;
+      const tileSize = 1.8;
+      const occupiedColumns = new Map();
+      const grassColors = new Map();
+      const fallbackGrass = { r: 0, g: 0, b: 0, count: 0 };
+
+      for (let i = 0; i < splatCount; i += sampleStep) {
+        const opacityByteIndex = (i * 8 + 6) * 4 + 3;
+        if (view.getUint8(opacityByteIndex) === 0) {
+          continue;
+        }
+
+        const p = toGamePoint(splatPointAt(floatData, i));
+        if (
+          Math.abs(p.x) > fillRadius ||
+          Math.abs(p.z) > fillRadius ||
+          p.y < groundY + 0.45 ||
+          p.y > groundY + 7
+        ) {
+          continue;
+        }
+
+        const key = `${Math.floor(p.x / tileSize)},${Math.floor(p.z / tileSize)}`;
+        occupiedColumns.set(key, (occupiedColumns.get(key) ?? 0) + 1);
+      }
+
+      for (let i = 0; i < splatCount; i += sampleStep) {
+        const colorByteIndex = (i * 8 + 6) * 4;
+        const opacityByteIndex = colorByteIndex + 3;
+        if (view.getUint8(opacityByteIndex) === 0) {
+          continue;
+        }
+
+        const p = toGamePoint(splatPointAt(floatData, i));
+        if (
+          Math.abs(p.x) > fillRadius ||
+          Math.abs(p.z) > fillRadius ||
+          p.y < groundY - 0.35 ||
+          p.y > groundY + 0.75
+        ) {
+          continue;
+        }
+
+        const r = view.getUint8(colorByteIndex);
+        const g = view.getUint8(colorByteIndex + 1);
+        const b = view.getUint8(colorByteIndex + 2);
+        const greenishGround = g >= r * 0.78 && g >= b * 0.72 && b < 170;
+        if (!greenishGround) {
+          continue;
+        }
+
+        const key = `${Math.floor(p.x / tileSize)},${Math.floor(p.z / tileSize)}`;
+        const sample = grassColors.get(key) ?? { r: 0, g: 0, b: 0, count: 0 };
+        sample.r += r;
+        sample.g += g;
+        sample.b += b;
+        sample.count++;
+        grassColors.set(key, sample);
+        fallbackGrass.r += r;
+        fallbackGrass.g += g;
+        fallbackGrass.b += b;
+        fallbackGrass.count++;
+      }
+
+      function colorForTile(gx, gz) {
+        const own = grassColors.get(`${gx},${gz}`);
+        let sample = own;
+        if (!sample) {
+          for (let radius = 1; radius <= 3 && !sample; radius++) {
+            for (let ox = -radius; ox <= radius && !sample; ox++) {
+              for (let oz = -radius; oz <= radius; oz++) {
+                sample = grassColors.get(`${gx + ox},${gz + oz}`);
+                if (sample) {
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        const base = sample?.count ? sample : fallbackGrass;
+        const r = base.count ? base.r / base.count : 92;
+        const g = base.count ? base.g / base.count : 124;
+        const b = base.count ? base.b / base.count : 66;
+        const variation = 0.9 + (((gx * 37 + gz * 17) % 11 + 11) % 11) * 0.018;
+        return [
+          BABYLON.Scalar.Clamp(r * variation / 255, 0.12, 0.72),
+          BABYLON.Scalar.Clamp(g * variation / 255, 0.16, 0.78),
+          BABYLON.Scalar.Clamp(b * variation / 255, 0.08, 0.58),
+          1
+        ];
+      }
+
+      const mat = new BABYLON.StandardMaterial("sampleGroundFillMat", scene);
+      mat.diffuseColor = BABYLON.Color3.White();
+      mat.emissiveColor = new BABYLON.Color3(0.025, 0.03, 0.018);
+      mat.specularColor = BABYLON.Color3.Black();
+      mat.alpha = 1;
+      mat.backFaceCulling = false;
+
+      const positions = [];
+      const indices = [];
+      const normals = [];
+      const colors = [];
+      let vertexIndex = 0;
+      const minCell = Math.floor(-fillRadius / tileSize);
+      const maxCell = Math.ceil(fillRadius / tileSize);
+
+      for (let gx = minCell; gx < maxCell; gx++) {
+        for (let gz = minCell; gz < maxCell; gz++) {
+          const centerX = (gx + 0.5) * tileSize;
+          const centerZ = (gz + 0.5) * tileSize;
+          if (Math.hypot(centerX, centerZ) > fillRadius) {
+            continue;
+          }
+
+          const columnCount = occupiedColumns.get(`${gx},${gz}`) ?? 0;
+          if (columnCount >= 2) {
+            continue;
+          }
+
+          const x0 = gx * tileSize;
+          const x1 = x0 + tileSize;
+          const z0 = gz * tileSize;
+          const z1 = z0 + tileSize;
+          const c = colorForTile(gx, gz);
+          positions.push(x0, groundY, z0, x1, groundY, z0, x1, groundY, z1, x0, groundY, z1);
+          indices.push(vertexIndex, vertexIndex + 1, vertexIndex + 2, vertexIndex, vertexIndex + 2, vertexIndex + 3);
+          normals.push(0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0);
+          colors.push(...c, ...c, ...c, ...c);
+          vertexIndex += 4;
+        }
+      }
+
+      const ground = new BABYLON.Mesh("sampleGroundFill", scene);
+      const vertexData = new BABYLON.VertexData();
+      vertexData.positions = positions;
+      vertexData.indices = indices;
+      vertexData.normals = normals;
+      vertexData.colors = colors;
+      vertexData.applyToMesh(ground);
+      ground.material = mat;
+      ground.isPickable = false;
+      splat.groundFill = ground;
+    }
+
     // 値の集合から指定パーセント位置の値を取り出します。
     // スプラットの密度やしきい値を決めるときに、外れ値を避けるために使います。
     function percentile(values, ratio) {
@@ -789,22 +1095,27 @@
       sphere.material = mat;
       sphere.position.copyFrom(position);
 
-      const blast = BABYLON.MeshBuilder.CreateSphere("blastRadius", { diameter: blastRadius * 2, segments: 32 }, scene);
+      const blast = BABYLON.MeshBuilder.CreateSphere("blastRadius", { diameter: 2, segments: 32 }, scene);
       const blastMat = new BABYLON.StandardMaterial("blastRadiusMat", scene);
       blastMat.diffuseColor = new BABYLON.Color3(1, 0.75, 0.28);
       blastMat.emissiveColor = new BABYLON.Color3(0.55, 0.22, 0.04);
-      blastMat.alpha = 0.16;
+      blastMat.alpha = 0.24;
       blastMat.wireframe = true;
       blast.material = blastMat;
       blast.position.copyFrom(position);
+      blast.scaling.setAll(0.03);
 
+      const duration = 2.16;
       let life = 0;
       scene.onBeforeRenderObservable.add(function grow() {
         life += engine.getDeltaTime() / 1000;
-        sphere.scaling.setAll(1 + life * 9);
-        mat.alpha = Math.max(0, 0.72 - life * 1.8);
-        blastMat.alpha = Math.max(0, 0.16 - life * 0.22);
-        if (life > 0.72) {
+        const progress = Math.min(life / duration, 1);
+        const spread = 1 - Math.pow(1 - progress, 3);
+        sphere.scaling.setAll(1 + progress * 7);
+        blast.scaling.setAll(Math.max(0.03, blastRadius * spread));
+        mat.alpha = Math.max(0, 0.72 * (1 - progress));
+        blastMat.alpha = Math.max(0, 0.24 * (1 - progress * 0.82));
+        if (life > duration) {
           scene.onBeforeRenderObservable.removeCallback(grow);
           sphere.dispose();
           mat.dispose();
@@ -904,7 +1215,18 @@
       setTimeout(() => smokeMat.dispose(), 4500);
     }
 
-    function endGame(message, tank) {
+    function hideGameOverPanel() {
+      ui.gameOverOverlay.classList.remove("visible");
+      ui.gameOverOverlay.setAttribute("aria-hidden", "true");
+    }
+
+    function showGameOverPanel(winnerIndex) {
+      ui.gameOverText.textContent = `Player ${winnerIndex + 1} Wins`;
+      ui.gameOverOverlay.classList.add("visible");
+      ui.gameOverOverlay.setAttribute("aria-hidden", "false");
+    }
+
+    function endGame(message, tank, winnerIndex) {
       if (state.gameOver) {
         return;
       }
@@ -912,6 +1234,13 @@
       state.inFlight = false;
       ui.fireButton.disabled = true;
       setMessage(`GAMESET: ${message}`);
+      const loserIndex = tank ? state.tanks.indexOf(tank) : -1;
+      const resolvedWinnerIndex = Number.isInteger(winnerIndex)
+        ? winnerIndex
+        : (loserIndex === 0 ? 1 : loserIndex === 1 ? 0 : null);
+      if (Number.isInteger(resolvedWinnerIndex)) {
+        showGameOverPanel(resolvedWinnerIndex, message);
+      }
       if (tank) {
         makeSmoke(tank.position.clone());
       }
@@ -924,6 +1253,8 @@
       state.gameOver = true;
       state.inFlight = false;
       ui.fireButton.disabled = true;
+      const loserIndex = state.tanks.indexOf(tank);
+      const winnerIndex = loserIndex === 0 ? 1 : 0;
       let velocity = 0;
       let life = 0;
       scene.onBeforeRenderObservable.add(function fallTank() {
@@ -933,6 +1264,7 @@
         tank.position.y -= velocity * dt;
         if (life > 1.25 || tank.position.y < boxField.minY - 5) {
           scene.onBeforeRenderObservable.removeCallback(fallTank);
+          showGameOverPanel(winnerIndex, "Opponent fell");
           setMessage(`GAMESET: ${tank.name} の足元が崩れました`);
           makeSmoke(tank.position.clone());
         }
@@ -1077,6 +1409,7 @@
 
     // 新しい3DGSを読み込んだときに、ゲーム状態を初期化します。
     function resetMatch() {
+      hideGameOverPanel();
       state.currentPlayer = 0;
       state.inFlight = false;
       state.gameOver = false;
@@ -1099,6 +1432,9 @@
         return;
       }
       configureSplatTransform(splat.mesh);
+      if (splat.groundFill) {
+        updateSampleGroundFill(splat.mesh);
+      }
       clearBoxes();
       resetMatch();
       setMessage(`サイズ${ui.splatScale.value}%に変更しました。Startで判定BOXを生成します。`);
@@ -1114,11 +1450,14 @@
         splat.transform.dispose();
         splat.transform = null;
       }
+      disposeGroundFill();
+      splat.source = null;
+      splat.loadOptions = {};
     }
 
     // 3DGSを読み込み、表示位置を決めます。
     // 判定BOXはサイズ調整後にStartボタンで生成します。
-    async function loadSplatSource(source, sourceName) {
+    async function loadSplatSource(source, sourceName, options = {}) {
       setMessage(`${sourceName} を読み込み中です。`);
       ui.fireButton.disabled = true;
       disposeCurrentSplat();
@@ -1131,11 +1470,22 @@
           }
         });
         splat.mesh = result.meshes[0];
+        splat.source = source;
         splat.sourceName = sourceName;
+        splat.loadOptions = { ...options };
         configureSplatTransform(splat.mesh);
+        const cleanedNoiseCount = options.cleanFloatingNoise
+          ? eraseSampleFloatingNoise(splat.mesh)
+          : 0;
+        if (options.cleanFloatingNoise) {
+          updateSampleGroundFill(splat.mesh);
+        }
         clearBoxes();
         resetMatch();
-        setMessage(`${sourceName} を読み込みました。サイズを調整してStartを押してください。`);
+        const cleanupMessage = cleanedNoiseCount > 0
+          ? ` 近くのフローティングノイズを${cleanedNoiseCount.toLocaleString()}点ほど非表示にしました。`
+          : "";
+        setMessage(`${sourceName} を読み込みました。サイズを調整してStartを押してください。${cleanupMessage}`);
       } catch (error) {
         console.error(error);
         clearBoxes();
@@ -1148,7 +1498,8 @@
     async function loadSampleSplat() {
       await loadSplatSource(
         "https://raw.githubusercontent.com/ykoba079/test_prj/main/models/asahi2_f.spz",
-        "asahi2_f.spz"
+        "asahi2_f.spz",
+        { cleanFloatingNoise: true }
       );
     }
 
@@ -1160,10 +1511,22 @@
       await loadSplatSource(file, file.name);
     }
 
+    async function restartGame() {
+      const source = splat.source;
+      const sourceName = splat.sourceName;
+      const loadOptions = { ...splat.loadOptions };
+      if (!source) {
+        await loadSampleSplat();
+      } else {
+        await loadSplatSource(source, sourceName, loadOptions);
+      }
+      startGame();
+    }
+
     // 初期状態では砲台を作り、そのあとサンプル3DGSを読み込みます。
     state.tanks = [
-      makeTank("player1", new BABYLON.Color3(0.2, 0.62, 0.92), -5.8),
-      makeTank("player2", new BABYLON.Color3(0.95, 0.62, 0.24), 5.8)
+      makeTank("player1", new BABYLON.Color3(0.2, 0.62, 0.92), -7.15),
+      makeTank("player2", new BABYLON.Color3(0.95, 0.62, 0.24), 7.15)
     ];
     state.tanks.forEach(placeTank);
     newWind();
@@ -1180,6 +1543,7 @@
     ui.splatScale.addEventListener("change", rebuildFromCurrentScale);
     ui.boxViewInputs.forEach((input) => input.addEventListener("change", updateBoxVisibility));
     ui.startButton.addEventListener("click", startGame);
+    ui.restartButton.addEventListener("click", restartGame);
     ui.angle.addEventListener("input", updateHud);
     ui.power.addEventListener("input", updateHud);
     ui.fireButton.addEventListener("click", fire);
