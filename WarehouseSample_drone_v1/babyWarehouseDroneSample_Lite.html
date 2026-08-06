@@ -75,6 +75,64 @@
                 font-size: 22px;
                 color: #526052;
             }
+            #productListCompact {
+                display: none;
+                max-height: 22dvh;
+                overflow: auto;
+                margin-top: 6px;
+                border: 1px solid #d5ded0;
+                border-radius: 6px;
+                background: #ffffff;
+            }
+            .compactProductTable {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+                color: #263026;
+                font-size: 20px;
+                font-weight: 700;
+            }
+            .compactProductTable th,
+            .compactProductTable td {
+                padding: 7px 8px;
+                border-bottom: 1px solid #e1e6de;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                text-align: left;
+            }
+            .compactProductTable tr {
+                cursor: pointer;
+            }
+            .compactProductTable tr.is-active {
+                background: #fff4bf;
+            }
+            .compactProductTable tr.is-scanned {
+                background: #edf7e9;
+            }
+            .productListToggle {
+                flex: 0 0 auto;
+                min-height: 42px;
+                padding: 7px 10px;
+                border: 1px solid #aebba8;
+                border-radius: 6px;
+                background: #ffffff;
+                color: #263026;
+                font: inherit;
+                font-size: 20px;
+                cursor: pointer;
+            }
+            #productPanel.product-list-collapsed .productPanelMeta,
+            #productPanel.product-list-collapsed #productSearch,
+            #productPanel.product-list-collapsed #productList {
+                display: none;
+            }
+            #productPanel.product-list-collapsed #productListCompact {
+                display: block;
+            }
+            #productPanel:not(.product-list-collapsed) #productListCompact {
+                display: none;
+            }
             .panelSection {
                 padding: 10px 12px;
                 border-bottom: 1px solid #d7ddd2;
@@ -300,7 +358,7 @@
 
             @media (max-width: 640px) {
                 .divMgnLeft {
-                    font-size: 20px;
+                    display: none;
                 }
 
                 #appShell {
@@ -308,7 +366,8 @@
                 }
 
                 #canvasPane {
-                    flex: 0 0 58%;
+                    flex: 1 1 auto;
+                    min-height: 62dvh;
                     height: auto;
                 }
 
@@ -318,10 +377,93 @@
                 }
 
                 #productPanel {
-                    flex: 1 1 auto;
+                    flex: 0 0 auto;
                     width: 100%;
+                    max-height: 38dvh;
                     min-height: 0;
+                    overflow: auto;
                     border-left: 0;
+                }
+
+                .panelSection {
+                    padding: 6px 8px;
+                }
+
+                .toolbarGrid {
+                    gap: 4px;
+                }
+
+                .panelButton {
+                    min-height: 34px;
+                    padding: 6px 8px;
+                    font-size: 14px;
+                }
+
+                .collapsibleTitle {
+                    font-size: 15px;
+                }
+
+                .collapsibleSummary,
+                .collapsibleIcon,
+                .detailGrid,
+                .droneStatusGrid,
+                .droneReadout,
+                .productPanelMeta {
+                    font-size: 13px;
+                }
+
+                #productListCompact {
+                    max-height: 18dvh;
+                }
+
+                .compactProductTable {
+                    font-size: 13px;
+                }
+
+                .compactProductTable th,
+                .compactProductTable td {
+                    padding: 5px 6px;
+                }
+
+                .detailGrid {
+                    grid-template-columns: 64px 1fr;
+                    min-height: 0;
+                }
+
+                .droneStatusGrid {
+                    grid-template-columns: 64px 1fr;
+                    margin-top: 5px;
+                }
+
+                #droneCameraView {
+                    display: none;
+                }
+
+                .productPanelHeader {
+                    padding: 6px 8px;
+                }
+
+                .productPanelTitle {
+                    font-size: 16px;
+                }
+
+                .productListToggle {
+                    min-height: 32px;
+                    padding: 5px 8px;
+                    font-size: 13px;
+                }
+
+                .panelSearch {
+                    font-size: 14px;
+                }
+
+                .productTable {
+                    font-size: 13px;
+                }
+
+                .productTable th,
+                .productTable td {
+                    padding: 6px 5px;
                 }
             }
         </style>
@@ -381,8 +523,10 @@
             <div class="productPanelHeader">
                 <div class="productHeaderRow">
                     <p class="productPanelTitle">商品一覧</p>
+                    <button id="productListToggleButton" class="productListToggle" type="button" aria-expanded="false">開く</button>
                     <input id="productSearch" class="panelSearch" type="search" placeholder="商品名・商品ID・箱ID・棚IDで検索">
                 </div>
+                <div id="productListCompact"></div>
                 <div id="productPanelMeta" class="productPanelMeta">出荷数順に表示</div>
             </div>
             <div id="productList"></div>
@@ -411,6 +555,7 @@
         productRows: new Map(),
         productSort: { key: "出荷数", direction: "desc" },
         productSearch: "",
+        productListCollapsed: true,
         detailCollapsed: true,
         tapMoveEnabled: true,
         camera: null,
@@ -746,6 +891,7 @@
     const scene = createScene();
     initPanelControls();
     updateHoverDetails(null);
+    updateProductListCollapse();
     engine.runRenderLoop(function () {
             scene.render();
     });
@@ -839,6 +985,18 @@ function updateDetailCollapse(){
     }
 }
 
+function updateProductListCollapse(){
+    const panel = document.getElementById("productPanel");
+    const button = document.getElementById("productListToggleButton");
+    if(panel){
+        panel.classList.toggle("product-list-collapsed", appState.productListCollapsed);
+    }
+    if(button){
+        button.setAttribute("aria-expanded", String(!appState.productListCollapsed));
+        button.textContent = appState.productListCollapsed ? "開く" : "閉じる";
+    }
+}
+
 function initPanelControls(){
     const modeButton = document.getElementById("modeToggleButton");
     if(modeButton){
@@ -852,6 +1010,14 @@ function initPanelControls(){
         search.addEventListener("input", () => {
             appState.productSearch = search.value.trim();
             renderProductList();
+        });
+    }
+
+    const productListToggleButton = document.getElementById("productListToggleButton");
+    if(productListToggleButton){
+        productListToggleButton.addEventListener("click", () => {
+            appState.productListCollapsed = !appState.productListCollapsed;
+            updateProductListCollapse();
         });
     }
 
@@ -2061,6 +2227,7 @@ function clearActiveItem(){
     }
     setMarkersVisible(false);
     appState.activeItemId = null;
+    renderCompactProductList([...niData].sort(compareProductItems).filter(matchesProductSearch));
 }
 
 function setActiveItem(itemId, shouldScroll){
@@ -2093,6 +2260,7 @@ function setActiveItem(itemId, shouldScroll){
     if(appState.mode === "edit" && appState.tapMoveEnabled){
         setMarkersVisible(true);
     }
+    renderCompactProductList([...niData].sort(compareProductItems).filter(matchesProductSearch));
 }
 
 function renderProductList(){
@@ -2107,6 +2275,7 @@ function renderProductList(){
     if(meta){
         meta.textContent = `${visibleItems.length}件 / 全${sortedItems.length}件 / ${getSortLabel()}`;
     }
+    renderCompactProductList(visibleItems);
 
     const table = document.createElement("table");
     table.className = "productTable";
@@ -2155,6 +2324,38 @@ function renderProductList(){
             row.classList.add("is-active");
         }
     }
+}
+
+function renderCompactProductList(items){
+    const compact = document.getElementById("productListCompact");
+    if(!compact){
+        return;
+    }
+    const table = document.createElement("table");
+    table.className = "compactProductTable";
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>棚ID</th>
+                <th>商品ID</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
+    const tbody = table.querySelector("tbody");
+    items.forEach(item => {
+        const row = document.createElement("tr");
+        row.dataset.itemId = item.id;
+        row.innerHTML = `
+            <td>${getItemShelfText(item)}</td>
+            <td>${item.productId || item.id}</td>
+        `;
+        row.classList.toggle("is-active", String(appState.activeItemId) === String(item.id));
+        row.classList.toggle("is-scanned", !!item.inventoryScanned);
+        row.addEventListener("click", () => setActiveItem(item.id, false));
+        tbody.appendChild(row);
+    });
+    compact.replaceChildren(table);
 }
 
 function matchesProductSearch(item){
