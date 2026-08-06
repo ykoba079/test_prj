@@ -54,6 +54,13 @@
       gap: 6px;
       align-items: center;
     }
+    .advancedControls {
+      display: none;
+      gap: 8px;
+    }
+    .panel.controls-open .advancedControls {
+      display: grid;
+    }
     label, button, select {
       min-height: 32px;
       border: 1px solid rgba(255,255,255,.2);
@@ -111,6 +118,33 @@
       font-weight: 900;
       letter-spacing: 0;
     }
+    @media (max-width: 640px) {
+      .panel {
+        left: 8px;
+        top: 8px;
+        width: calc(100vw - 16px);
+        max-height: 42vh;
+        gap: 6px;
+        padding: 8px;
+      }
+      .title {
+        font-size: 12px;
+      }
+      label, button, select {
+        min-height: 30px;
+        font-size: 11px;
+      }
+      input[type="file"] {
+        width: min(58vw, 220px);
+      }
+      .status {
+        font-size: 11px;
+      }
+      .parts {
+        max-height: 18vh;
+        overflow: auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -119,6 +153,17 @@
     <div class="title">SPZ Parts Test</div>
     <div class="row">
       <label>SPZ <input id="splatFile" type="file" accept=".spz"></label>
+      <button id="advancedToggleButton" type="button" aria-expanded="false">詳細を開く</button>
+    </div>
+    <div class="row">
+      <button class="motionButton" type="button" data-motion="idle">&#24453;&#27231;</button>
+      <button class="motionButton" type="button" data-motion="walk">&#27497;&#12367;</button>
+      <button class="motionButton" type="button" data-motion="jogBack">&#12472;&#12519;&#12464;&#24460;&#36864;</button>
+      <button class="motionButton" type="button" data-motion="stepBack">&#24460;&#36864;</button>
+      <button id="stopMotionButton" type="button">&#20572;&#27490;</button>
+    </div>
+    <div id="advancedControls" class="advancedControls">
+    <div class="row">
       <button id="sampleButton" type="button">&#12469;&#12531;&#12503;&#12523;</button>
       <select id="frontSelect">
         <option value="auto">&#27491;&#38754; &#33258;&#21205;</option>
@@ -144,15 +189,9 @@
       <button id="csvButton" type="button">CSV</button>
       <button id="resetButton" type="button">&#21021;&#26399;&#21270;</button>
     </div>
-    <div class="row">
-      <button class="motionButton" type="button" data-motion="idle">&#24453;&#27231;</button>
-      <button class="motionButton" type="button" data-motion="walk">&#27497;&#12367;</button>
-      <button class="motionButton" type="button" data-motion="jogBack">&#12472;&#12519;&#12464;&#24460;&#36864;</button>
-      <button class="motionButton" type="button" data-motion="stepBack">&#24460;&#36864;</button>
-      <button id="stopMotionButton" type="button">&#20572;&#27490;</button>
-    </div>
     <div class="parts" id="partsToggles"></div>
     <div class="status" id="status">SPZ&#12434;&#35501;&#12415;&#36796;&#12435;&#12391;&#12367;&#12384;&#12373;&#12356;&#12290;&#12497;&#12540;&#12484;&#20998;&#12369;&#12392;&#31777;&#26131;&#12514;&#12540;&#12471;&#12519;&#12531;&#12434;&#30906;&#35469;&#12375;&#12414;&#12377;&#12290;</div>
+    </div>
   </div>
 
   <script>
@@ -193,6 +232,7 @@
       capsuleRangeToggle: document.getElementById("capsuleRangeToggle"),
       presetButtons: [...document.querySelectorAll(".presetButton")],
       motionButtons: [...document.querySelectorAll(".motionButton")],
+      advancedToggleButton: document.getElementById("advancedToggleButton"),
       csvButton: document.getElementById("csvButton"),
       resetButton: document.getElementById("resetButton"),
       stopMotionButton: document.getElementById("stopMotionButton"),
@@ -213,7 +253,7 @@
       jogBack: { label: "\u30b8\u30e7\u30b0\u5f8c\u9000", url: "mixamo/Slow Jog Backwards.glb" },
       stepBack: { label: "\u5f8c\u9000", url: "mixamo/Step Backward.glb" }
     };
-    const DEFAULT_VISIBLE_PARTS = ["head"];
+    const DEFAULT_VISIBLE_PARTS = [];
     const savedSettings = loadSettings();
 
     const state = {
@@ -222,7 +262,7 @@
       sourceBounds: null,
       sourceBase: null,
       frontSign: 1,
-      visibleParts: new Set(savedSettings.visibleParts ?? DEFAULT_VISIBLE_PARTS),
+      visibleParts: new Set(DEFAULT_VISIBLE_PARTS),
       partCounts: {},
       partIndices: null,
       segmentMesh: null,
@@ -262,6 +302,8 @@
     ];
     const PART_INDEX = Object.fromEntries(PARTS.map((part, index) => [part.id, index]));
     const INDEX_PART = PARTS.map((part) => part.id);
+    const ALL_PART_IDS = PARTS.map((part) => part.id);
+    state.visibleParts = new Set(ALL_PART_IDS);
 
     const RIG_LINES = [
       ["hips", "spine"], ["spine", "spine1"], ["spine1", "spine2"], ["spine2", "neck"], ["neck", "head"],
@@ -273,6 +315,12 @@
 
     function setStatus(text) {
       ui.status.textContent = text;
+    }
+
+    function setAdvancedControlsOpen(open) {
+      document.querySelector(".panel")?.classList.toggle("controls-open", open);
+      ui.advancedToggleButton.setAttribute("aria-expanded", String(open));
+      ui.advancedToggleButton.textContent = open ? "詳細を閉じる" : "詳細を開く";
     }
 
     function loadSettings() {
@@ -362,7 +410,7 @@
       ui.scaleValue.textContent = ui.scaleInput.value;
       ui.headYValue.textContent = ui.headYInput.value;
       ui.capsuleValue.textContent = ui.capsuleInput.value;
-      state.visibleParts = new Set(DEFAULT_VISIBLE_PARTS);
+      state.visibleParts = new Set(ALL_PART_IDS);
       localStorage.removeItem(STORAGE_KEY);
       renderPartToggles();
       reloadSegmentation();
@@ -1263,6 +1311,10 @@
       if (file) loadSplatSource(file, file.name);
     });
     ui.sampleButton.addEventListener("click", () => loadSplatSource(SAMPLE_SPZ_URL, "zenshin.spz"));
+    ui.advancedToggleButton.addEventListener("click", () => {
+      const panel = document.querySelector(".panel");
+      setAdvancedControlsOpen(!panel?.classList.contains("controls-open"));
+    });
     ui.allButton.addEventListener("click", () => setVisibleParts(PARTS.map((part) => part.id)));
     ui.noneButton.addEventListener("click", () => setVisibleParts([]));
       ui.presetButtons.forEach((button) => {
@@ -1290,6 +1342,7 @@
       });
 
     applySavedSettings();
+    setAdvancedControlsOpen(false);
     renderPartToggles();
     loadSplatSource(SAMPLE_SPZ_URL, "zenshin.spz");
     engine.runRenderLoop(() => {
