@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#071523">
+  <title>灯りの川 — 灯籠流し VR</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
+  <style>
+    :root { color-scheme: dark; font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; }
+    * { box-sizing: border-box; }
+    html, body, #renderCanvas { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { background: #071523; }
+    #renderCanvas { display: block; touch-action: none; outline: 0; }
+    .shade { position: fixed; inset: 0; pointer-events: none; background: linear-gradient(180deg,rgba(2,8,18,.05),rgba(2,8,18,.24)); z-index: 2; }
+    .topbar { position: fixed; z-index: 4; top: max(14px,env(safe-area-inset-top)); left: max(14px,env(safe-area-inset-left)); right: max(14px,env(safe-area-inset-right)); display:flex; justify-content:space-between; align-items:flex-start; gap:12px; pointer-events:none; }
+    .title { text-shadow: 0 2px 18px #000; }
+    .title h1 { margin:0; font-size:clamp(19px,4vw,30px); letter-spacing:.16em; font-weight:500; }
+    .title p { margin:5px 0 0; color:#d8dfdc; font-family:system-ui,sans-serif; font-size:11px; letter-spacing:.08em; }
+    .sound { pointer-events:auto; width:44px; height:44px; border:1px solid rgba(255,255,255,.28); border-radius:50%; color:white; background:rgba(5,15,25,.52); backdrop-filter:blur(8px); font-size:18px; cursor:pointer; }
+    .panel { position:fixed; z-index:4; left:50%; bottom:max(22px,env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(480px,calc(100% - 28px)); padding:14px; border:1px solid rgba(255,230,188,.25); border-radius:18px; color:#fff9e9; background:rgba(5,15,25,.68); box-shadow:0 14px 50px rgba(0,0,0,.28); backdrop-filter:blur(12px); text-align:center; transition:opacity .5s,transform .5s; }
+    .panel.hidden { opacity:0; transform:translate(-50%,24px); pointer-events:none; }
+    #message { min-height:1.5em; margin:0 0 10px; font-family:system-ui,sans-serif; font-size:14px; line-height:1.55; }
+    .actions { display:flex; justify-content:center; gap:9px; }
+    button.action { min-height:44px; padding:10px 18px; border:1px solid rgba(255,228,175,.52); border-radius:999px; color:#fff8e8; background:linear-gradient(#9c512a,#71351f); box-shadow:0 5px 18px rgba(151,74,31,.28); font:700 14px system-ui,sans-serif; cursor:pointer; }
+    button.action:hover,button.action:focus-visible { filter:brightness(1.14); outline:2px solid rgba(255,229,179,.55); outline-offset:2px; }
+    .hint { position:fixed; z-index:4; left:50%; top:23%; transform:translateX(-50%); padding:8px 13px; border-radius:999px; color:#fff4d7; background:rgba(4,12,20,.62); font:12px system-ui,sans-serif; pointer-events:none; opacity:0; transition:opacity .3s; white-space:nowrap; }
+    .hint.show { opacity:1; }
+    .start { position:fixed; z-index:10; inset:0; display:grid; place-items:center; padding:24px; background:radial-gradient(circle at 50% 38%,#19344b 0,#081724 50%,#030a10 100%); transition:opacity .8s; }
+    .start.gone { opacity:0; pointer-events:none; }
+    .start-card { width:min(500px,100%); text-align:center; }
+    .start-lantern { position:relative; width:76px; height:94px; margin:0 auto 26px; border:7px solid #402318; background:rgba(255,195,112,.85); box-shadow:0 0 35px #ff9a3c,0 0 90px rgba(255,128,45,.35); }
+    .start-lantern:before,.start-lantern:after { content:""; position:absolute; left:-13px; width:88px; height:9px; background:#281711; }
+    .start-lantern:before { top:-12px; } .start-lantern:after { bottom:-12px; }
+    .start h2 { margin:0; font-size:clamp(28px,8vw,46px); letter-spacing:.2em; font-weight:500; }
+    .start p { margin:14px auto 24px; max-width:390px; color:#dbe4e5; font:14px/1.8 system-ui,sans-serif; }
+    .start .action { padding:13px 26px; font-size:15px; }
+    .credit { margin-top:12px; color:#95a6ab; font:10px system-ui,sans-serif; }
+    @media (max-height:560px) { .topbar .title p{display:none}.panel{bottom:10px;padding:10px}.start-lantern{width:52px;height:62px;margin-bottom:15px}.start h2{font-size:27px}.start p{margin:9px auto 14px} }
+  </style>
+</head>
+<body>
+  <canvas id="renderCanvas" aria-label="夕暮れの川に灯籠を流す3D体験"></canvas>
+  <div class="shade"></div>
+  <header class="topbar">
+    <div class="title"><h1>灯りの川</h1><p>TORO NAGASHI · A QUIET RIVER OF LIGHT</p></div>
+    <button id="soundButton" class="sound" aria-label="環境音を消す" title="環境音">♪</button>
+  </header>
+  <div id="aimHint" class="hint">川の手前を選んで、灯籠を置いてください</div>
+  <section id="controlPanel" class="panel hidden" aria-live="polite">
+    <p id="message">あなたの灯籠を川へ送り出しましょう。</p>
+    <div class="actions"><button id="lanternButton" class="action">灯籠を手に取る</button></div>
+  </section>
+  <div id="startScreen" class="start">
+    <div class="start-card">
+      <div class="start-lantern" aria-hidden="true"></div>
+      <h2>灯りの川</h2>
+      <p>夕暮れの水辺で、ひとつの灯籠をそっと流す短い体験です。音が流れます。</p>
+      <button id="startButton" class="action">川辺へ行く</button>
+      <div class="credit">画面をドラッグして見回せます · VR対応機器ではゴーグルボタンが表示されます</div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    "use strict";
+    const canvas = document.getElementById("renderCanvas");
+    const startScreen = document.getElementById("startScreen");
+    const startButton = document.getElementById("startButton");
+    const controlPanel = document.getElementById("controlPanel");
+    const lanternButton = document.getElementById("lanternButton");
+    const message = document.getElementById("message");
+    const aimHint = document.getElementById("aimHint");
+    const soundButton = document.getElementById("soundButton");
+    const engine = new BABYLON.Engine(canvas, true, { stencil:true, adaptToDeviceRatio:true });
+    let scene, camera, water, readyLantern = null, heldLantern = null, audio = null, muted = false, releasedCount = 0;
+    const floatingLanterns = [];
+    const rand = (a,b) => a + Math.random() * (b-a);
+
+    function material(name, color, emissive=null, alpha=1) {
+      const m = new BABYLON.StandardMaterial(name, scene);
+      m.diffuseColor = color; m.alpha = alpha;
+      if (emissive) m.emissiveColor = emissive;
+      return m;
+    }
+
+    function createSky() {
+      const dome = BABYLON.MeshBuilder.CreateSphere("夕暮れの空", { diameter:380, segments:32, sideOrientation:BABYLON.Mesh.BACKSIDE }, scene);
+      const skyMat = new BABYLON.ShaderMaterial("夕暮れ", scene, { vertex:"gradient", fragment:"gradient" }, { attributes:["position"], uniforms:["worldViewProjection","world"] });
+      skyMat.backFaceCulling = false;
+      dome.material = skyMat;
+      for (let i=0;i<90;i++) {
+        const s = BABYLON.MeshBuilder.CreateSphere("星", {diameter:rand(.025,.075),segments:4}, scene);
+        const angle=rand(-1.25,1.25), distance=150;
+        s.position.set(Math.sin(angle)*distance,rand(28,90),Math.cos(angle)*distance-10);
+        s.material = material("星明かり",BABYLON.Color3.Black(),new BABYLON.Color3(.8,.85,1));
+      }
+    }
+
+    BABYLON.Effect.ShadersStore.gradientVertexShader = `
+      precision highp float; attribute vec3 position; uniform mat4 worldViewProjection; uniform mat4 world;
+      varying vec3 vPos; void main(){ vec4 wp=world*vec4(position,1.0); vPos=normalize(wp.xyz); gl_Position=worldViewProjection*vec4(position,1.0); }`;
+    BABYLON.Effect.ShadersStore.gradientFragmentShader = `
+      precision highp float; varying vec3 vPos;
+      void main(){ float h=clamp(vPos.y*.72+.38,0.,1.); vec3 night=vec3(.012,.035,.09); vec3 blue=vec3(.06,.17,.28); vec3 dusk=vec3(.72,.25,.17); vec3 c=mix(dusk,blue,smoothstep(.05,.31,h)); c=mix(c,night,smoothstep(.38,.9,h)); gl_FragColor=vec4(c,1.); }`;
+
+    function createLandscape() {
+      const bankMat=material("川岸",new BABYLON.Color3(.055,.09,.075));
+      const sandMat=material("砂",new BABYLON.Color3(.18,.16,.11));
+      [-1,1].forEach(side => {
+        const bank=BABYLON.MeshBuilder.CreateGround("川岸",{width:34,height:180},scene);
+        bank.position.set(side*23,-.12,50); bank.material=bankMat;
+        const edge=BABYLON.MeshBuilder.CreateGround("岸辺",{width:9,height:180},scene);
+        edge.position.set(side*10.7,-.055,50); edge.material=sandMat;
+      });
+      const foreground=BABYLON.MeshBuilder.CreateGround("足元",{width:24,height:12},scene);
+      foreground.position.set(0,.02,-12); foreground.material=sandMat;
+      for(let row=0;row<3;row++) for(let i=0;i<17;i++) {
+        const hill=BABYLON.MeshBuilder.CreateSphere("遠景の山",{diameter:rand(20,38),segments:8},scene);
+        hill.scaling.y=rand(.35,.65); hill.position.set(-105+i*13+rand(-4,4),rand(0,5),92+row*18); hill.material=bankMat;
+      }
+      for(let i=0;i<28;i++) {
+        const side=i%2?-1:1, x=side*rand(15,29), z=rand(-8,100);
+        const trunk=BABYLON.MeshBuilder.CreateCylinder("木",{height:rand(3,6),diameter:.24,tessellation:7},scene);
+        trunk.position.set(x,1.4,z); trunk.material=material("幹",new BABYLON.Color3(.08,.045,.025));
+        const crown=BABYLON.MeshBuilder.CreateSphere("木立",{diameter:rand(3,6),segments:7},scene);
+        crown.scaling.y=1.5; crown.position.set(x+rand(-.4,.4),rand(3.5,5.7),z); crown.material=bankMat;
+      }
+    }
+
+    function createWater() {
+      water=BABYLON.MeshBuilder.CreateGround("川",{width:18,height:180,subdivisions:64},scene);
+      water.position.set(0,0,50); water.isPickable=true;
+      const wm=new BABYLON.WaterMaterial("ゆらぐ水面",scene,new BABYLON.Vector2(512,512));
+      wm.bumpTexture=new BABYLON.Texture("https://assets.babylonjs.com/textures/waterbump.png",scene);
+      wm.windForce=-3; wm.waveHeight=.10; wm.bumpHeight=.15; wm.waveLength=.45; wm.colorBlendFactor=.28;
+      wm.waterColor=new BABYLON.Color3(.018,.09,.13); wm.windDirection=new BABYLON.Vector2(0,1);
+      water.material=wm;
+      return wm;
+    }
+
+    function createLantern(pos, scale=1, personal=false) {
+      const root=new BABYLON.TransformNode(personal?"あなたの灯籠":"流れる灯籠",scene);
+      root.position.copyFrom(pos); root.scaling.setAll(scale);
+      const paper=material("和紙",new BABYLON.Color3(.95,.54,.22),new BABYLON.Color3(1,.32,.065),.88);
+      paper.backFaceCulling=false;
+      const wood=material("木枠",new BABYLON.Color3(.13,.045,.018));
+      const body=BABYLON.MeshBuilder.CreateBox("灯籠の和紙",{width:.72,height:.82,depth:.72},scene);
+      body.parent=root; body.position.y=.52; body.material=paper; body.isPickable=false;
+      [.05,.98].forEach(y=>{
+        const rail=BABYLON.MeshBuilder.CreateBox("灯籠の木枠",{width:.88,height:.09,depth:.88},scene);
+        rail.parent=root; rail.position.y=y; rail.material=wood; rail.isPickable=false;
+      });
+      if(personal) {
+        const mark=BABYLON.MeshBuilder.CreatePlane("あなたの印",{width:.26,height:.26},scene);
+        mark.parent=root; mark.position.set(0,.54,-.366); mark.rotation.y=Math.PI; mark.material=material("花の印",BABYLON.Color3.Black(),new BABYLON.Color3(.95,.12,.09),.8);
+      }
+      const glow=BABYLON.MeshBuilder.CreatePlane("水面の灯り",{width:.8,height:3.2},scene);
+      glow.parent=root; glow.rotation.x=Math.PI/2; glow.position.set(0,.025,1.25);
+      glow.material=material("灯りの反射",BABYLON.Color3.Black(),new BABYLON.Color3(1,.19,.025),.26); glow.material.disableLighting=true; glow.isPickable=false;
+      const light=new BABYLON.PointLight("灯籠の灯り",new BABYLON.Vector3(0,.7,0),scene);
+      light.parent=root; light.diffuse=new BABYLON.Color3(1,.36,.1); light.intensity=personal?.75:.32; light.range=personal?7:4;
+      root.metadata={ phase:rand(0,Math.PI*2), speed:rand(.58,.8), baseX:pos.x, personal, born:performance.now() };
+      if(water?.material?.addToRenderList) {
+        root.getChildMeshes().filter(mesh=>mesh.name!=="水面の灯り").forEach(mesh=>water.material.addToRenderList(mesh));
+      }
+      return root;
+    }
+
+    function seedLanterns() {
+      for(let i=0;i<20;i++) {
+        const z=rand(16,105), x=rand(-6.5,6.5);
+        const l=createLantern(new BABYLON.Vector3(x,.08,z),rand(.72,.95));
+        l.metadata.speed=rand(.28,.55); floatingLanterns.push(l);
+      }
+    }
+
+    function createLanternStand() {
+      const wood=material("灯籠台",new BABYLON.Color3(.12,.055,.024));
+      const stand=BABYLON.MeshBuilder.CreateBox("灯籠台",{width:2,height:.42,depth:1.45},scene);
+      stand.position.set(-7.15,.18,3.2); stand.material=wood;
+      readyLantern=createLantern(new BABYLON.Vector3(-7.15,.38,3.2),.86,true);
+      readyLantern.getChildMeshes().forEach(mesh=>{mesh.isPickable=true;mesh.metadata={takeLantern:true};});
+      const labelTexture=new BABYLON.DynamicTexture("案内",{width:512,height:128},scene,true);
+      labelTexture.hasAlpha=true; labelTexture.drawText("灯籠を手に取る",28,82,"bold 48px sans-serif","#fff2cf","rgba(4,12,18,.78)",true,true);
+      const labelMat=new BABYLON.StandardMaterial("案内板",scene); labelMat.diffuseTexture=labelTexture; labelMat.emissiveTexture=labelTexture; labelMat.opacityTexture=labelTexture; labelMat.backFaceCulling=false;
+      const label=BABYLON.MeshBuilder.CreatePlane("灯籠を手に取る",{width:3.2,height:.8,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);
+      label.position.set(-7.15,1.75,3.2); label.billboardMode=BABYLON.Mesh.BILLBOARDMODE_Y; label.material=labelMat; label.metadata={takeLantern:true};
+    }
+
+    function takeLantern() {
+      if(heldLantern) return;
+      heldLantern=createLantern(new BABYLON.Vector3(0,.8,2.8),1,true);
+      heldLantern.metadata.held=true;
+      if(readyLantern) readyLantern.setEnabled(false);
+      lanternButton.textContent="灯籠を持っています"; lanternButton.disabled=true;
+      message.textContent="川の手前を選んで、灯籠をそっと置いてください。";
+      aimHint.classList.add("show");
+    }
+
+    function releaseLantern(point) {
+      if(!heldLantern || point.z<1 || point.z>40 || Math.abs(point.x)>8.4) return;
+      heldLantern.position.set(BABYLON.Scalar.Clamp(point.x,-6.7,6.7),.08,BABYLON.Scalar.Clamp(point.z,2,24));
+      heldLantern.metadata.held=false; heldLantern.metadata.baseX=heldLantern.position.x; heldLantern.metadata.born=performance.now();
+      floatingLanterns.push(heldLantern); heldLantern=null; releasedCount++;
+      aimHint.classList.remove("show");
+      lanternButton.disabled=false; lanternButton.textContent="もう一つ流す";
+      if(readyLantern) readyLantern.setEnabled(true);
+      message.textContent="あなたの灯りが、ゆっくり川を下っていきます。";
+      setTimeout(()=>{ if(!heldLantern) message.textContent="灯りが集まり、ひとつの流れになっていきます。"; },6500);
+    }
+
+    function setupInteraction() {
+      lanternButton.addEventListener("click",takeLantern);
+      scene.onPointerObservable.add(info=>{
+        if(info.type!==BABYLON.PointerEventTypes.POINTERDOWN) return;
+        if(info.pickInfo?.pickedMesh?.metadata?.takeLantern){takeLantern();return;}
+        if(!heldLantern) return;
+        const pick=info.pickInfo?.pickedMesh===water ? info.pickInfo : scene.pick(scene.pointerX,scene.pointerY,m=>m===water);
+        if(pick?.hit) releaseLantern(pick.pickedPoint);
+      });
+      scene.onBeforeRenderObservable.add(()=>{
+        if(!heldLantern) return;
+        const pick=scene.pick(scene.pointerX,scene.pointerY,m=>m===water);
+        if(pick?.hit && pick.pickedPoint.z<40) heldLantern.position=BABYLON.Vector3.Lerp(heldLantern.position,new BABYLON.Vector3(pick.pickedPoint.x,.55,pick.pickedPoint.z),.12);
+      });
+    }
+
+    function updateLanterns(t) {
+      const dt=Math.min(engine.getDeltaTime()/1000,.04);
+      floatingLanterns.forEach(l=>{
+        const m=l.metadata; if(m.held)return;
+        l.position.z+=m.speed*dt;
+        const age=(performance.now()-m.born)/1000;
+        l.position.x=m.baseX+Math.sin(t*.45+m.phase)*.20+Math.sin(t*.13+m.phase)*.12;
+        l.position.y=.09+Math.sin(t*1.25+m.phase)*.025;
+        l.rotation.y=Math.sin(t*.34+m.phase)*.12;
+        l.rotation.z=Math.sin(t*.72+m.phase)*.018;
+        if(m.personal && age<35) l.scaling.setAll(1+Math.sin(t*2)*.018);
+        if(l.position.z>120){l.position.z=12;l.metadata.baseX=rand(-6.5,6.5);}
+      });
+    }
+
+    function makeNoiseBuffer(ctx, seconds) {
+      const b=ctx.createBuffer(1,ctx.sampleRate*seconds,ctx.sampleRate),d=b.getChannelData(0);
+      let last=0; for(let i=0;i<d.length;i++){const white=Math.random()*2-1;last=last*.985+white*.015;d[i]=last*3.2;} return b;
+    }
+
+    function startAudio() {
+      if(audio){audio.ctx.resume();return;}
+      const ctx=new (window.AudioContext||window.webkitAudioContext)(), master=ctx.createGain(); master.gain.value=.38; master.connect(ctx.destination);
+      function noise(type,freq,gain){const src=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),g=ctx.createGain();src.buffer=makeNoiseBuffer(ctx,3);src.loop=true;filter.type=type;filter.frequency.value=freq;g.gain.value=gain;src.connect(filter).connect(g).connect(master);src.start();return g;}
+      noise("lowpass",720,.52); noise("bandpass",190,.18); noise("lowpass",160,.11);
+      const insectGain=ctx.createGain(); insectGain.gain.value=.025; insectGain.connect(master); audio={ctx,master};
+      function chirp(){if(!audio)return;const now=ctx.currentTime;for(let i=0;i<rand(2,5);i++){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=rand(3200,4900);o.type="sine";g.gain.setValueAtTime(0,now+i*.095);g.gain.linearRampToValueAtTime(.16,now+i*.095+.012);g.gain.exponentialRampToValueAtTime(.001,now+i*.095+.07);o.connect(g).connect(insectGain);o.start(now+i*.095);o.stop(now+i*.095+.08);}setTimeout(chirp,rand(1200,3400));} chirp();
+    }
+
+    async function createScene() {
+      scene=new BABYLON.Scene(engine); scene.clearColor=new BABYLON.Color4(.008,.025,.05,1); scene.ambientColor=new BABYLON.Color3(.11,.14,.19);
+      scene.imageProcessingConfiguration.exposure=1.08; scene.imageProcessingConfiguration.contrast=1.13;
+      camera=new BABYLON.ArcRotateCamera("川岸の視点",-Math.PI/2,1.25,18,new BABYLON.Vector3(0,1.2,15),scene);
+      camera.attachControl(canvas,true); camera.lowerRadiusLimit=12; camera.upperRadiusLimit=22; camera.lowerBetaLimit=.86; camera.upperBetaLimit=1.47; camera.wheelPrecision=80; camera.panningSensibility=0;
+      const hemi=new BABYLON.HemisphericLight("残照",new BABYLON.Vector3(0,1,-.4),scene); hemi.intensity=.48; hemi.diffuse=new BABYLON.Color3(.5,.58,.72); hemi.groundColor=new BABYLON.Color3(.18,.08,.05);
+      const dusk=new BABYLON.DirectionalLight("夕暮れ",new BABYLON.Vector3(.2,-.25,.8),scene); dusk.intensity=.45; dusk.diffuse=new BABYLON.Color3(1,.38,.2);
+      createSky(); createLandscape(); createWater(); seedLanterns(); createLanternStand();
+      const glow=new BABYLON.GlowLayer("柔らかな光",scene,{blurKernelSize:32}); glow.intensity=.65;
+      setupInteraction();
+      try { await scene.createDefaultXRExperienceAsync({ disableTeleportation:true, uiOptions:{sessionMode:"immersive-vr",referenceSpaceType:"local-floor"}, optionalFeatures:true }); } catch(e){ console.info("WebXRはこの環境では利用できません。",e); }
+      return scene;
+    }
+
+    startButton.addEventListener("click",()=>{startAudio();startScreen.classList.add("gone");controlPanel.classList.remove("hidden");setTimeout(()=>startScreen.hidden=true,850);});
+    soundButton.addEventListener("click",()=>{if(!audio){startAudio();muted=false;}else{muted=!muted;audio.master.gain.setTargetAtTime(muted?0:.38,audio.ctx.currentTime,.08);}soundButton.textContent=muted?"♩":"♪";soundButton.setAttribute("aria-label",muted?"環境音を流す":"環境音を消す");});
+    createScene().then(()=>{engine.runRenderLoop(()=>{updateLanterns(performance.now()/1000);scene.render();});}).catch(err=>{console.error(err);message.textContent="3Dシーンを読み込めませんでした。ページを再読み込みしてください。";controlPanel.classList.remove("hidden");});
+    window.addEventListener("resize",()=>engine.resize());
+  })();
+  </script>
+</body>
+</html>
