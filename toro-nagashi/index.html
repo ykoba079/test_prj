@@ -75,7 +75,9 @@
     const soundButton = document.getElementById("soundButton");
     const engine = new BABYLON.Engine(canvas, true, { stencil:true, adaptToDeviceRatio:true });
     let scene, camera, water, readyLantern = null, heldLantern = null, audio = null, muted = false, releasedCount = 0;
-    const floatingLanterns = [];
+    let flameMaterial = null, reflectionMaterial = null, woodMaterial = null, glowLayer = null;
+    const paperMaterials = [];
+    const floatingLanterns = [], allLanterns = [];
     const rand = (a,b) => a + Math.random() * (b-a);
 
     function material(name, color, emissive=null, alpha=1) {
@@ -87,27 +89,43 @@
 
     function createSky() {
       const dome = BABYLON.MeshBuilder.CreateSphere("夕暮れの空", { diameter:380, segments:32, sideOrientation:BABYLON.Mesh.BACKSIDE }, scene);
-      const skyMat = new BABYLON.ShaderMaterial("夕暮れ", scene, { vertex:"gradient", fragment:"gradient" }, { attributes:["position"], uniforms:["worldViewProjection","world"] });
+      const skyMat = new BABYLON.ShaderMaterial("夕暮れ", scene, { vertex:"gradient", fragment:"gradient" }, { attributes:["position"], uniforms:["worldViewProjection","world","time"] });
       skyMat.backFaceCulling = false;
       dome.material = skyMat;
-      for (let i=0;i<90;i++) {
-        const s = BABYLON.MeshBuilder.CreateSphere("星", {diameter:rand(.025,.075),segments:4}, scene);
-        const angle=rand(-1.25,1.25), distance=150;
-        s.position.set(Math.sin(angle)*distance,rand(28,90),Math.cos(angle)*distance-10);
-        s.material = material("星明かり",BABYLON.Color3.Black(),new BABYLON.Color3(.8,.85,1));
-      }
+      scene.onBeforeRenderObservable.add(()=>skyMat.setFloat("time",performance.now()/1000));
     }
 
     BABYLON.Effect.ShadersStore.gradientVertexShader = `
       precision highp float; attribute vec3 position; uniform mat4 worldViewProjection; uniform mat4 world;
       varying vec3 vPos; void main(){ vec4 wp=world*vec4(position,1.0); vPos=normalize(wp.xyz); gl_Position=worldViewProjection*vec4(position,1.0); }`;
     BABYLON.Effect.ShadersStore.gradientFragmentShader = `
-      precision highp float; varying vec3 vPos;
-      void main(){ float h=clamp(vPos.y*.72+.38,0.,1.); vec3 night=vec3(.012,.035,.09); vec3 blue=vec3(.06,.17,.28); vec3 dusk=vec3(.72,.25,.17); vec3 c=mix(dusk,blue,smoothstep(.05,.31,h)); c=mix(c,night,smoothstep(.38,.9,h)); gl_FragColor=vec4(c,1.); }`;
+      precision highp float; varying vec3 vPos; uniform float time;
+      float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+      void main(){
+        float h=clamp(vPos.y*.72+.38,0.,1.);
+        vec3 night=vec3(.006,.018,.055), blue=vec3(.035,.105,.19), dusk=vec3(.52,.135,.085);
+        vec3 c=mix(dusk,blue,smoothstep(.04,.30,h)); c=mix(c,night,smoothstep(.37,.88,h));
+        vec2 uv=vec2(atan(vPos.z,vPos.x)/6.2831853+.5,asin(clamp(vPos.y,-1.,1.))/3.1415926+.5);
+        vec2 cells=uv*vec2(520.,260.), id=floor(cells), p=fract(cells)-.5;
+        float n=hash(id), n2=hash(id+19.37); vec2 offset=vec2(hash(id+3.1),hash(id+7.7))-.5;
+        float radius=mix(.032,.12,n2*n2); float star=smoothstep(radius,0.,length(p-offset))*step(.972,n);
+        float twinkle=.76+.24*sin(time*(1.1+n2*2.8)+n*31.4);
+        vec3 starColor=mix(vec3(.72,.82,1.),vec3(1.,.78,.52),hash(id+53.))*star*twinkle;
+        float horizonFade=smoothstep(.12,.38,vPos.y);
+        float milky=pow(max(0.,1.-abs(vPos.x*.62+vPos.y*.44-.08)),8.)*.045*smoothstep(.2,.75,vPos.y);
+        c+=starColor*horizonFade+vec3(.25,.31,.46)*milky;
+        gl_FragColor=vec4(c,1.);
+      }`;
 
     function createLandscape() {
       const bankMat=material("川岸",new BABYLON.Color3(.055,.09,.075));
       const sandMat=material("砂",new BABYLON.Color3(.18,.16,.11));
+      const barkMat=material("樹皮",new BABYLON.Color3(.045,.026,.017));
+      const foliageMats=[
+        material("葉の影",new BABYLON.Color3(.025,.052,.043)),
+        material("葉の中間色",new BABYLON.Color3(.038,.071,.055)),
+        material("葉の残照",new BABYLON.Color3(.052,.086,.064))
+      ];
       [-1,1].forEach(side => {
         const bank=BABYLON.MeshBuilder.CreateGround("川岸",{width:34,height:180},scene);
         bank.position.set(side*23,-.12,50); bank.material=bankMat;
@@ -122,10 +140,20 @@
       }
       for(let i=0;i<28;i++) {
         const side=i%2?-1:1, x=side*rand(15,29), z=rand(-8,100);
-        const trunk=BABYLON.MeshBuilder.CreateCylinder("木",{height:rand(3,6),diameter:.24,tessellation:7},scene);
-        trunk.position.set(x,1.4,z); trunk.material=material("幹",new BABYLON.Color3(.08,.045,.025));
-        const crown=BABYLON.MeshBuilder.CreateSphere("木立",{diameter:rand(3,6),segments:7},scene);
-        crown.scaling.y=1.5; crown.position.set(x+rand(-.4,.4),rand(3.5,5.7),z); crown.material=bankMat;
+        const height=rand(3.8,6.8), trunk=BABYLON.MeshBuilder.CreateCylinder("木",{height,diameterTop:.12,diameterBottom:.38,tessellation:7},scene);
+        trunk.position.set(x,height/2-.08,z); trunk.material=barkMat;
+        for(let cluster=0;cluster<5;cluster++){
+          const crown=BABYLON.MeshBuilder.CreateIcoSphere("重なる樹冠",{radius:rand(1.25,2.25),subdivisions:1,flat:true},scene);
+          crown.scaling.set(rand(.75,1.2),rand(.8,1.45),rand(.72,1.12));
+          crown.rotation.set(rand(-.25,.25),rand(0,Math.PI),rand(-.18,.18));
+          crown.position.set(x+rand(-1.15,1.15),height-rand(.2,1.8),z+rand(-.85,.85));
+          crown.material=foliageMats[cluster%foliageMats.length];
+        }
+      }
+      const distantLight=material("対岸の灯り",BABYLON.Color3.Black(),new BABYLON.Color3(1,.40,.09));
+      for(let i=0;i<22;i++){
+        const lamp=BABYLON.MeshBuilder.CreateSphere("遠くのぼけた灯り",{diameter:rand(.07,.22),segments:6},scene);
+        lamp.position.set(rand(-15,15),rand(.7,4.2),rand(96,116)); lamp.material=distantLight;
       }
     }
 
@@ -134,43 +162,117 @@
       water.position.set(0,0,50); water.isPickable=true;
       const wm=new BABYLON.WaterMaterial("ゆらぐ水面",scene,new BABYLON.Vector2(512,512));
       wm.bumpTexture=new BABYLON.Texture("https://assets.babylonjs.com/textures/waterbump.png",scene);
-      wm.windForce=-3; wm.waveHeight=.10; wm.bumpHeight=.15; wm.waveLength=.45; wm.colorBlendFactor=.28;
-      wm.waterColor=new BABYLON.Color3(.018,.09,.13); wm.windDirection=new BABYLON.Vector2(0,1);
+      wm.windForce=-1.5; wm.waveHeight=.038; wm.bumpHeight=.17; wm.waveLength=.20; wm.waveSpeed=.27; wm.colorBlendFactor=.13;
+      wm.waterColor=new BABYLON.Color3(.002,.012,.018); wm.windDirection=new BABYLON.Vector2(.18,1);
+      wm.specularColor=new BABYLON.Color3(.68,.72,.70); wm.specularPower=240;
       water.material=wm;
+      scene.meshes.filter(mesh=>mesh!==water && mesh.name!=="足元").forEach(mesh=>wm.addToRenderList(mesh));
       return wm;
+    }
+
+    function getFlameMaterial() {
+      if(flameMaterial) return flameMaterial;
+      const texture=new BABYLON.DynamicTexture("炎テクスチャ",{width:128,height:256},scene,false);
+      const ctx=texture.getContext(); ctx.clearRect(0,0,128,256);
+      const outer=ctx.createRadialGradient(64,148,4,64,148,62);
+      outer.addColorStop(0,"rgba(255,255,225,1)"); outer.addColorStop(.18,"rgba(255,230,110,.98)"); outer.addColorStop(.5,"rgba(255,105,20,.82)"); outer.addColorStop(1,"rgba(170,30,0,0)");
+      ctx.fillStyle=outer; ctx.beginPath(); ctx.moveTo(64,18); ctx.bezierCurveTo(103,82,116,170,64,235); ctx.bezierCurveTo(12,170,25,82,64,18); ctx.fill(); texture.update(false);
+      flameMaterial=new BABYLON.StandardMaterial("ろうそくの炎",scene); flameMaterial.diffuseTexture=texture; flameMaterial.emissiveTexture=texture; flameMaterial.opacityTexture=texture;
+      flameMaterial.disableLighting=true; flameMaterial.backFaceCulling=false; flameMaterial.useAlphaFromDiffuseTexture=true;
+      return flameMaterial;
+    }
+
+    function getReflectionMaterial() {
+      if(reflectionMaterial) return reflectionMaterial;
+      reflectionMaterial=new BABYLON.StandardMaterial("水面に途切れる灯り",scene);
+      reflectionMaterial.diffuseColor=new BABYLON.Color3(1.,.62,.16); reflectionMaterial.emissiveColor=new BABYLON.Color3(1.,.30,.035);
+      reflectionMaterial.alpha=.14; reflectionMaterial.disableLighting=true; reflectionMaterial.backFaceCulling=false;
+      return reflectionMaterial;
+    }
+
+    function getPaperMaterial(variant=0) {
+      if(paperMaterials[variant]) return paperMaterials[variant];
+      const texture=new BABYLON.DynamicTexture(`和紙の繊維${variant}`,{width:256,height:256},scene,false);
+      const ctx=texture.getContext(), glow=ctx.createRadialGradient(128,145,6,128,145,186);
+      glow.addColorStop(0,"#fff8d9"); glow.addColorStop(.48,"#f5d28b"); glow.addColorStop(1,"#c9823e"); ctx.fillStyle=glow; ctx.fillRect(0,0,256,256);
+      ctx.globalAlpha=.10;
+      for(let i=0;i<460;i++){const y=rand(0,256),x=rand(0,256),length=rand(3,35);ctx.strokeStyle=i%3?"#fffdf0":"#80502c";ctx.lineWidth=rand(.2,.7);ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+length*.5,y+rand(-2,2),x+length,y+rand(-1,1));ctx.stroke();}
+      ctx.globalAlpha=.72; ctx.strokeStyle="#ba542e"; ctx.lineWidth=5; ctx.strokeRect(8,8,240,240);
+      const motifColors=["#5c4937","#8b3b2d","#476151","#74543c"], glyphs=["祈","灯","夢","花"];
+      ctx.fillStyle=motifColors[variant]; ctx.font='bold 48px "Yu Mincho",serif'; ctx.fillText(glyphs[variant],172,72);
+      ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(62,218); ctx.bezierCurveTo(40,164,76,118,113,67); ctx.stroke();
+      for(let leaf=0;leaf<4;leaf++){const lx=66+leaf*13,ly=186-leaf*30;ctx.beginPath();ctx.ellipse(lx+(leaf%2?17:-9),ly,18,8,leaf%2?-.65:.65,0,Math.PI*2);ctx.fill();}
+      ctx.globalAlpha=1; texture.update(false);
+      const paper=new BABYLON.PBRMaterial(`絵入りの薄い和紙${variant}`,scene); paper.albedoTexture=texture; paper.emissiveTexture=texture;
+      paper.albedoColor=new BABYLON.Color3(.95,.82,.58); paper.emissiveColor=new BABYLON.Color3(.62,.22,.035);
+      paper.metallic=0; paper.roughness=.97; paper.alpha=.76; paper.backFaceCulling=false;
+      paper.transparencyMode=BABYLON.PBRMaterial.PBRMATERIAL_ALPHABLEND; paperMaterials[variant]=paper;
+      return paper;
+    }
+
+    function getWoodMaterial() {
+      if(woodMaterial) return woodMaterial;
+      const texture=new BABYLON.DynamicTexture("木枠の木目",{width:256,height:64},scene,false),ctx=texture.getContext();
+      const base=ctx.createLinearGradient(0,0,0,64);base.addColorStop(0,"#35170d");base.addColorStop(.5,"#6c3219");base.addColorStop(1,"#261009");ctx.fillStyle=base;ctx.fillRect(0,0,256,64);
+      ctx.globalAlpha=.28;for(let i=0;i<34;i++){ctx.strokeStyle=i%2?"#c06b35":"#180a06";ctx.lineWidth=rand(.4,1.5);ctx.beginPath();ctx.moveTo(0,rand(0,64));ctx.bezierCurveTo(70,rand(0,64),170,rand(0,64),256,rand(0,64));ctx.stroke();}texture.update(false);
+      woodMaterial=new BABYLON.PBRMaterial("木目の木枠",scene);woodMaterial.albedoTexture=texture;woodMaterial.albedoColor=new BABYLON.Color3(.25,.12,.07);woodMaterial.metallic=0;woodMaterial.roughness=.84;
+      return woodMaterial;
     }
 
     function createLantern(pos, scale=1, personal=false) {
       const root=new BABYLON.TransformNode(personal?"あなたの灯籠":"流れる灯籠",scene);
       root.position.copyFrom(pos); root.scaling.setAll(scale);
-      const paper=material("和紙",new BABYLON.Color3(.95,.54,.22),new BABYLON.Color3(1,.32,.065),.88);
-      paper.backFaceCulling=false;
-      const wood=material("木枠",new BABYLON.Color3(.13,.045,.018));
-      const body=BABYLON.MeshBuilder.CreateBox("灯籠の和紙",{width:.72,height:.82,depth:.72},scene);
-      body.parent=root; body.position.y=.52; body.material=paper; body.isPickable=false;
-      [.05,.98].forEach(y=>{
-        const rail=BABYLON.MeshBuilder.CreateBox("灯籠の木枠",{width:.88,height:.09,depth:.88},scene);
-        rail.parent=root; rail.position.y=y; rail.material=wood; rail.isPickable=false;
+      const paper=getPaperMaterial(Math.floor(rand(0,4))), wood=getWoodMaterial();
+      [[0,0,.36,0],[0,0,-.36,Math.PI],[.36,0,0,Math.PI/2],[-.36,0,0,-Math.PI/2]].forEach((side,index)=>{
+        const panel=BABYLON.MeshBuilder.CreatePlane("灯籠の和紙",{width:.72,height:.82,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);
+        panel.parent=root; panel.position.set(side[0],.52,side[2]); panel.rotation.y=side[3]; panel.material=paper; panel.isPickable=false;
       });
+      const base=BABYLON.MeshBuilder.CreateBox("灯籠の底板",{width:.86,height:.075,depth:.86},scene);
+      base.parent=root; base.position.y=.045; base.material=wood; base.isPickable=false;
+      [[.88,.055,.055,0,.98,.415],[.88,.055,.055,0,.98,-.415],[.055,.055,.78,.415,.98,0],[.055,.055,.78,-.415,.98,0]].forEach(part=>{
+        const rail=BABYLON.MeshBuilder.CreateBox("開いた上面の木枠",{width:part[0],height:part[1],depth:part[2]},scene);
+        rail.parent=root; rail.position.set(part[3],part[4],part[5]); rail.material=wood; rail.isPickable=false;
+      });
+      [[-.39,-.39],[-.39,.39],[.39,-.39],[.39,.39]].forEach(corner=>{
+        const post=BABYLON.MeshBuilder.CreateBox("縦の木枠",{width:.055,height:.93,depth:.055},scene);
+        post.parent=root; post.position.set(corner[0],.52,corner[1]); post.material=wood; post.isPickable=false;
+      });
+      const handlePath=BABYLON.Curve3.CreateQuadraticBezier(
+        new BABYLON.Vector3(-.29,1.01,0),new BABYLON.Vector3(0,1.43,0),new BABYLON.Vector3(.29,1.01,0),14
+      ).getPoints();
+      const handle=BABYLON.MeshBuilder.CreateTube("灯籠の持ち手",{path:handlePath,radius:.012,tessellation:6,cap:BABYLON.Mesh.CAP_ALL},scene);
+      handle.parent=root; handle.material=wood; handle.isPickable=false;
+      const wax=material("ろうそく",new BABYLON.Color3(.82,.73,.52));
+      const candle=BABYLON.MeshBuilder.CreateCylinder("ろうそく",{height:.25,diameter:.12,tessellation:16},scene); candle.parent=root; candle.position.y=.20; candle.material=wax; candle.isPickable=false;
+      const wick=BABYLON.MeshBuilder.CreateCylinder("芯",{height:.10,diameter:.018,tessellation:6},scene); wick.parent=root; wick.position.y=.37; wick.material=wood; wick.isPickable=false;
+      const flameRoot=new BABYLON.TransformNode("揺れる炎",scene); flameRoot.parent=root; flameRoot.position.y=.49;
+      [0,Math.PI/2].forEach(rotation=>{const flame=BABYLON.MeshBuilder.CreatePlane("炎",{width:.16,height:.38,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);flame.parent=flameRoot;flame.rotation.y=rotation;flame.position.y=.08;flame.material=getFlameMaterial();flame.isPickable=false;});
       if(personal) {
-        const mark=BABYLON.MeshBuilder.CreatePlane("あなたの印",{width:.26,height:.26},scene);
-        mark.parent=root; mark.position.set(0,.54,-.366); mark.rotation.y=Math.PI; mark.material=material("花の印",BABYLON.Color3.Black(),new BABYLON.Color3(.95,.12,.09),.8);
+        const mark=BABYLON.MeshBuilder.CreateDisc("あなたの印",{radius:.105,tessellation:28,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);
+        mark.parent=root; mark.position.set(0,.55,-.367); mark.rotation.y=Math.PI; mark.material=material("朱色の丸印",new BABYLON.Color3(.45,.07,.025),new BABYLON.Color3(.18,.018,.004),.58);
       }
-      const glow=BABYLON.MeshBuilder.CreatePlane("水面の灯り",{width:.8,height:3.2},scene);
-      glow.parent=root; glow.rotation.x=Math.PI/2; glow.position.set(0,.025,1.25);
-      glow.material=material("灯りの反射",BABYLON.Color3.Black(),new BABYLON.Color3(1,.19,.025),.26); glow.material.disableLighting=true; glow.isPickable=false;
-      const light=new BABYLON.PointLight("灯籠の灯り",new BABYLON.Vector3(0,.7,0),scene);
-      light.parent=root; light.diffuse=new BABYLON.Color3(1,.36,.1); light.intensity=personal?.75:.32; light.range=personal?7:4;
-      root.metadata={ phase:rand(0,Math.PI*2), speed:rand(.58,.8), baseX:pos.x, personal, born:performance.now() };
+      const reflectionParts=[];
+      for(let streak=0;streak<12;streak++){
+        const ripple=BABYLON.MeshBuilder.CreateDisc("途切れた水面反射",{radius:.22,tessellation:20,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);
+        ripple.position.set(Math.sin(streak*2.7)*.09,.018,-.10-streak*.155); ripple.rotation.x=Math.PI/2;
+        ripple.scaling.set(rand(.48,1.6)*(1-streak*.035),rand(.035,.095),1); ripple.bakeCurrentTransformIntoVertices(); reflectionParts.push(ripple);
+      }
+      const glow=BABYLON.Mesh.MergeMeshes(reflectionParts,true,true,undefined,false,true);
+      glow.name="波で途切れる灯籠の反射"; glow.parent=root; glow.material=getReflectionMaterial(); glow.isPickable=false; glow.metadata={excludeGlow:true,isReflection:true};
+      if(glowLayer) glowLayer.addExcludedMesh(glow);
+      let light=null;
+      if(personal){light=new BABYLON.PointLight("灯籠の灯り",new BABYLON.Vector3(0,.62,0),scene);light.parent=root;light.diffuse=new BABYLON.Color3(1,.32,.075);light.intensity=.72;light.range=6;light.falloffType=BABYLON.Light.FALLOFF_PHYSICAL;}
+      root.metadata={ phase:rand(0,Math.PI*2), speed:rand(.58,.8), baseX:pos.x, personal, born:performance.now(), flame:flameRoot, light, reflection:glow };
+      allLanterns.push(root);
       if(water?.material?.addToRenderList) {
-        root.getChildMeshes().filter(mesh=>mesh.name!=="水面の灯り").forEach(mesh=>water.material.addToRenderList(mesh));
+        root.getChildMeshes().filter(mesh=>!mesh.metadata?.isReflection).forEach(mesh=>water.material.addToRenderList(mesh));
       }
       return root;
     }
 
     function seedLanterns() {
-      for(let i=0;i<20;i++) {
-        const z=rand(16,105), x=rand(-6.5,6.5);
+      for(let i=0;i<34;i++) {
+        const z=9+Math.pow(Math.random(),1.55)*98, x=rand(-6.7,6.7);
         const l=createLantern(new BABYLON.Vector3(x,.08,z),rand(.72,.95));
         l.metadata.speed=rand(.28,.55); floatingLanterns.push(l);
       }
@@ -181,7 +283,7 @@
       const stand=BABYLON.MeshBuilder.CreateBox("灯籠台",{width:2,height:.42,depth:1.45},scene);
       stand.position.set(-7.15,.18,3.2); stand.material=wood;
       readyLantern=createLantern(new BABYLON.Vector3(-7.15,.38,3.2),.86,true);
-      readyLantern.getChildMeshes().forEach(mesh=>{mesh.isPickable=true;mesh.metadata={takeLantern:true};});
+      readyLantern.getChildMeshes().forEach(mesh=>{mesh.isPickable=true;mesh.metadata={...(mesh.metadata||{}),takeLantern:true};});
       const labelTexture=new BABYLON.DynamicTexture("案内",{width:512,height:128},scene,true);
       labelTexture.hasAlpha=true; labelTexture.drawText("灯籠を手に取る",28,82,"bold 48px sans-serif","#fff2cf","rgba(4,12,18,.78)",true,true);
       const labelMat=new BABYLON.StandardMaterial("案内板",scene); labelMat.diffuseTexture=labelTexture; labelMat.emissiveTexture=labelTexture; labelMat.opacityTexture=labelTexture; labelMat.backFaceCulling=false;
@@ -229,6 +331,12 @@
 
     function updateLanterns(t) {
       const dt=Math.min(engine.getDeltaTime()/1000,.04);
+      allLanterns.forEach(l=>{
+        const m=l.metadata, flicker=.92+Math.sin(t*12.7+m.phase)*.055+Math.sin(t*21.3+m.phase)*.025;
+        if(m.flame){m.flame.scaling.set(.88+Math.sin(t*9.1+m.phase)*.10,flicker,1);m.flame.rotation.z=Math.sin(t*7.4+m.phase)*.07;m.flame.position.x=Math.sin(t*5.8+m.phase)*.012;}
+        if(m.light)m.light.intensity=.68*flicker;
+        if(m.reflection)m.reflection.scaling.x=.86+Math.sin(t*2.6+m.phase)*.16;
+      });
       floatingLanterns.forEach(l=>{
         const m=l.metadata; if(m.held)return;
         l.position.z+=m.speed*dt;
@@ -258,13 +366,16 @@
 
     async function createScene() {
       scene=new BABYLON.Scene(engine); scene.clearColor=new BABYLON.Color4(.008,.025,.05,1); scene.ambientColor=new BABYLON.Color3(.11,.14,.19);
-      scene.imageProcessingConfiguration.exposure=1.08; scene.imageProcessingConfiguration.contrast=1.13;
+      scene.imageProcessingConfiguration.exposure=1.04; scene.imageProcessingConfiguration.contrast=1.18;
+      scene.imageProcessingConfiguration.toneMappingEnabled=true; scene.imageProcessingConfiguration.toneMappingType=BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+      scene.imageProcessingConfiguration.vignetteEnabled=true; scene.imageProcessingConfiguration.vignetteWeight=1.35; scene.imageProcessingConfiguration.vignetteStretch=.15;
       camera=new BABYLON.ArcRotateCamera("川岸の視点",-Math.PI/2,1.25,18,new BABYLON.Vector3(0,1.2,15),scene);
       camera.attachControl(canvas,true); camera.lowerRadiusLimit=12; camera.upperRadiusLimit=22; camera.lowerBetaLimit=.86; camera.upperBetaLimit=1.47; camera.wheelPrecision=80; camera.panningSensibility=0;
       const hemi=new BABYLON.HemisphericLight("残照",new BABYLON.Vector3(0,1,-.4),scene); hemi.intensity=.48; hemi.diffuse=new BABYLON.Color3(.5,.58,.72); hemi.groundColor=new BABYLON.Color3(.18,.08,.05);
       const dusk=new BABYLON.DirectionalLight("夕暮れ",new BABYLON.Vector3(.2,-.25,.8),scene); dusk.intensity=.45; dusk.diffuse=new BABYLON.Color3(1,.38,.2);
       createSky(); createLandscape(); createWater(); seedLanterns(); createLanternStand();
-      const glow=new BABYLON.GlowLayer("柔らかな光",scene,{blurKernelSize:32}); glow.intensity=.65;
+      glowLayer=new BABYLON.GlowLayer("柔らかな光",scene,{blurKernelSize:48}); glowLayer.intensity=.58;
+      scene.meshes.filter(mesh=>mesh.metadata?.excludeGlow).forEach(mesh=>glowLayer.addExcludedMesh(mesh));
       setupInteraction();
       try { await scene.createDefaultXRExperienceAsync({ disableTeleportation:true, uiOptions:{sessionMode:"immersive-vr",referenceSpaceType:"local-floor"}, optionalFeatures:true }); } catch(e){ console.info("WebXRはこの環境では利用できません。",e); }
       return scene;
