@@ -58,7 +58,7 @@ button { touch-action: manipulation; }
 
 .sensor-label {
   color: var(--mint);
-  font: 800 11px ui-monospace, SFMono-Regular, Consolas, monospace;
+  font: 800 13px ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: .11em;
 }
 
@@ -96,8 +96,8 @@ button { touch-action: manipulation; }
 
 .sensor-content dl { margin: 0; }
 .sensor-content dl div { min-width: 0; }
-.sensor-content dt { color: var(--muted); font: 700 11px ui-monospace, monospace; }
-.sensor-content dd { margin: 0; font: 800 clamp(16px, 5vw, 23px) ui-monospace, SFMono-Regular, Consolas, monospace; line-height: 1.15; }
+.sensor-content dt { color: var(--muted); font: 700 12px ui-monospace, monospace; white-space: nowrap; }
+.sensor-content dd { margin: 0; font: 800 clamp(19px, 5.8vw, 27px) ui-monospace, SFMono-Regular, Consolas, monospace; line-height: 1.15; }
 
 .raw-values,
 .tilt-values { display: grid; align-items: center; gap: 8px; }
@@ -246,7 +246,7 @@ button { touch-action: manipulation; }
 @media (max-height: 700px) and (orientation: portrait) {
   .game-shell { grid-template-rows: 29dvh 71dvh; }
   .sensor-content { padding-block: 2px; }
-  .sensor-content dd { font-size: 16px; }
+  .sensor-content dd { font-size: 18px; }
   .control-button { min-height: 28px; padding-inline: 7px; font-size: 9px; }
 }
 
@@ -254,12 +254,13 @@ button { touch-action: manipulation; }
   .game-shell { grid-template-rows: 34dvh 66dvh; }
   .sensor-panel { padding-top: max(5px, env(safe-area-inset-top)); }
   .sensor-content { padding: 1px 0; }
-  .sensor-content dd { font-size: 15px; }
+  .sensor-content dd { font-size: 17px; }
   .control-button { min-height: 26px; }
 }
 
 @media (max-width: 390px) {
   .sensor-content { gap-column: 8px; }
+  .sensor-content dt { font-size: 10px; }
   .game-controls { gap: 3px; }
   .control-button { padding-inline: 6px; font-size: 9px; }
 }

@@ -15,6 +15,7 @@
       this.ready = false;
       this.initializing = null;
       this.goalReached = false;
+      this.startedAt = null;
       this.resizeObserver = null;
     }
 
@@ -118,7 +119,8 @@
         scene.onBeforeRenderObservable.add(() => {
           if (!this.goalReached && BABYLON.Vector3.DistanceSquared(this.ball.position, goal.position) < 0.62) {
             this.goalReached = true;
-            this.onGoal("GOAL — センサー入力が3Dの動きにつながりました");
+            const elapsedSeconds = this.startedAt === null ? 0 : (performance.now() - this.startedAt) / 1000;
+            this.onGoal(`GOAL　${elapsedSeconds.toFixed(1)}秒`);
           }
           if (this.ball.position.y < -3) this.reset();
         });
@@ -165,6 +167,7 @@
     reset() {
       if (!this.ready || !this.ballAggregate) return;
       this.goalReached = false;
+      this.startedAt = performance.now();
       this.onGoal("");
       this.ballAggregate.body.setLinearVelocity(BABYLON.Vector3.Zero());
       this.ballAggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());

@@ -68,7 +68,11 @@
     button.disabled = true;
     const started = await sensor.start();
     button.disabled = false;
-    if (started) elements.overlay.classList.add("is-hidden");
+    if (started) {
+      await ballScene.init();
+      ballScene.reset();
+      elements.overlay.classList.add("is-hidden");
+    }
   }
 
   document.querySelectorAll("[data-start-sensor]").forEach((button) => button.addEventListener("click", startSensor));
@@ -92,7 +96,9 @@
 
   elements.manualToggle.addEventListener("click", () => setManualOpen(elements.manualControls.hidden));
   elements.manualClose.addEventListener("click", () => setManualOpen(false));
-  elements.startManual.addEventListener("click", () => {
+  elements.startManual.addEventListener("click", async () => {
+    await ballScene.init();
+    ballScene.reset();
     elements.overlay.classList.add("is-hidden");
     setManualOpen(true);
   });
