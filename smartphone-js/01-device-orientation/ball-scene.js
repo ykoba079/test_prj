@@ -71,16 +71,24 @@
         createWall("east", 0.32, 14, 4.62, 0);
         createWall("west", 0.32, 14, -4.62, 0);
 
-        // 主経路に枝と袋小路を加えた、見た目にも迷路らしい構成。
-        createWall("mazeH1", 6.25, 0.24, -1.38, -4.55);
-        createWall("mazeV1", 0.24, 1.15, -1.85, -3.98);
-        createWall("mazeH2", 6.25, 0.24, 1.38, -2.15);
-        createWall("mazeV2", 0.24, 1.15, 1.95, -1.58);
-        createWall("mazeH3", 6.25, 0.24, -1.38, 0.25);
-        createWall("mazeV3", 0.24, 1.15, -1.95, 0.83);
-        createWall("mazeH4", 6.25, 0.24, 1.38, 2.65);
-        createWall("mazeV4", 0.24, 1.15, 1.95, 3.23);
-        createWall("mazeH5", 6.25, 0.24, -1.38, 5.05);
+        // 下段は広い練習路、中段は左右の判断、上段は狭いゴール進入路。
+        // 一本の正解ルートを保ちつつ、壁の枝と脇道で迷路らしさを加える。
+        createWall("mazeH1", 6.25, 0.24, -1.38, -4.75);
+        createWall("mazeV1", 0.24, 1.05, -1.85, -4.22);
+        createWall("mazeH2", 6.25, 0.24, 1.38, -2.25);
+        createWall("mazeV2", 0.24, 1.05, 1.85, -1.72);
+        createWall("mazeH3", 5.75, 0.24, -1.63, 0.25);
+        createWall("mazeV3", 0.24, 1.05, -1.55, 0.78);
+        createWall("mazeH4", 5.75, 0.24, 1.63, 2.75);
+        createWall("mazeV4", 0.24, 1.05, 1.55, 3.28);
+        createWall("mazeH5", 6.65, 0.24, -1.18, 5.15);
+
+        // 外壁から伸びる短い壁は袋小路の目印。主経路は塞がない。
+        createWall("pocketR1", 1.2, 0.24, 4.0, -5.85);
+        createWall("pocketL1", 1.25, 0.24, -3.98, -3.45);
+        createWall("pocketR2", 1.25, 0.24, 3.98, -0.95);
+        createWall("pocketL2", 1.25, 0.24, -3.98, 1.55);
+        createWall("pocketR3", 1.25, 0.24, 3.98, 4.0);
 
         const goalMat = new BABYLON.StandardMaterial("goalMat", scene);
         goalMat.diffuseColor = BABYLON.Color3.FromHexString("#d7ff4f");
