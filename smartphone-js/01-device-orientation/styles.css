@@ -1,0 +1,272 @@
+:root {
+  color-scheme: dark;
+  --ink: #f4f7ef;
+  --muted: #9eb2af;
+  --panel: rgba(7, 27, 29, .84);
+  --line: rgba(210, 239, 229, .2);
+  --acid: #d7ff4f;
+  --mint: #68ebc2;
+  --danger: #ff896d;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink);
+  background: #061315;
+  font-family: Inter, "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif;
+}
+
+button, input { font: inherit; }
+button { touch-action: manipulation; }
+
+.game-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: #061315;
+}
+
+#ball-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  touch-action: none;
+}
+
+.game-header {
+  position: absolute;
+  inset: max(12px, env(safe-area-inset-top)) 12px auto;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.series {
+  margin: 0 0 2px;
+  color: var(--mint);
+  font: 800 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .11em;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(23px, 6vw, 34px);
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+
+.status-chip, .loading-badge {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+  backdrop-filter: blur(12px);
+}
+
+.status-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 52vw;
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.status-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #73827f;
+}
+
+.status-dot.is-live { background: var(--mint); box-shadow: 0 0 10px rgba(104, 235, 194, .8); }
+.status-dot.is-error { background: var(--danger); }
+
+.sensor-card {
+  position: absolute;
+  z-index: 5;
+  top: max(72px, calc(env(safe-area-inset-top) + 64px));
+  right: 12px;
+  width: min(226px, 58vw);
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: rgba(7, 27, 29, .93);
+  box-shadow: 0 14px 35px rgba(0, 0, 0, .24);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.sensor-card-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sensor-card-title span { color: var(--mint); font: 800 12px ui-monospace, monospace; letter-spacing: .1em; }
+.sensor-card-title small { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.sensor-card dl { margin: 0; }
+.sensor-card dl div { min-width: 0; }
+.sensor-card dt { color: var(--muted); font: 700 12px ui-monospace, monospace; }
+.sensor-card dd { margin: 2px 0 0; font: 800 16px ui-monospace, SFMono-Regular, Consolas, monospace; }
+
+.raw-values, .tilt-values { display: grid; gap: 10px; }
+.raw-values { grid-template-columns: repeat(3, 1fr); padding: 11px 0; }
+.tilt-values { grid-template-columns: repeat(2, 1fr); padding-top: 10px; border-top: 1px solid var(--line); }
+.tilt-values dd { color: var(--acid); font-size: 21px; }
+.sensor-card > p { margin: 9px 0 0; color: var(--muted); font-size: 10px; text-align: right; }
+
+.start-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: max(22px, env(safe-area-inset-top)) 22px max(22px, env(safe-area-inset-bottom));
+  background: rgba(3, 13, 14, .66);
+  backdrop-filter: blur(9px);
+  transition: opacity .22s ease, visibility .22s ease;
+}
+
+.start-overlay.is-hidden { visibility: hidden; opacity: 0; pointer-events: none; }
+
+.start-card {
+  width: min(390px, 100%);
+  padding: clamp(26px, 7vw, 40px);
+  border: 1px solid rgba(215, 255, 79, .36);
+  border-radius: 24px;
+  background: rgba(7, 27, 29, .96);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .5);
+  text-align: center;
+}
+
+.start-number { margin: 0; color: var(--mint); font: 800 10px ui-monospace, monospace; letter-spacing: .12em; }
+.start-card h2 { margin: 12px 0 18px; color: var(--acid); font-size: clamp(54px, 18vw, 82px); line-height: .82; letter-spacing: -.07em; }
+.start-card > p:not(.start-number) { margin: 0 auto 22px; color: var(--muted); font-size: 14px; }
+.start-card small { display: block; margin-top: 18px; color: var(--muted); font-size: 9px; }
+
+.button, .control-button, .text-button, .close-button { border: 0; cursor: pointer; }
+.button { width: 100%; min-height: 52px; padding: 10px 18px; border-radius: 12px; font-weight: 850; }
+.button-primary { color: #142000; background: var(--acid); }
+.text-button { margin-top: 12px; padding: 8px; color: var(--muted); background: transparent; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+
+.game-controls {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  display: flex;
+  gap: 5px;
+  max-width: calc(100% - 18px);
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--panel);
+  box-shadow: 0 15px 38px rgba(0, 0, 0, .3);
+  backdrop-filter: blur(12px);
+  transform: translateX(-50%);
+}
+
+.control-button {
+  min-height: 40px;
+  padding: 6px 10px;
+  color: var(--ink);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .06);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.control-button:disabled { opacity: .35; cursor: not-allowed; }
+.control-button.accent { color: #152000; background: var(--acid); }
+
+.goal-message {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  bottom: max(72px, calc(env(safe-area-inset-bottom) + 62px));
+  width: min(420px, calc(100% - 28px));
+  margin: 0;
+  padding: 0;
+  color: var(--acid);
+  font-size: clamp(16px, 5vw, 24px);
+  font-weight: 900;
+  text-align: center;
+  text-shadow: 0 3px 14px #000;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.manual-controls {
+  position: absolute;
+  z-index: 15;
+  left: 50%;
+  bottom: max(66px, calc(env(safe-area-inset-bottom) + 56px));
+  width: min(420px, calc(100% - 20px));
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: rgba(7, 27, 29, .96);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, .42);
+  transform: translateX(-50%);
+}
+
+.manual-controls[hidden] { display: none; }
+.manual-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px; }
+.close-button { width: 30px; height: 30px; color: var(--ink); border-radius: 50%; background: rgba(255, 255, 255, .08); font-size: 18px; }
+.manual-controls label { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 10px; color: var(--muted); font-size: 11px; }
+.manual-controls output { color: var(--ink); font-family: ui-monospace, monospace; }
+.manual-controls input { grid-column: 1 / -1; width: 100%; accent-color: var(--acid); }
+.manual-controls > .control-button { width: 100%; margin-top: 12px; }
+
+.loading-badge {
+  position: absolute;
+  z-index: 4;
+  left: 12px;
+  bottom: max(68px, calc(env(safe-area-inset-bottom) + 58px));
+  padding: 6px 10px;
+  color: var(--muted);
+  font-size: 9px;
+  pointer-events: none;
+}
+
+.button:focus-visible, .control-button:focus-visible, .text-button:focus-visible,
+.close-button:focus-visible, input:focus-visible { outline: 3px solid rgba(104, 235, 194, .58); outline-offset: 2px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .game-header { inset: max(8px, env(safe-area-inset-top)) auto auto max(12px, env(safe-area-inset-left)); }
+  .sensor-card { top: max(8px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); width: 212px; }
+  .game-controls { left: max(10px, env(safe-area-inset-left)); bottom: max(8px, env(safe-area-inset-bottom)); transform: none; }
+  .goal-message { bottom: max(14px, env(safe-area-inset-bottom)); }
+  .loading-badge { left: auto; right: max(12px, env(safe-area-inset-right)); bottom: max(8px, env(safe-area-inset-bottom)); }
+  .start-card { padding: 20px 28px; }
+  .start-card h2 { margin: 7px 0 10px; font-size: 50px; }
+  .start-card > p:not(.start-number) { margin-bottom: 12px; }
+  .start-card small { margin-top: 9px; }
+  .button { min-height: 44px; }
+}
+
+@media (max-width: 390px) {
+  .game-controls { gap: 3px; }
+  .control-button { padding-inline: 7px; font-size: 9px; }
+  .sensor-card { width: 202px; }
+}
+
+@media (prefers-reduced-motion: reduce) { .start-overlay { transition: none; } }

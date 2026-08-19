@@ -1,0 +1,155 @@
+(function () {
+  "use strict";
+
+  const DEG = Math.PI / 180;
+
+  class BallScene {
+    constructor(canvas, { onStatus, onGoal }) {
+      this.canvas = canvas;
+      this.onStatus = onStatus;
+      this.onGoal = onGoal;
+      this.engine = null;
+      this.scene = null;
+      this.ball = null;
+      this.ballAggregate = null;
+      this.ready = false;
+      this.initializing = null;
+      this.goalReached = false;
+    }
+
+    async init() {
+      if (this.ready) return true;
+      if (this.initializing) return this.initializing;
+      this.initializing = this.create();
+      return this.initializing;
+    }
+
+    async create() {
+      this.onStatus("物理演算を準備しています…");
+      try {
+        if (!window.BABYLON || !window.HavokPhysics) throw new Error("3Dライブラリを読み込めませんでした");
+
+        this.engine = new BABYLON.Engine(this.canvas, true, { preserveDrawingBuffer: true, stencil: true });
+        const scene = new BABYLON.Scene(this.engine);
+        scene.clearColor = new BABYLON.Color4(0.025, 0.055, 0.06, 1);
+        this.scene = scene;
+
+        const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, 0.3, 20, new BABYLON.Vector3(0, 0, 0), scene);
+        camera.inputs.clear();
+
+        const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(-0.4, 1, -0.2), scene);
+        light.intensity = 0.92;
+        light.groundColor = BABYLON.Color3.FromHexString("#102326");
+
+        const havok = await window.HavokPhysics();
+        const plugin = new BABYLON.HavokPlugin(true, havok);
+        scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), plugin);
+
+        const boardMat = new BABYLON.StandardMaterial("boardMat", scene);
+        boardMat.diffuseColor = BABYLON.Color3.FromHexString("#28574b");
+        boardMat.specularColor = BABYLON.Color3.Black();
+        const wallMat = new BABYLON.StandardMaterial("wallMat", scene);
+        wallMat.diffuseColor = BABYLON.Color3.FromHexString("#d7e5d8");
+        wallMat.specularColor = BABYLON.Color3.Black();
+
+        const board = BABYLON.MeshBuilder.CreateBox("board", { width: 9, height: 0.35, depth: 14 }, scene);
+        board.position.y = -0.25;
+        board.material = boardMat;
+        new BABYLON.PhysicsAggregate(board, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0.72, restitution: 0.06 }, scene);
+
+        const createWall = (name, width, depth, x, z) => {
+          const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height: 0.75, depth }, scene);
+          wall.position.set(x, 0.25, z);
+          wall.material = wallMat;
+          new BABYLON.PhysicsAggregate(wall, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0.65, restitution: 0.18 }, scene);
+        };
+        createWall("north", 9.4, 0.32, 0, 7.12);
+        createWall("south", 9.4, 0.32, 0, -7.12);
+        createWall("east", 0.32, 14, 4.62, 0);
+        createWall("west", 0.32, 14, -4.62, 0);
+
+        // 主経路に枝と袋小路を加えた、見た目にも迷路らしい構成。
+        createWall("mazeH1", 6.25, 0.24, -1.38, -4.55);
+        createWall("mazeV1", 0.24, 1.15, -1.85, -3.98);
+        createWall("mazeH2", 6.25, 0.24, 1.38, -2.15);
+        createWall("mazeV2", 0.24, 1.15, 1.95, -1.58);
+        createWall("mazeH3", 6.25, 0.24, -1.38, 0.25);
+        createWall("mazeV3", 0.24, 1.15, -1.95, 0.83);
+        createWall("mazeH4", 6.25, 0.24, 1.38, 2.65);
+        createWall("mazeV4", 0.24, 1.15, 1.95, 3.23);
+        createWall("mazeH5", 6.25, 0.24, -1.38, 5.05);
+
+        const goalMat = new BABYLON.StandardMaterial("goalMat", scene);
+        goalMat.diffuseColor = BABYLON.Color3.FromHexString("#d7ff4f");
+        goalMat.emissiveColor = BABYLON.Color3.FromHexString("#344500");
+        goalMat.specularColor = BABYLON.Color3.Black();
+        const goal = BABYLON.MeshBuilder.CreateCylinder("goal", { diameter: 1.55, height: 0.04, tessellation: 48 }, scene);
+        goal.position.set(3.25, -0.04, 6.05);
+        goal.material = goalMat;
+
+        const startMat = new BABYLON.StandardMaterial("startMat", scene);
+        startMat.diffuseColor = BABYLON.Color3.FromHexString("#5ccfe6");
+        startMat.emissiveColor = BABYLON.Color3.FromHexString("#123b45");
+        startMat.specularColor = BABYLON.Color3.Black();
+        const start = BABYLON.MeshBuilder.CreateCylinder("start", { diameter: 1.35, height: 0.035, tessellation: 48 }, scene);
+        start.position.set(-3.35, -0.045, -5.75);
+        start.material = startMat;
+
+        const ballMat = new BABYLON.StandardMaterial("ballMat", scene);
+        ballMat.diffuseColor = BABYLON.Color3.FromHexString("#ff775f");
+        ballMat.emissiveColor = BABYLON.Color3.FromHexString("#35120d");
+        ballMat.specularColor = BABYLON.Color3.Black();
+        this.ball = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 0.85, segments: 28 }, scene);
+        this.ball.material = ballMat;
+        this.ball.position.set(-3.35, 0.75, -5.75);
+        this.ballAggregate = new BABYLON.PhysicsAggregate(this.ball, BABYLON.PhysicsShapeType.SPHERE, { mass: 1, friction: 0.62, restitution: 0.16 }, scene);
+
+        scene.onBeforeRenderObservable.add(() => {
+          if (!this.goalReached && BABYLON.Vector3.DistanceSquared(this.ball.position, goal.position) < 0.62) {
+            this.goalReached = true;
+            this.onGoal("GOAL — センサー入力が3Dの動きにつながりました");
+          }
+          if (this.ball.position.y < -3) this.reset();
+        });
+
+        this.engine.runRenderLoop(() => scene.render());
+        window.addEventListener("resize", () => this.engine?.resize());
+        this.ready = true;
+        this.onStatus("Physics V2 / Havok 準備完了");
+        return true;
+      } catch (error) {
+        console.error(error);
+        this.onStatus(`3Dの準備に失敗しました: ${error.message}`);
+        return false;
+      }
+    }
+
+    setTilt(xDegrees, yDegrees) {
+      if (!this.ready) return;
+      const x = Math.max(-25, Math.min(25, xDegrees)) * DEG;
+      const y = Math.max(-25, Math.min(25, yDegrees)) * DEG;
+      const direction = new BABYLON.Vector3(
+        Math.sin(x),
+        -Math.cos(x) * Math.cos(y),
+        -Math.sin(y)
+      ).normalize().scale(9.81);
+      this.scene.getPhysicsEngine().setGravity(direction);
+    }
+
+    reset() {
+      if (!this.ready || !this.ballAggregate) return;
+      this.goalReached = false;
+      this.onGoal("");
+      this.ballAggregate.body.setLinearVelocity(BABYLON.Vector3.Zero());
+      this.ballAggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
+      this.ball.position.set(-3.35, 0.75, -5.75);
+      this.ball.computeWorldMatrix(true);
+      this.ballAggregate.body.disablePreStep = false;
+      window.setTimeout(() => {
+        if (this.ballAggregate?.body) this.ballAggregate.body.disablePreStep = true;
+      }, 0);
+    }
+  }
+
+  window.BallScene = BallScene;
+})();
