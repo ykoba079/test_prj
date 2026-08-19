@@ -15,6 +15,7 @@
       this.ready = false;
       this.initializing = null;
       this.goalReached = false;
+      this.resizeObserver = null;
     }
 
     async init() {
@@ -36,6 +37,8 @@
 
         const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, 0.3, 20, new BABYLON.Vector3(0, 0, 0), scene);
         camera.inputs.clear();
+        camera.fovMode = BABYLON.Camera.FOVMODE_HORIZONTAL_FIXED;
+        camera.fov = 0.82;
 
         const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(-0.4, 1, -0.2), scene);
         light.intensity = 0.92;
@@ -113,7 +116,20 @@
         });
 
         this.engine.runRenderLoop(() => scene.render());
-        window.addEventListener("resize", () => this.engine?.resize());
+        const resize = () => this.engine?.resize();
+        window.addEventListener("resize", resize);
+        window.visualViewport?.addEventListener("resize", resize);
+        if (window.ResizeObserver) {
+          this.resizeObserver = new ResizeObserver(resize);
+          this.resizeObserver.observe(this.canvas);
+        }
+        // iOS Safariでは初回レイアウト後に表示領域が確定するため、数フレーム後にも同期する。
+        requestAnimationFrame(() => {
+          resize();
+          requestAnimationFrame(resize);
+        });
+        window.setTimeout(resize, 250);
+        window.setTimeout(resize, 800);
         this.ready = true;
         this.onStatus("Physics V2 / Havok 準備完了");
         return true;
@@ -134,6 +150,8 @@
         -Math.sin(y)
       ).normalize().scale(9.81);
       this.scene.getPhysicsEngine().setGravity(direction);
+      // Havokで静止した剛体はスリープするため、重力方向の変更時に起こす。
+      this.ballAggregate.body.applyImpulse(direction.scale(1e-8), this.ball.getAbsolutePosition());
     }
 
     reset() {
