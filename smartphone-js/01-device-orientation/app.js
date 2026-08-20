@@ -82,11 +82,14 @@
   const sensor = new window.SensorController({
     onUpdate: update,
     onStatus: setStatus,
-    onMotion: ({ magnitude, available, jumpRequested }) => {
+    onMotion: ({ magnitude, available, jumpRequested, motionX = 0, motionY = 0 }) => {
       elements.acceleration.textContent = available ? magnitude.toFixed(1) : "--";
+      if (available) ballScene.setMotion(motionX, motionY);
       if (!available) elements.motionState.textContent = "N/A";
       else if (jumpRequested) jump();
-      else if (!elements.motionState.classList.contains("is-jumping")) elements.motionState.textContent = "READY";
+      else if (!elements.motionState.classList.contains("is-jumping")) {
+        elements.motionState.textContent = magnitude > 0.8 ? "MOVE" : "READY";
+      }
     }
   });
 

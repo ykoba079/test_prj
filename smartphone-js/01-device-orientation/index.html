@@ -58,7 +58,7 @@
 
     <section class="maze-stage" aria-label="ボール転がし迷路">
       <canvas id="ball-canvas" aria-label="スマートフォンの傾きで操作する3D迷路"></canvas>
-      <p class="jump-hint">スマホを振ってJUMP・壁越えOK</p>
+      <p class="jump-hint">振ってJUMP・横へ動かして迷路でCATCH</p>
       <p class="jump-message" id="jump-message" aria-live="polite">JUMP!</p>
       <p class="goal-message" id="goal-message" aria-live="polite"></p>
       <div class="loading-badge" id="physics-status">3Dを準備しています…</div>
@@ -67,7 +67,7 @@
     <div class="start-overlay" id="start-overlay">
       <section class="start-card" aria-label="センサー開始">
         <p class="start-number">DEVICE ORIENTATION</p>
-        <p class="start-guide">傾けてボールを転がし、黄色ゲートではスマホを軽く振ってジャンプします。</p>
+        <p class="start-guide">傾けて転がし、振ってジャンプ。空中ではスマホを横へ動かし、迷路でボールをキャッチします。</p>
         <button class="button button-primary" type="button" data-start-sensor>センサーを開始</button>
         <button class="text-button" id="start-manual-button" type="button">PCで手動操作を試す</button>
         <small>センサー情報は端末内だけで処理し、保存・送信しません。</small>
