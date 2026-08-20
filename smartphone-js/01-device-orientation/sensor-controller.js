@@ -109,14 +109,11 @@
 
       const magnitude = Math.sqrt(values.x ** 2 + values.y ** 2 + values.z ** 2);
       const jumpRequested = magnitude >= 5.0;
-      const screenMotion = this.toScreenCoordinates(values.y, values.x);
       this.filteredMotion += (magnitude - this.filteredMotion) * 0.32;
       this.onMotion?.({
         magnitude: jumpRequested ? magnitude : this.filteredMotion,
         available: true,
-        jumpRequested,
-        motionX: screenMotion.x,
-        motionY: screenMotion.y
+        jumpRequested
       });
     }
 

@@ -203,17 +203,13 @@
       this.ballAggregate.body.applyImpulse(direction.scale(1e-8), this.ball.getAbsolutePosition());
     }
 
-    jump(motionX = 0, motionY = 0) {
+    jump() {
       if (!this.ready || !this.ballAggregate || this.goalReached || this.outOfBounds) return false;
       const now = performance.now();
       const isGrounded = this.ball.position.y < 0.72;
       if (!isGrounded || now - this.lastJumpAt < 850) return false;
       this.lastJumpAt = now;
-      const motionLength = Math.hypot(motionX, motionY);
-      const planar = motionLength > 1
-        ? { x: motionX / motionLength, z: -motionY / motionLength }
-        : this.jumpPlanar;
-      const impulse = new BABYLON.Vector3(planar.x * 9, 10.5, planar.z * 9);
+      const impulse = new BABYLON.Vector3(this.jumpPlanar.x * 14, 16, this.jumpPlanar.z * 14);
       this.ballAggregate.body.applyImpulse(impulse, this.ball.getAbsolutePosition());
       return true;
     }
