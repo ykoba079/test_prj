@@ -223,6 +223,32 @@ button { touch-action: manipulation; }
   pointer-events: none;
 }
 
+.jump-message {
+  position: absolute;
+  z-index: 5;
+  top: 42%;
+  left: 50%;
+  margin: 0;
+  color: var(--acid);
+  font: 950 clamp(32px, 12vw, 58px) ui-monospace, monospace;
+  letter-spacing: .04em;
+  opacity: 0;
+  text-shadow: 0 4px 20px #000, 0 0 22px rgba(215, 255, 79, .55);
+  transform: translate(-50%, -30%) scale(.72);
+  pointer-events: none;
+}
+
+.jump-message.is-visible {
+  animation: jump-flash .65s cubic-bezier(.18, .8, .28, 1);
+}
+
+@keyframes jump-flash {
+  0% { opacity: 0; transform: translate(-50%, 15%) scale(.65); }
+  24% { opacity: 1; transform: translate(-50%, -45%) scale(1.08); }
+  70% { opacity: 1; transform: translate(-50%, -62%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -85%) scale(.94); }
+}
+
 .loading-badge {
   position: absolute;
   z-index: 3;

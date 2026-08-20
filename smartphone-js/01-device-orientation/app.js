@@ -18,7 +18,7 @@
     manualXOutput: $("#manual-x-output"), manualYOutput: $("#manual-y-output"),
     manualCenter: $("#manual-center-button"), manualJump: $("#manual-jump-button"),
     startManual: $("#start-manual-button"), acceleration: $("#acceleration-value"),
-    motionState: $("#motion-state")
+    motionState: $("#motion-state"), jumpMessage: $("#jump-message")
   };
 
   let latest = null;
@@ -64,10 +64,14 @@
   function showJump() {
     elements.motionState.textContent = "JUMP!";
     elements.motionState.classList.add("is-jumping");
+    elements.jumpMessage.classList.remove("is-visible");
+    void elements.jumpMessage.offsetWidth;
+    elements.jumpMessage.classList.add("is-visible");
     clearTimeout(jumpIndicatorTimer);
     jumpIndicatorTimer = window.setTimeout(() => {
       elements.motionState.textContent = "READY";
       elements.motionState.classList.remove("is-jumping");
+      elements.jumpMessage.classList.remove("is-visible");
     }, 650);
   }
 

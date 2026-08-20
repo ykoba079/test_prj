@@ -12,11 +12,13 @@
       this.scene = null;
       this.ball = null;
       this.ballAggregate = null;
+      this.ballShadow = null;
       this.ready = false;
       this.initializing = null;
       this.goalReached = false;
       this.startedAt = null;
       this.lastJumpAt = 0;
+      this.jumpPlanar = { x: 0, z: 0 };
       this.resizeObserver = null;
     }
 
@@ -60,9 +62,9 @@
         const board = BABYLON.MeshBuilder.CreateBox("board", { width: 9, height: 0.35, depth: 14 }, scene);
         board.position.y = -0.25;
         board.material = boardMat;
-        new BABYLON.PhysicsAggregate(board, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0.72, restitution: 0.06 }, scene);
+        new BABYLON.PhysicsAggregate(board, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0.28, restitution: 0.06 }, scene);
 
-        const createWall = (name, width, depth, x, z, height = 1.2, material = wallMat) => {
+        const createWall = (name, width, depth, x, z, height = 1.55, material = wallMat) => {
           const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height, depth }, scene);
           wall.position.set(x, -0.075 + height / 2, z);
           wall.material = material;
@@ -97,7 +99,7 @@
         jumpMat.emissiveColor = BABYLON.Color3.FromHexString("#344500");
         jumpMat.specularColor = BABYLON.Color3.Black();
         // 最初の折り返しに、加速度ジャンプでだけ越えられる低いゲートを置く。
-        createWall("jumpGate", 8.75, 0.34, 0, -3.55, 0.65, jumpMat);
+        createWall("jumpGate", 8.75, 0.34, 0, -3.55, 0.72, jumpMat);
 
         const goalMat = new BABYLON.StandardMaterial("goalMat", scene);
         goalMat.diffuseColor = BABYLON.Color3.FromHexString("#d7ff4f");
@@ -122,9 +124,25 @@
         this.ball = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 0.85, segments: 28 }, scene);
         this.ball.material = ballMat;
         this.ball.position.set(-3.35, 0.75, -5.75);
-        this.ballAggregate = new BABYLON.PhysicsAggregate(this.ball, BABYLON.PhysicsShapeType.SPHERE, { mass: 1, friction: 0.62, restitution: 0.16 }, scene);
+        this.ballAggregate = new BABYLON.PhysicsAggregate(this.ball, BABYLON.PhysicsShapeType.SPHERE, { mass: 1, friction: 0.22, restitution: 0.16 }, scene);
+
+        const shadowMat = new BABYLON.StandardMaterial("shadowMat", scene);
+        shadowMat.diffuseColor = BABYLON.Color3.Black();
+        shadowMat.emissiveColor = BABYLON.Color3.Black();
+        shadowMat.specularColor = BABYLON.Color3.Black();
+        shadowMat.alpha = 0.34;
+        this.ballShadow = BABYLON.MeshBuilder.CreateCylinder("ballShadow", { diameter: 0.72, height: 0.012, tessellation: 32 }, scene);
+        this.ballShadow.material = shadowMat;
+        this.ballShadow.position.y = -0.065;
 
         scene.onBeforeRenderObservable.add(() => {
+          const airHeight = Math.max(0, this.ball.position.y - 0.35);
+          const shadowScale = Math.max(0.45, 1 - airHeight * 0.28);
+          this.ballShadow.position.x = this.ball.position.x;
+          this.ballShadow.position.z = this.ball.position.z;
+          this.ballShadow.scaling.x = shadowScale;
+          this.ballShadow.scaling.z = shadowScale;
+          this.ballShadow.visibility = Math.max(0.12, 0.8 - airHeight * 0.32);
           if (!this.goalReached && BABYLON.Vector3.DistanceSquared(this.ball.position, goal.position) < 0.62) {
             this.goalReached = true;
             const elapsedSeconds = this.startedAt === null ? 0 : (performance.now() - this.startedAt) / 1000;
@@ -162,11 +180,16 @@
       if (!this.ready) return;
       const x = Math.max(-25, Math.min(25, xDegrees)) * DEG;
       const y = Math.max(-25, Math.min(25, yDegrees)) * DEG;
+      const horizontalScale = 13.5;
       const direction = new BABYLON.Vector3(
-        Math.sin(x),
-        -Math.cos(x) * Math.cos(y),
-        -Math.sin(y)
-      ).normalize().scale(9.81);
+        Math.sin(x) * horizontalScale,
+        -9.81,
+        -Math.sin(y) * horizontalScale
+      );
+      const planarLength = Math.hypot(direction.x, direction.z);
+      this.jumpPlanar = planarLength > 0.05
+        ? { x: direction.x / planarLength, z: direction.z / planarLength }
+        : { x: 0, z: 0 };
       this.scene.getPhysicsEngine().setGravity(direction);
       // Havokで静止した剛体はスリープするため、重力方向の変更時に起こす。
       this.ballAggregate.body.applyImpulse(direction.scale(1e-8), this.ball.getAbsolutePosition());
@@ -178,7 +201,8 @@
       const isGrounded = this.ball.position.y < 0.72;
       if (!isGrounded || now - this.lastJumpAt < 850) return false;
       this.lastJumpAt = now;
-      this.ballAggregate.body.applyImpulse(new BABYLON.Vector3(0, 4.25, 0), this.ball.getAbsolutePosition());
+      const impulse = new BABYLON.Vector3(this.jumpPlanar.x * 0.9, 5.2, this.jumpPlanar.z * 0.9);
+      this.ballAggregate.body.applyImpulse(impulse, this.ball.getAbsolutePosition());
       return true;
     }
 

@@ -108,11 +108,12 @@
       }
 
       const magnitude = Math.sqrt(values.x ** 2 + values.y ** 2 + values.z ** 2);
+      const jumpRequested = magnitude >= 5.0;
       this.filteredMotion += (magnitude - this.filteredMotion) * 0.32;
       this.onMotion?.({
-        magnitude: this.filteredMotion,
+        magnitude: jumpRequested ? magnitude : this.filteredMotion,
         available: true,
-        jumpRequested: magnitude >= 7.5
+        jumpRequested
       });
     }
 
