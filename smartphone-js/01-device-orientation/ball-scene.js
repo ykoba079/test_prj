@@ -64,6 +64,12 @@
         board.material = boardMat;
         new BABYLON.PhysicsAggregate(board, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0.28, restitution: 0.06 }, scene);
 
+        // 強いジャンプでも通常壁を飛び越えないよう、迷路上部に透明な物理天井を置く。
+        const ceiling = BABYLON.MeshBuilder.CreateBox("ceiling", { width: 9, height: 0.1, depth: 14 }, scene);
+        ceiling.position.y = 2.1;
+        ceiling.isVisible = false;
+        new BABYLON.PhysicsAggregate(ceiling, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0, restitution: 0.04 }, scene);
+
         const createWall = (name, width, depth, x, z, height = 1.55, material = wallMat) => {
           const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height, depth }, scene);
           wall.position.set(x, -0.075 + height / 2, z);
@@ -180,7 +186,7 @@
       if (!this.ready) return;
       const x = Math.max(-25, Math.min(25, xDegrees)) * DEG;
       const y = Math.max(-25, Math.min(25, yDegrees)) * DEG;
-      const horizontalScale = 13.5;
+      const horizontalScale = 27;
       const direction = new BABYLON.Vector3(
         Math.sin(x) * horizontalScale,
         -9.81,
@@ -201,7 +207,7 @@
       const isGrounded = this.ball.position.y < 0.72;
       if (!isGrounded || now - this.lastJumpAt < 850) return false;
       this.lastJumpAt = now;
-      const impulse = new BABYLON.Vector3(this.jumpPlanar.x * 0.9, 5.2, this.jumpPlanar.z * 0.9);
+      const impulse = new BABYLON.Vector3(this.jumpPlanar.x * 4.5, 8, this.jumpPlanar.z * 4.5);
       this.ballAggregate.body.applyImpulse(impulse, this.ball.getAbsolutePosition());
       return true;
     }
