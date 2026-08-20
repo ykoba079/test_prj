@@ -25,17 +25,24 @@
       </div>
 
       <div class="sensor-content">
-        <dl class="raw-values">
-          <div><dt>α / 水平回転</dt><dd id="alpha-value">--</dd></div>
-          <div><dt>β / 前後傾き</dt><dd id="beta-value">--</dd></div>
-          <div><dt>γ / 左右傾き</dt><dd id="gamma-value">--</dd></div>
-        </dl>
-        <dl class="tilt-values">
-          <div><dt>X / 左右</dt><dd id="tilt-x-value">0.0°</dd></div>
-          <div><dt>Y / 前後</dt><dd id="tilt-y-value">0.0°</dd></div>
-        </dl>
+        <div class="reading-group">
+          <span class="reading-group-label">RAW姿勢</span>
+          <dl class="raw-values">
+            <div><dt>α / Z軸回転</dt><dd id="alpha-value">--</dd></div>
+            <div><dt>β / 前後傾き</dt><dd id="beta-value">--</dd></div>
+            <div><dt>γ / 左右傾き</dt><dd id="gamma-value">--</dd></div>
+          </dl>
+        </div>
+        <div class="reading-group">
+          <span class="reading-group-label">CONTROL / 補正後</span>
+          <dl class="tilt-values">
+            <div><dt>X / 左右</dt><dd id="tilt-x-value">0.0°</dd></div>
+            <div><dt>Y / 前後</dt><dd id="tilt-y-value">0.0°</dd></div>
+          </dl>
+        </div>
         <div class="sensor-meta">
           <span id="reference-label">端末水平を基準</span>
+          <span class="motion-readout"><span>MOTION</span> <strong id="acceleration-value">--</strong><span>m/s²</span> <b id="motion-state">WAIT</b></span>
           <span id="screen-angle-value">Portrait ↑</span>
         </div>
       </div>
@@ -51,6 +58,7 @@
 
     <section class="maze-stage" aria-label="ボール転がし迷路">
       <canvas id="ball-canvas" aria-label="スマートフォンの傾きで操作する3D迷路"></canvas>
+      <p class="jump-hint">黄色ゲート：スマホを軽く振ってJUMP</p>
       <p class="goal-message" id="goal-message" aria-live="polite"></p>
       <div class="loading-badge" id="physics-status">3Dを準備しています…</div>
     </section>
@@ -58,7 +66,7 @@
     <div class="start-overlay" id="start-overlay">
       <section class="start-card" aria-label="センサー開始">
         <p class="start-number">DEVICE ORIENTATION</p>
-        <p class="start-guide">スマホを普段見る角度で持ち、センサーを開始してください。</p>
+        <p class="start-guide">傾けてボールを転がし、黄色ゲートではスマホを軽く振ってジャンプします。</p>
         <button class="button button-primary" type="button" data-start-sensor>センサーを開始</button>
         <button class="text-button" id="start-manual-button" type="button">PCで手動操作を試す</button>
         <small>センサー情報は端末内だけで処理し、保存・送信しません。</small>
@@ -72,6 +80,7 @@
       </div>
       <label>左右 <output id="manual-x-output">0.0°</output><input id="manual-x" type="range" min="-25" max="25" value="0" step="0.5"></label>
       <label>前後 <output id="manual-y-output">0.0°</output><input id="manual-y" type="range" min="-25" max="25" value="0" step="0.5"></label>
+      <button class="control-button" id="manual-jump-button" type="button">手動ジャンプ</button>
       <button class="control-button" id="manual-center-button" type="button">中央に戻す</button>
     </section>
   </main>

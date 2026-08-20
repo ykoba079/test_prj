@@ -16,6 +16,7 @@
       this.initializing = null;
       this.goalReached = false;
       this.startedAt = null;
+      this.lastJumpAt = 0;
       this.resizeObserver = null;
     }
 
@@ -61,10 +62,10 @@
         board.material = boardMat;
         new BABYLON.PhysicsAggregate(board, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0.72, restitution: 0.06 }, scene);
 
-        const createWall = (name, width, depth, x, z) => {
-          const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height: 0.75, depth }, scene);
-          wall.position.set(x, 0.25, z);
-          wall.material = wallMat;
+        const createWall = (name, width, depth, x, z, height = 1.2, material = wallMat) => {
+          const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height, depth }, scene);
+          wall.position.set(x, -0.075 + height / 2, z);
+          wall.material = material;
           new BABYLON.PhysicsAggregate(wall, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0.65, restitution: 0.18 }, scene);
         };
         createWall("north", 9.4, 0.32, 0, 7.12);
@@ -90,6 +91,13 @@
         createWall("pocketR2", 1.25, 0.24, 3.98, -0.95);
         createWall("pocketL2", 1.25, 0.24, -3.98, 1.55);
         createWall("pocketR3", 1.25, 0.24, 3.98, 4.0);
+
+        const jumpMat = new BABYLON.StandardMaterial("jumpMat", scene);
+        jumpMat.diffuseColor = BABYLON.Color3.FromHexString("#d7ff4f");
+        jumpMat.emissiveColor = BABYLON.Color3.FromHexString("#344500");
+        jumpMat.specularColor = BABYLON.Color3.Black();
+        // 最初の折り返しに、加速度ジャンプでだけ越えられる低いゲートを置く。
+        createWall("jumpGate", 8.75, 0.34, 0, -3.55, 0.65, jumpMat);
 
         const goalMat = new BABYLON.StandardMaterial("goalMat", scene);
         goalMat.diffuseColor = BABYLON.Color3.FromHexString("#d7ff4f");
@@ -164,10 +172,21 @@
       this.ballAggregate.body.applyImpulse(direction.scale(1e-8), this.ball.getAbsolutePosition());
     }
 
+    jump() {
+      if (!this.ready || !this.ballAggregate || this.goalReached) return false;
+      const now = performance.now();
+      const isGrounded = this.ball.position.y < 0.72;
+      if (!isGrounded || now - this.lastJumpAt < 850) return false;
+      this.lastJumpAt = now;
+      this.ballAggregate.body.applyImpulse(new BABYLON.Vector3(0, 4.25, 0), this.ball.getAbsolutePosition());
+      return true;
+    }
+
     reset() {
       if (!this.ready || !this.ballAggregate) return;
       this.goalReached = false;
       this.startedAt = performance.now();
+      this.lastJumpAt = 0;
       this.onGoal("");
       this.ballAggregate.body.setLinearVelocity(BABYLON.Vector3.Zero());
       this.ballAggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());

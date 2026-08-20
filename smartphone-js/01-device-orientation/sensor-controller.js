@@ -12,9 +12,10 @@
   }
 
   class SensorController {
-    constructor({ onUpdate, onStatus }) {
+    constructor({ onUpdate, onStatus, onMotion }) {
       this.onUpdate = onUpdate;
       this.onStatus = onStatus;
+      this.onMotion = onMotion;
       this.reference = null;
       this.filtered = null;
       this.lastReading = null;
@@ -23,7 +24,11 @@
       this.eventTimeout = 0;
       this.receivedSensorReading = false;
       this.filterStrength = 0.18;
+      this.motionListening = false;
+      this.gravityEstimate = null;
+      this.filteredMotion = 0;
       this.handleOrientation = this.handleOrientation.bind(this);
+      this.handleMotion = this.handleMotion.bind(this);
       this.handleScreenChange = this.handleScreenChange.bind(this);
     }
 
@@ -37,16 +42,17 @@
         return false;
       }
 
-      try {
-        if (typeof window.DeviceOrientationEvent.requestPermission === "function") {
-          const permission = await window.DeviceOrientationEvent.requestPermission();
-          if (permission !== "granted") {
-            this.onStatus("denied", "センサーの利用が許可されませんでした");
-            return false;
-          }
-        }
-      } catch (error) {
-        console.warn("Device orientation permission request failed.", error);
+      const orientationPermission = typeof window.DeviceOrientationEvent.requestPermission === "function"
+        ? window.DeviceOrientationEvent.requestPermission()
+        : Promise.resolve("granted");
+      const hasMotion = typeof window.DeviceMotionEvent !== "undefined";
+      const motionPermission = hasMotion && typeof window.DeviceMotionEvent.requestPermission === "function"
+        ? window.DeviceMotionEvent.requestPermission()
+        : Promise.resolve(hasMotion ? "granted" : "unsupported");
+      const [orientationResult, motionResult] = await Promise.allSettled([orientationPermission, motionPermission]);
+
+      if (orientationResult.status !== "fulfilled" || orientationResult.value !== "granted") {
+        console.warn("Device orientation permission request failed.", orientationResult.reason);
         this.onStatus("denied", "センサーの利用許可を取得できませんでした");
         return false;
       }
@@ -59,6 +65,12 @@
         }
         this.listening = true;
       }
+      if (!this.motionListening && motionResult.status === "fulfilled" && motionResult.value === "granted") {
+        window.addEventListener("devicemotion", this.handleMotion, true);
+        this.motionListening = true;
+      } else if (!this.motionListening) {
+        this.onMotion?.({ magnitude: null, available: false });
+      }
 
       clearTimeout(this.eventTimeout);
       this.eventTimeout = window.setTimeout(() => {
@@ -68,6 +80,40 @@
       }, 2500);
       this.onStatus("waiting", "センサー値を待っています");
       return true;
+    }
+
+    handleMotion(event) {
+      if (this.manual) return;
+      const linear = event.acceleration;
+      let values = null;
+
+      if ([linear?.x, linear?.y, linear?.z].every(Number.isFinite)) {
+        values = { x: linear.x, y: linear.y, z: linear.z };
+      } else {
+        const gravity = event.accelerationIncludingGravity;
+        if (![gravity?.x, gravity?.y, gravity?.z].every(Number.isFinite)) return;
+        if (!this.gravityEstimate) {
+          this.gravityEstimate = { x: gravity.x, y: gravity.y, z: gravity.z };
+          return;
+        }
+        const smoothing = 0.14;
+        this.gravityEstimate.x += (gravity.x - this.gravityEstimate.x) * smoothing;
+        this.gravityEstimate.y += (gravity.y - this.gravityEstimate.y) * smoothing;
+        this.gravityEstimate.z += (gravity.z - this.gravityEstimate.z) * smoothing;
+        values = {
+          x: gravity.x - this.gravityEstimate.x,
+          y: gravity.y - this.gravityEstimate.y,
+          z: gravity.z - this.gravityEstimate.z
+        };
+      }
+
+      const magnitude = Math.sqrt(values.x ** 2 + values.y ** 2 + values.z ** 2);
+      this.filteredMotion += (magnitude - this.filteredMotion) * 0.32;
+      this.onMotion?.({
+        magnitude: this.filteredMotion,
+        available: true,
+        jumpRequested: magnitude >= 7.5
+      });
     }
 
     handleOrientation(event) {

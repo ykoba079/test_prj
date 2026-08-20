@@ -99,6 +99,18 @@ button { touch-action: manipulation; }
 .sensor-content dt { color: var(--muted); font: 700 12px ui-monospace, monospace; white-space: nowrap; }
 .sensor-content dd { margin: 0; font: 800 clamp(19px, 5.8vw, 27px) ui-monospace, SFMono-Regular, Consolas, monospace; line-height: 1.15; }
 
+.reading-group {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+}
+
+.reading-group-label {
+  color: var(--mint);
+  font: 800 8px ui-monospace, monospace;
+  letter-spacing: .08em;
+}
+
 .raw-values,
 .tilt-values { display: grid; align-items: center; gap: 8px; }
 .raw-values { grid-template-columns: repeat(3, 1fr); }
@@ -108,10 +120,32 @@ button { touch-action: manipulation; }
 .sensor-meta {
   grid-column: 1 / -1;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   color: var(--muted);
   font-size: 9px;
 }
+
+.motion-readout {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.motion-readout strong {
+  color: var(--ink);
+  font: 850 14px ui-monospace, monospace;
+}
+
+.motion-readout b {
+  min-width: 38px;
+  color: var(--mint);
+  font: 900 9px ui-monospace, monospace;
+  text-align: center;
+}
+
+.motion-readout b.is-jumping { color: var(--acid); }
 
 .game-controls {
   justify-content: center;
@@ -169,6 +203,23 @@ button { touch-action: manipulation; }
   text-align: center;
   text-shadow: 0 3px 14px #000;
   transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.jump-hint {
+  position: absolute;
+  z-index: 4;
+  top: 8px;
+  left: 50%;
+  margin: 0;
+  padding: 5px 9px;
+  color: #172000;
+  border-radius: 999px;
+  background: rgba(215, 255, 79, .9);
+  font-size: 9px;
+  font-weight: 850;
+  transform: translateX(-50%);
+  white-space: nowrap;
   pointer-events: none;
 }
 
@@ -238,7 +289,7 @@ button { touch-action: manipulation; }
 .manual-controls label { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 10px; color: var(--muted); font-size: 11px; }
 .manual-controls output { color: var(--ink); font-family: ui-monospace, monospace; }
 .manual-controls input { grid-column: 1 / -1; width: 100%; accent-color: var(--acid); }
-.manual-controls > .control-button { width: 100%; margin-top: 12px; }
+.manual-controls > .control-button { width: 100%; margin-top: 8px; }
 
 .button:focus-visible, .control-button:focus-visible, .text-button:focus-visible,
 .close-button:focus-visible, input:focus-visible { outline: 3px solid rgba(104, 235, 194, .58); outline-offset: 2px; }
@@ -261,6 +312,9 @@ button { touch-action: manipulation; }
 @media (max-width: 390px) {
   .sensor-content { gap-column: 8px; }
   .sensor-content dt { font-size: 10px; }
+  .sensor-meta > :first-child,
+  .sensor-meta > :last-child { display: none; }
+  .sensor-meta { justify-content: center; }
   .game-controls { gap: 3px; }
   .control-button { padding-inline: 6px; font-size: 9px; }
 }

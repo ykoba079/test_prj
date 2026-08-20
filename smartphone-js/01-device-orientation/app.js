@@ -16,10 +16,13 @@
     manualClose: $("#manual-close-button"), manualControls: $("#manual-controls"),
     manualX: $("#manual-x"), manualY: $("#manual-y"),
     manualXOutput: $("#manual-x-output"), manualYOutput: $("#manual-y-output"),
-    manualCenter: $("#manual-center-button"), startManual: $("#start-manual-button")
+    manualCenter: $("#manual-center-button"), manualJump: $("#manual-jump-button"),
+    startManual: $("#start-manual-button"), acceleration: $("#acceleration-value"),
+    motionState: $("#motion-state")
   };
 
   let latest = null;
+  let jumpIndicatorTimer = 0;
 
   function formatAngle(value) {
     return `${value >= 0 ? "+" : ""}${value.toFixed(1)}°`;
@@ -53,10 +56,34 @@
     ballScene.setTilt(x, y);
   }
 
-  const sensor = new window.SensorController({ onUpdate: update, onStatus: setStatus });
   const ballScene = new window.BallScene($("#ball-canvas"), {
     onStatus: (message) => { elements.physicsStatus.textContent = message; },
     onGoal: (message) => { elements.goalMessage.textContent = message; }
+  });
+
+  function showJump() {
+    elements.motionState.textContent = "JUMP!";
+    elements.motionState.classList.add("is-jumping");
+    clearTimeout(jumpIndicatorTimer);
+    jumpIndicatorTimer = window.setTimeout(() => {
+      elements.motionState.textContent = "READY";
+      elements.motionState.classList.remove("is-jumping");
+    }, 650);
+  }
+
+  function jump() {
+    if (ballScene.jump()) showJump();
+  }
+
+  const sensor = new window.SensorController({
+    onUpdate: update,
+    onStatus: setStatus,
+    onMotion: ({ magnitude, available, jumpRequested }) => {
+      elements.acceleration.textContent = available ? magnitude.toFixed(1) : "--";
+      if (!available) elements.motionState.textContent = "N/A";
+      else if (jumpRequested) jump();
+      else if (!elements.motionState.classList.contains("is-jumping")) elements.motionState.textContent = "READY";
+    }
   });
 
   ballScene.init().then(() => {
@@ -109,4 +136,5 @@
     elements.manualY.value = "0";
     updateManual();
   });
+  elements.manualJump.addEventListener("click", jump);
 })();
