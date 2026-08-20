@@ -75,17 +75,17 @@
     }, 650);
   }
 
-  function jump() {
-    if (ballScene.jump()) showJump();
+  function jump(motionX = 0, motionY = 0) {
+    if (ballScene.jump(motionX, motionY)) showJump();
   }
 
   const sensor = new window.SensorController({
     onUpdate: update,
     onStatus: setStatus,
-    onMotion: ({ magnitude, available, jumpRequested }) => {
+    onMotion: ({ magnitude, available, jumpRequested, motionX, motionY }) => {
       elements.acceleration.textContent = available ? magnitude.toFixed(1) : "--";
       if (!available) elements.motionState.textContent = "N/A";
-      else if (jumpRequested) jump();
+      else if (jumpRequested) jump(motionX, motionY);
       else if (!elements.motionState.classList.contains("is-jumping")) elements.motionState.textContent = "READY";
     }
   });
@@ -140,5 +140,5 @@
     elements.manualY.value = "0";
     updateManual();
   });
-  elements.manualJump.addEventListener("click", jump);
+  elements.manualJump.addEventListener("click", () => jump());
 })();

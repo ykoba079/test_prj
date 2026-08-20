@@ -16,6 +16,7 @@
       this.ready = false;
       this.initializing = null;
       this.goalReached = false;
+      this.outOfBounds = false;
       this.startedAt = null;
       this.lastJumpAt = 0;
       this.jumpPlanar = { x: 0, z: 0 };
@@ -63,12 +64,6 @@
         board.position.y = -0.25;
         board.material = boardMat;
         new BABYLON.PhysicsAggregate(board, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0.28, restitution: 0.06 }, scene);
-
-        // 強いジャンプでも通常壁を飛び越えないよう、迷路上部に透明な物理天井を置く。
-        const ceiling = BABYLON.MeshBuilder.CreateBox("ceiling", { width: 9, height: 0.1, depth: 14 }, scene);
-        ceiling.position.y = 2.1;
-        ceiling.isVisible = false;
-        new BABYLON.PhysicsAggregate(ceiling, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0, restitution: 0.04 }, scene);
 
         const createWall = (name, width, depth, x, z, height = 1.55, material = wallMat) => {
           const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height, depth }, scene);
@@ -149,12 +144,19 @@
           this.ballShadow.scaling.x = shadowScale;
           this.ballShadow.scaling.z = shadowScale;
           this.ballShadow.visibility = Math.max(0.12, 0.8 - airHeight * 0.32);
-          if (!this.goalReached && BABYLON.Vector3.DistanceSquared(this.ball.position, goal.position) < 0.62) {
+          if (!this.goalReached && !this.outOfBounds && BABYLON.Vector3.DistanceSquared(this.ball.position, goal.position) < 0.62) {
             this.goalReached = true;
             const elapsedSeconds = this.startedAt === null ? 0 : (performance.now() - this.startedAt) / 1000;
             this.onGoal(`GOAL　${elapsedSeconds.toFixed(1)}秒`);
           }
-          if (this.ball.position.y < -3) this.reset();
+          if (!this.outOfBounds && (
+            Math.abs(this.ball.position.x) > 5.6
+            || Math.abs(this.ball.position.z) > 8.1
+            || this.ball.position.y < -3
+          )) {
+            this.outOfBounds = true;
+            this.onGoal("OUT　「リトライ」で再開");
+          }
         });
 
         this.engine.runRenderLoop(() => scene.render());
@@ -201,13 +203,17 @@
       this.ballAggregate.body.applyImpulse(direction.scale(1e-8), this.ball.getAbsolutePosition());
     }
 
-    jump() {
-      if (!this.ready || !this.ballAggregate || this.goalReached) return false;
+    jump(motionX = 0, motionY = 0) {
+      if (!this.ready || !this.ballAggregate || this.goalReached || this.outOfBounds) return false;
       const now = performance.now();
       const isGrounded = this.ball.position.y < 0.72;
       if (!isGrounded || now - this.lastJumpAt < 850) return false;
       this.lastJumpAt = now;
-      const impulse = new BABYLON.Vector3(this.jumpPlanar.x * 4.5, 8, this.jumpPlanar.z * 4.5);
+      const motionLength = Math.hypot(motionX, motionY);
+      const planar = motionLength > 1
+        ? { x: motionX / motionLength, z: -motionY / motionLength }
+        : this.jumpPlanar;
+      const impulse = new BABYLON.Vector3(planar.x * 9, 10.5, planar.z * 9);
       this.ballAggregate.body.applyImpulse(impulse, this.ball.getAbsolutePosition());
       return true;
     }
@@ -215,6 +221,7 @@
     reset() {
       if (!this.ready || !this.ballAggregate) return;
       this.goalReached = false;
+      this.outOfBounds = false;
       this.startedAt = performance.now();
       this.lastJumpAt = 0;
       this.onGoal("");
