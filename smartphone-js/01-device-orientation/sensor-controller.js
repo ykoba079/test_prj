@@ -27,6 +27,7 @@
       this.motionListening = false;
       this.gravityEstimate = null;
       this.filteredMotion = 0;
+      this.alphaOrigin = null;
       this.handleOrientation = this.handleOrientation.bind(this);
       this.handleMotion = this.handleMotion.bind(this);
       this.handleScreenChange = this.handleScreenChange.bind(this);
@@ -157,10 +158,13 @@
 
       const x = this.filtered.x - (this.reference?.x ?? 0);
       const y = this.filtered.y - (this.reference?.y ?? 0);
+      if (this.alphaOrigin === null) this.alphaOrigin = this.filtered.alpha;
+      const heading = circularDelta(this.filtered.alpha, this.reference?.alpha ?? this.alphaOrigin);
       this.lastReading = {
         raw,
         x: clamp(Math.abs(x) < 0.15 ? 0 : x, -45, 45),
         y: clamp(Math.abs(y) < 0.15 ? 0 : y, -45, 45),
+        heading,
         screenAngle: this.getScreenAngle(),
         calibrated: Boolean(this.reference),
         source
@@ -170,10 +174,11 @@
 
     calibrate() {
       if (!this.filtered) return false;
-      this.reference = { x: this.filtered.x, y: this.filtered.y };
+      this.reference = { x: this.filtered.x, y: this.filtered.y, alpha: this.filtered.alpha };
       if (this.lastReading) {
         this.lastReading.x = 0;
         this.lastReading.y = 0;
+        this.lastReading.heading = 0;
         this.lastReading.calibrated = true;
         this.onUpdate(this.lastReading);
       }
@@ -186,6 +191,7 @@
       if (this.filtered && this.lastReading) {
         this.lastReading.x = clamp(this.filtered.x, -45, 45);
         this.lastReading.y = clamp(this.filtered.y, -45, 45);
+        this.lastReading.heading = circularDelta(this.filtered.alpha, this.alphaOrigin ?? this.filtered.alpha);
         this.lastReading.calibrated = false;
         this.onUpdate(this.lastReading);
       }
@@ -203,6 +209,7 @@
         raw,
         x: relativeX,
         y: relativeY,
+        heading: 0,
         screenAngle: 0,
         calibrated: Boolean(this.reference),
         source: "manual"
@@ -214,6 +221,7 @@
     handleScreenChange() {
       this.filtered = null;
       this.reference = null;
+      this.alphaOrigin = null;
       this.receivedSensorReading = false;
       this.onStatus(this.manual ? "manual" : "waiting", "画面の向きが変わりました。必要に応じて基準を再設定してください");
     }

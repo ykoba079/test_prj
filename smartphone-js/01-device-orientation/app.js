@@ -43,7 +43,7 @@
 
   function update(reading) {
     latest = reading;
-    const { raw, x, y, calibrated } = reading;
+    const { raw, x, y, heading, calibrated } = reading;
     elements.alpha.textContent = `${raw.alpha.toFixed(1)}°`;
     elements.beta.textContent = `${raw.beta.toFixed(1)}°`;
     elements.gamma.textContent = `${raw.gamma.toFixed(1)}°`;
@@ -53,7 +53,7 @@
     elements.reference.textContent = calibrated ? "設定姿勢を基準" : "端末水平を基準";
     elements.calibrate.disabled = false;
     elements.clearCalibration.disabled = !calibrated;
-    ballScene.setTilt(x, y);
+    ballScene.setOrientation(x, y, heading);
   }
 
   const ballScene = new window.BallScene($("#ball-canvas"), {
@@ -94,7 +94,7 @@
   });
 
   ballScene.init().then(() => {
-    if (latest) ballScene.setTilt(latest.x, latest.y);
+    if (latest) ballScene.setOrientation(latest.x, latest.y, latest.heading);
   });
 
   async function startSensor(event) {

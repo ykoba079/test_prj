@@ -11,6 +11,7 @@
       this.engine = null;
       this.scene = null;
       this.camera = null;
+      this.light = null;
       this.ball = null;
       this.ballAggregate = null;
       this.ballShadow = null;
@@ -22,10 +23,16 @@
       this.lastJumpAt = 0;
       this.jumpPlanar = { x: 0, z: 0 };
       this.motionInput = { x: 0, z: 0 };
-      this.mazeOffset = { x: 0, z: 0 };
-      this.mazeVelocity = { x: 0, z: 0 };
+      this.mazeOffset = { x: 0, y: 0, z: 0 };
+      this.mazeVelocity = { x: 0, y: 0, z: 0 };
+      this.mazeRotation = null;
+      this.mazePose = null;
+      this.mazeAnchor = null;
       this.movableBodies = [];
       this.mazeVisuals = [];
+      this.cameraLocalPosition = null;
+      this.cameraLocalUp = null;
+      this.lightLocalDirection = null;
       this.resizeObserver = null;
     }
 
@@ -46,13 +53,24 @@
         scene.clearColor = new BABYLON.Color4(0.025, 0.055, 0.06, 1);
         this.scene = scene;
 
-        const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, 0.3, 20, new BABYLON.Vector3(0, 0, 0), scene);
+        const camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 19.1, -5.91), scene);
         this.camera = camera;
+        this.cameraLocalPosition = new BABYLON.Vector3(0, 19.1, -5.91);
+        this.cameraLocalUp = new BABYLON.Vector3(0, 0.296, 0.955);
+        this.mazeRotation = BABYLON.Quaternion.Identity();
+        this.mazePose = {
+          origin: BABYLON.Vector3.Zero(),
+          rotation: BABYLON.Quaternion.Identity()
+        };
         camera.inputs.clear();
         camera.fovMode = BABYLON.Camera.FOVMODE_HORIZONTAL_FIXED;
         camera.fov = 0.82;
+        camera.upVector.copyFrom(this.cameraLocalUp);
+        camera.setTarget(BABYLON.Vector3.Zero());
 
         const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(-0.4, 1, -0.2), scene);
+        this.light = light;
+        this.lightLocalDirection = new BABYLON.Vector3(-0.4, 1, -0.2).normalize();
         light.intensity = 0.92;
         light.groundColor = BABYLON.Color3.FromHexString("#102326");
 
@@ -80,8 +98,7 @@
             mesh,
             body: aggregate.body,
             basePosition: mesh.position.clone(),
-            targetPosition: mesh.position.clone(),
-            rotation: mesh.rotationQuaternion.clone()
+            targetPosition: mesh.position.clone()
           });
           return aggregate;
         };
@@ -90,6 +107,7 @@
         board.position.y = -0.25;
         board.material = boardMat;
         registerMovableBody(board, 0.28, 0.06);
+        this.mazeAnchor = board;
 
         const createWall = (name, width, depth, x, z, height = 1.55, material = wallMat) => {
           const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height, depth }, scene);
@@ -166,10 +184,13 @@
 
         scene.onBeforeRenderObservable.add(() => {
           this.updateMazeMotion(Math.min(this.engine.getDeltaTime() / 1000, 0.034));
-          const airHeight = Math.max(0, this.ball.position.y - 0.35);
+          const ballLocal = this.worldToMazeLocal(this.ball.position);
+          const airHeight = Math.max(0, ballLocal.y - 0.35);
           const shadowScale = Math.max(0.45, 1 - airHeight * 0.28);
-          this.ballShadow.position.x = this.ball.position.x;
-          this.ballShadow.position.z = this.ball.position.z;
+          const shadowWorld = this.mazeLocalToWorld(new BABYLON.Vector3(ballLocal.x, -0.065, ballLocal.z));
+          this.ballShadow.position.copyFrom(shadowWorld);
+          this.ballShadow.rotationQuaternion = this.ballShadow.rotationQuaternion || BABYLON.Quaternion.Identity();
+          this.ballShadow.rotationQuaternion.copyFrom(this.mazePose.rotation);
           this.ballShadow.scaling.x = shadowScale;
           this.ballShadow.scaling.z = shadowScale;
           this.ballShadow.visibility = Math.max(0.12, 0.8 - airHeight * 0.32);
@@ -178,7 +199,7 @@
             const elapsedSeconds = this.startedAt === null ? 0 : (performance.now() - this.startedAt) / 1000;
             this.onGoal(`GOAL　${elapsedSeconds.toFixed(1)}秒`);
           }
-          if (!this.outOfBounds && this.ball.position.y < -8) {
+          if (!this.outOfBounds && ballLocal.y < -8) {
             this.outOfBounds = true;
             this.onGoal("OUT　「リトライ」で再開");
           }
@@ -209,23 +230,43 @@
       }
     }
 
-    setTilt(xDegrees, yDegrees) {
-      if (!this.ready) return;
-      const x = Math.max(-25, Math.min(25, xDegrees)) * DEG;
-      const y = Math.max(-25, Math.min(25, yDegrees)) * DEG;
-      const horizontalScale = 27;
-      const direction = new BABYLON.Vector3(
-        Math.sin(x) * horizontalScale,
-        -9.81,
-        -Math.sin(y) * horizontalScale
+    rotateVector(vector, quaternion) {
+      const tx = 2 * (quaternion.y * vector.z - quaternion.z * vector.y);
+      const ty = 2 * (quaternion.z * vector.x - quaternion.x * vector.z);
+      const tz = 2 * (quaternion.x * vector.y - quaternion.y * vector.x);
+      return new BABYLON.Vector3(
+        vector.x + quaternion.w * tx + quaternion.y * tz - quaternion.z * ty,
+        vector.y + quaternion.w * ty + quaternion.z * tx - quaternion.x * tz,
+        vector.z + quaternion.w * tz + quaternion.x * ty - quaternion.y * tx
       );
-      const planarLength = Math.hypot(direction.x, direction.z);
+    }
+
+    inverseRotateVector(vector, quaternion) {
+      return this.rotateVector(vector, new BABYLON.Quaternion(-quaternion.x, -quaternion.y, -quaternion.z, quaternion.w));
+    }
+
+    mazeLocalToWorld(localPosition) {
+      return this.rotateVector(localPosition, this.mazePose.rotation).add(this.mazePose.origin);
+    }
+
+    worldToMazeLocal(worldPosition) {
+      return this.inverseRotateVector(worldPosition.subtract(this.mazePose.origin), this.mazePose.rotation);
+    }
+
+    setOrientation(xDegrees, yDegrees, headingDegrees = 0) {
+      if (!this.ready) return;
+      const x = Math.max(-35, Math.min(35, xDegrees)) * DEG;
+      const y = Math.max(-35, Math.min(35, yDegrees)) * DEG;
+      const heading = Math.max(-180, Math.min(180, headingDegrees)) * DEG;
+      this.mazeRotation.copyFrom(
+        BABYLON.Quaternion.RotationYawPitchRoll(-heading, -y, -x)
+      );
+      const planarLength = Math.hypot(x, y);
       this.jumpPlanar = planarLength > 0.05
-        ? { x: direction.x / planarLength, z: direction.z / planarLength }
+        ? { x: x / planarLength, z: -y / planarLength }
         : { x: 0, z: 0 };
-      this.scene.getPhysicsEngine().setGravity(direction);
-      // Havokで静止した剛体はスリープするため、重力方向の変更時に起こす。
-      this.ballAggregate.body.applyImpulse(direction.scale(1e-8), this.ball.getAbsolutePosition());
+      // 姿勢変化時に、静止したボールを起こして動く迷路との衝突を反映させる。
+      this.ballAggregate.body.applyImpulse(new BABYLON.Vector3(0, -1e-8, 0), this.ball.getAbsolutePosition());
     }
 
     setMotion(xAcceleration, yAcceleration) {
@@ -241,38 +282,64 @@
       if (!this.ready || !this.camera) return;
       const accelerationGain = 24;
       const drag = Math.exp(-1.2 * deltaSeconds);
-      this.mazeVelocity.x = (this.mazeVelocity.x + this.motionInput.x * accelerationGain * deltaSeconds) * drag;
-      this.mazeVelocity.z = (this.mazeVelocity.z + this.motionInput.z * accelerationGain * deltaSeconds) * drag;
+      const worldAcceleration = this.rotateVector(
+        new BABYLON.Vector3(this.motionInput.x, 0, this.motionInput.z),
+        this.mazeRotation
+      );
+      this.mazeVelocity.x = (this.mazeVelocity.x + worldAcceleration.x * accelerationGain * deltaSeconds) * drag;
+      this.mazeVelocity.y = (this.mazeVelocity.y + worldAcceleration.y * accelerationGain * deltaSeconds) * drag;
+      this.mazeVelocity.z = (this.mazeVelocity.z + worldAcceleration.z * accelerationGain * deltaSeconds) * drag;
       this.mazeVelocity.x = Math.max(-36, Math.min(36, this.mazeVelocity.x));
+      this.mazeVelocity.y = Math.max(-36, Math.min(36, this.mazeVelocity.y));
       this.mazeVelocity.z = Math.max(-36, Math.min(36, this.mazeVelocity.z));
       this.mazeOffset.x = Math.max(-48, Math.min(48, this.mazeOffset.x + this.mazeVelocity.x * deltaSeconds));
+      this.mazeOffset.y = Math.max(-32, Math.min(32, this.mazeOffset.y + this.mazeVelocity.y * deltaSeconds));
       this.mazeOffset.z = Math.max(-56, Math.min(56, this.mazeOffset.z + this.mazeVelocity.z * deltaSeconds));
 
       for (const item of this.movableBodies) {
+        const rotatedPosition = this.rotateVector(item.basePosition, this.mazeRotation);
         item.targetPosition.set(
-          item.basePosition.x + this.mazeOffset.x,
-          item.basePosition.y,
-          item.basePosition.z + this.mazeOffset.z
+          rotatedPosition.x + this.mazeOffset.x,
+          rotatedPosition.y + this.mazeOffset.y,
+          rotatedPosition.z + this.mazeOffset.z
         );
-        item.body.setTargetTransform(item.targetPosition, item.rotation);
+        item.body.setTargetTransform(item.targetPosition, this.mazeRotation);
       }
+
+      const anchorItem = this.movableBodies[0];
+      const actualRotation = this.mazeAnchor.rotationQuaternion || this.mazeRotation;
+      const rotatedAnchorBase = this.rotateVector(anchorItem.basePosition, actualRotation);
+      this.mazePose.origin.set(
+        this.mazeAnchor.position.x - rotatedAnchorBase.x,
+        this.mazeAnchor.position.y - rotatedAnchorBase.y,
+        this.mazeAnchor.position.z - rotatedAnchorBase.z
+      );
+      this.mazePose.rotation.copyFrom(actualRotation);
+
       for (const item of this.mazeVisuals) {
-        item.mesh.position.set(
-          item.basePosition.x + this.mazeOffset.x,
-          item.basePosition.y,
-          item.basePosition.z + this.mazeOffset.z
-        );
+        const worldPosition = this.mazeLocalToWorld(item.basePosition);
+        item.mesh.position.copyFrom(worldPosition);
+        item.mesh.rotationQuaternion = item.mesh.rotationQuaternion || BABYLON.Quaternion.Identity();
+        item.mesh.rotationQuaternion.copyFrom(this.mazePose.rotation);
       }
-      this.camera.setTarget(new BABYLON.Vector3(this.mazeOffset.x, 0, this.mazeOffset.z));
+
+      this.camera.position.copyFrom(this.mazeLocalToWorld(this.cameraLocalPosition));
+      this.camera.upVector.copyFrom(this.rotateVector(this.cameraLocalUp, this.mazePose.rotation).normalize());
+      this.camera.setTarget(this.mazePose.origin);
+      this.light.direction.copyFrom(this.rotateVector(this.lightLocalDirection, this.mazePose.rotation).normalize());
     }
 
     jump() {
       if (!this.ready || !this.ballAggregate || this.goalReached || this.outOfBounds) return false;
       const now = performance.now();
-      const isGrounded = this.ball.position.y < 0.72;
+      const ballLocal = this.worldToMazeLocal(this.ball.position);
+      const isGrounded = ballLocal.y < 0.72;
       if (!isGrounded || now - this.lastJumpAt < 850) return false;
       this.lastJumpAt = now;
-      const impulse = new BABYLON.Vector3(this.jumpPlanar.x * 14, 16, this.jumpPlanar.z * 14);
+      const impulse = this.rotateVector(
+        new BABYLON.Vector3(this.jumpPlanar.x * 14, 16, this.jumpPlanar.z * 14),
+        this.mazePose.rotation
+      );
       this.ballAggregate.body.applyImpulse(impulse, this.ball.getAbsolutePosition());
       return true;
     }
@@ -284,11 +351,11 @@
       this.startedAt = performance.now();
       this.lastJumpAt = 0;
       this.motionInput = { x: 0, z: 0 };
-      this.mazeVelocity = { x: 0, z: 0 };
+      this.mazeVelocity = { x: 0, y: 0, z: 0 };
       this.onGoal("");
       this.ballAggregate.body.setLinearVelocity(BABYLON.Vector3.Zero());
       this.ballAggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
-      this.ball.position.set(-3.35 + this.mazeOffset.x, 0.75, -5.75 + this.mazeOffset.z);
+      this.ball.position.copyFrom(this.mazeLocalToWorld(new BABYLON.Vector3(-3.35, 0.75, -5.75)));
       this.ball.computeWorldMatrix(true);
       this.ballAggregate.body.disablePreStep = false;
       window.setTimeout(() => {
