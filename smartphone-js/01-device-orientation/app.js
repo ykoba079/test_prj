@@ -88,7 +88,9 @@
       if (!available) elements.motionState.textContent = "N/A";
       else if (jumpRequested) jump();
       else if (!elements.motionState.classList.contains("is-jumping")) {
-        elements.motionState.textContent = magnitude > 0.8 ? "MOVE" : "READY";
+        if (magnitude <= 0.8) elements.motionState.textContent = "READY";
+        else if (Math.abs(motionX) >= Math.abs(motionY)) elements.motionState.textContent = motionX >= 0 ? "MOVE →" : "MOVE ←";
+        else elements.motionState.textContent = motionY >= 0 ? "MOVE ↑" : "MOVE ↓";
       }
     }
   });

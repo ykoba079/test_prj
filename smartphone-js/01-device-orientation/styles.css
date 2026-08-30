@@ -139,7 +139,7 @@ button { touch-action: manipulation; }
 }
 
 .motion-readout b {
-  min-width: 38px;
+  min-width: 48px;
   color: var(--mint);
   font: 900 9px ui-monospace, monospace;
   text-align: center;

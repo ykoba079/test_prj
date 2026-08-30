@@ -106,7 +106,8 @@
         const board = BABYLON.MeshBuilder.CreateBox("board", { width: 9, height: 0.35, depth: 14 }, scene);
         board.position.y = -0.25;
         board.material = boardMat;
-        registerMovableBody(board, 0.28, 0.06);
+        // 平行移動時は床にボールが貼り付かず、慣性で取り残されるよう低摩擦にする。
+        registerMovableBody(board, 0.02, 0.06);
         this.mazeAnchor = board;
 
         const createWall = (name, width, depth, x, z, height = 1.55, material = wallMat) => {
@@ -171,7 +172,7 @@
         this.ball = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 0.85, segments: 28 }, scene);
         this.ball.material = ballMat;
         this.ball.position.set(-3.35, 0.75, -5.75);
-        this.ballAggregate = new BABYLON.PhysicsAggregate(this.ball, BABYLON.PhysicsShapeType.SPHERE, { mass: 1, friction: 0.22, restitution: 0.16 }, scene);
+        this.ballAggregate = new BABYLON.PhysicsAggregate(this.ball, BABYLON.PhysicsShapeType.SPHERE, { mass: 1, friction: 0.04, restitution: 0.16 }, scene);
 
         const shadowMat = new BABYLON.StandardMaterial("shadowMat", scene);
         shadowMat.diffuseColor = BABYLON.Color3.Black();
