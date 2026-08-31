@@ -221,41 +221,6 @@ button { touch-action: manipulation; }
   pointer-events: none;
 }
 
-.orientation-message,
-.portrait-guide {
-  position: absolute;
-  z-index: 8;
-  left: 50%;
-  width: min(430px, calc(100% - 28px));
-  margin: 0;
-  padding: 10px 14px;
-  color: var(--ink);
-  border: 1px solid rgba(215, 255, 79, .55);
-  border-radius: 12px;
-  background: rgba(7, 27, 29, .96);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, .45);
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.45;
-  text-align: center;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.orientation-message {
-  top: 44px;
-  opacity: 0;
-  transition: opacity .2s ease;
-}
-
-.orientation-message.is-visible { opacity: 1; }
-
-.portrait-guide {
-  display: none;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-
 .loading-badge {
   position: absolute;
   z-index: 3;
@@ -341,8 +306,6 @@ button { touch-action: manipulation; }
   .sensor-content dd { font-size: 17px; }
   .control-button { min-height: 26px; }
 }
-
-@media (orientation: landscape) { .portrait-guide { display: block; } }
 
 @media (max-width: 390px) {
   .sensor-content { gap-column: 8px; }
