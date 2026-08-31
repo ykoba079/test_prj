@@ -20,8 +20,6 @@
       this.goalReached = false;
       this.outOfBounds = false;
       this.startedAt = null;
-      this.lastJumpAt = 0;
-      this.jumpPlanar = { x: 0, z: 0 };
       this.motionInput = { x: 0, z: 0 };
       this.mazeOffset = { x: 0, y: 0, z: 0 };
       this.mazeVelocity = { x: 0, y: 0, z: 0 };
@@ -140,13 +138,6 @@
         createWall("pocketL2", 1.25, 0.24, -3.98, 1.55);
         createWall("pocketR3", 1.25, 0.24, 3.98, 4.0);
 
-        const jumpMat = new BABYLON.StandardMaterial("jumpMat", scene);
-        jumpMat.diffuseColor = BABYLON.Color3.FromHexString("#d7ff4f");
-        jumpMat.emissiveColor = BABYLON.Color3.FromHexString("#344500");
-        jumpMat.specularColor = BABYLON.Color3.Black();
-        // 最初の折り返しに、加速度ジャンプでだけ越えられる低いゲートを置く。
-        createWall("jumpGate", 8.75, 0.34, 0, -3.55, 0.72, jumpMat);
-
         const goalMat = new BABYLON.StandardMaterial("goalMat", scene);
         goalMat.diffuseColor = BABYLON.Color3.FromHexString("#d7ff4f");
         goalMat.emissiveColor = BABYLON.Color3.FromHexString("#344500");
@@ -262,10 +253,6 @@
       this.mazeRotation.copyFrom(
         BABYLON.Quaternion.RotationYawPitchRoll(-heading, -y, -x)
       );
-      const planarLength = Math.hypot(x, y);
-      this.jumpPlanar = planarLength > 0.05
-        ? { x: x / planarLength, z: -y / planarLength }
-        : { x: 0, z: 0 };
       // 姿勢変化時に、静止したボールを起こして動く迷路との衝突を反映させる。
       this.ballAggregate.body.applyImpulse(new BABYLON.Vector3(0, -1e-8, 0), this.ball.getAbsolutePosition());
     }
@@ -330,27 +317,11 @@
       this.light.direction.copyFrom(this.rotateVector(this.lightLocalDirection, this.mazePose.rotation).normalize());
     }
 
-    jump() {
-      if (!this.ready || !this.ballAggregate || this.goalReached || this.outOfBounds) return false;
-      const now = performance.now();
-      const ballLocal = this.worldToMazeLocal(this.ball.position);
-      const isGrounded = ballLocal.y < 0.72;
-      if (!isGrounded || now - this.lastJumpAt < 850) return false;
-      this.lastJumpAt = now;
-      const impulse = this.rotateVector(
-        new BABYLON.Vector3(this.jumpPlanar.x * 14, 16, this.jumpPlanar.z * 14),
-        this.mazePose.rotation
-      );
-      this.ballAggregate.body.applyImpulse(impulse, this.ball.getAbsolutePosition());
-      return true;
-    }
-
     reset() {
       if (!this.ready || !this.ballAggregate) return;
       this.goalReached = false;
       this.outOfBounds = false;
       this.startedAt = performance.now();
-      this.lastJumpAt = 0;
       this.motionInput = { x: 0, z: 0 };
       this.mazeVelocity = { x: 0, y: 0, z: 0 };
       this.onGoal("");

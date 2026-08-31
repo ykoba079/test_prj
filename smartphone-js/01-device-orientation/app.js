@@ -16,13 +16,12 @@
     manualClose: $("#manual-close-button"), manualControls: $("#manual-controls"),
     manualX: $("#manual-x"), manualY: $("#manual-y"),
     manualXOutput: $("#manual-x-output"), manualYOutput: $("#manual-y-output"),
-    manualCenter: $("#manual-center-button"), manualJump: $("#manual-jump-button"),
+    manualCenter: $("#manual-center-button"),
     startManual: $("#start-manual-button"), acceleration: $("#acceleration-value"),
-    motionState: $("#motion-state"), jumpMessage: $("#jump-message")
+    motionState: $("#motion-state")
   };
 
   let latest = null;
-  let jumpIndicatorTimer = 0;
 
   function formatAngle(value) {
     return `${value >= 0 ? "+" : ""}${value.toFixed(1)}°`;
@@ -61,33 +60,14 @@
     onGoal: (message) => { elements.goalMessage.textContent = message; }
   });
 
-  function showJump() {
-    elements.motionState.textContent = "JUMP!";
-    elements.motionState.classList.add("is-jumping");
-    elements.jumpMessage.classList.remove("is-visible");
-    void elements.jumpMessage.offsetWidth;
-    elements.jumpMessage.classList.add("is-visible");
-    clearTimeout(jumpIndicatorTimer);
-    jumpIndicatorTimer = window.setTimeout(() => {
-      elements.motionState.textContent = "READY";
-      elements.motionState.classList.remove("is-jumping");
-      elements.jumpMessage.classList.remove("is-visible");
-    }, 650);
-  }
-
-  function jump() {
-    if (ballScene.jump()) showJump();
-  }
-
   const sensor = new window.SensorController({
     onUpdate: update,
     onStatus: setStatus,
-    onMotion: ({ magnitude, available, jumpRequested, motionX = 0, motionY = 0 }) => {
+    onMotion: ({ magnitude, available, motionX = 0, motionY = 0 }) => {
       elements.acceleration.textContent = available ? magnitude.toFixed(1) : "--";
       if (available) ballScene.setMotion(motionX, motionY);
       if (!available) elements.motionState.textContent = "N/A";
-      else if (jumpRequested) jump();
-      else if (!elements.motionState.classList.contains("is-jumping")) {
+      else {
         if (magnitude <= 0.8) elements.motionState.textContent = "READY";
         else if (Math.abs(motionX) >= Math.abs(motionY)) elements.motionState.textContent = motionX >= 0 ? "MOVE →" : "MOVE ←";
         else elements.motionState.textContent = motionY >= 0 ? "MOVE ↑" : "MOVE ↓";
@@ -145,5 +125,4 @@
     elements.manualY.value = "0";
     updateManual();
   });
-  elements.manualJump.addEventListener("click", () => jump());
 })();
