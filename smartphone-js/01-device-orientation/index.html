@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#061315">
   <meta name="description" content="スマートフォンを傾けて3D迷路のボールを操作するJavaScriptデモです。">
   <title>スマホ傾き迷路 | スマホ × JavaScript #01</title>
+  <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
   <script defer src="https://cdn.babylonjs.com/babylon.js"></script>
   <script defer src="https://cdn.babylonjs.com/havok/HavokPhysics_umd.js"></script>
@@ -51,6 +52,7 @@
         <button class="control-button" type="button" data-start-sensor>センサー</button>
         <button class="control-button" id="calibrate-button" type="button" disabled>基準設定</button>
         <button class="control-button" id="clear-calibration-button" type="button" disabled>基準解除</button>
+        <button class="control-button" id="orientation-lock-button" type="button">縦固定</button>
         <button class="control-button accent" id="reset-ball-button" type="button">リトライ</button>
         <button class="control-button" id="manual-toggle-button" type="button" aria-expanded="false" aria-controls="manual-controls">PC操作</button>
       </div>
@@ -59,6 +61,8 @@
     <section class="maze-stage" aria-label="ボール転がし迷路">
       <canvas id="ball-canvas" aria-label="スマートフォンの傾きで操作する3D迷路"></canvas>
       <p class="motion-hint">傾けてROLL・横へ動かして迷路をスライド</p>
+      <p class="orientation-message" id="orientation-message" role="status" aria-live="polite"></p>
+      <aside class="portrait-guide">端末の「画面縦向きロック」をONにして、縦向きに戻してください</aside>
       <p class="goal-message" id="goal-message" aria-live="polite"></p>
       <div class="loading-badge" id="physics-status">3Dを準備しています…</div>
     </section>

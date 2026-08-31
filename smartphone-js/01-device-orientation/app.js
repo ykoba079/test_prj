@@ -6,6 +6,8 @@
     status: $("#sensor-status"),
     statusDot: $("#status-dot"),
     overlay: $("#start-overlay"),
+    orientationLock: $("#orientation-lock-button"),
+    orientationMessage: $("#orientation-message"),
     calibrate: $("#calibrate-button"),
     clearCalibration: $("#clear-calibration-button"),
     alpha: $("#alpha-value"), beta: $("#beta-value"), gamma: $("#gamma-value"),
@@ -22,6 +24,7 @@
   };
 
   let latest = null;
+  let orientationMessageTimer = 0;
 
   function formatAngle(value) {
     return `${value >= 0 ? "+" : ""}${value.toFixed(1)}°`;
@@ -38,6 +41,34 @@
     elements.status.textContent = message;
     elements.statusDot.classList.toggle("is-live", ["live", "manual"].includes(kind));
     elements.statusDot.classList.toggle("is-error", ["denied", "unsupported", "silent"].includes(kind));
+  }
+
+  function showOrientationMessage(message) {
+    elements.orientationMessage.textContent = message;
+    elements.orientationMessage.classList.add("is-visible");
+    clearTimeout(orientationMessageTimer);
+    orientationMessageTimer = window.setTimeout(() => {
+      elements.orientationMessage.classList.remove("is-visible");
+    }, 3200);
+  }
+
+  async function lockPortrait() {
+    elements.orientationLock.disabled = true;
+    try {
+      if (typeof window.screen.orientation?.lock !== "function") throw new Error("Screen orientation lock is unavailable");
+      const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+      if (!document.fullscreenElement && !standalone) {
+        if (typeof document.documentElement.requestFullscreen !== "function") throw new Error("Fullscreen is unavailable");
+        await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+      }
+      await window.screen.orientation.lock("portrait-primary");
+      elements.orientationLock.textContent = "縦固定中";
+      showOrientationMessage("画面を縦向きに固定しました");
+    } catch (error) {
+      console.info("Portrait lock was not available.", error);
+      elements.orientationLock.disabled = false;
+      showOrientationMessage("端末側の「画面縦向きロック」をONにしてください");
+    }
   }
 
   function update(reading) {
@@ -94,6 +125,14 @@
   document.querySelectorAll("[data-start-sensor]").forEach((button) => button.addEventListener("click", startSensor));
   elements.calibrate.addEventListener("click", () => sensor.calibrate());
   elements.clearCalibration.addEventListener("click", () => sensor.clearCalibration());
+  elements.orientationLock.addEventListener("click", lockPortrait);
+  document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement && elements.orientationLock.textContent === "縦固定中") {
+      window.screen.orientation?.unlock?.();
+      elements.orientationLock.textContent = "縦固定";
+      elements.orientationLock.disabled = false;
+    }
+  });
   elements.resetBall.addEventListener("click", () => ballScene.reset());
 
   function updateManual() {

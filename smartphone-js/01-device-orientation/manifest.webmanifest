@@ -1,0 +1,10 @@
+{
+  "name": "スマホ傾き迷路",
+  "short_name": "傾き迷路",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#061315",
+  "theme_color": "#061315"
+}
