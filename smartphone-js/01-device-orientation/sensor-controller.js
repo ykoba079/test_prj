@@ -23,8 +23,8 @@
       this.listening = false;
       this.eventTimeout = 0;
       this.receivedSensorReading = false;
-      // 大きいほど入力へ素早く追従する。0.30は安定性を残しつつ遅延を抑える値。
-      this.filterStrength = 0.30;
+      // 大きいほど入力へ素早く追従する。0.45は約2フレームで入力へ近づく値。
+      this.filterStrength = 0.45;
       this.motionListening = false;
       this.gravityEstimate = null;
       this.filteredMotion = 0;

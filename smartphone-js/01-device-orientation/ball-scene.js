@@ -2,7 +2,7 @@
   "use strict";
 
   const DEG = Math.PI / 180;
-  const TILT_RESPONSE = 1.35;
+  const TILT_RESPONSE = 1.7;
   const MAX_UPWARD_SPEED = 2.2;
 
   class BallScene {
