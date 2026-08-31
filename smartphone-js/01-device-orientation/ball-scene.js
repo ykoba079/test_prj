@@ -23,7 +23,7 @@
       this.startedAt = null;
       this.resetVersion = 0;
       // QRコードを読んだ直後の縦持ちで、画面上側から遊び始める配置。
-      this.startLocal = { x: 3.25, z: 5.85 };
+      this.startLocal = { x: 3.7, z: 6.25 };
       this.motionInput = { x: 0, z: 0 };
       this.mazeOffset = { x: 0, z: 0 };
       this.mazeVelocity = { x: 0, z: 0 };
@@ -124,34 +124,44 @@
         createWall("east", 0.32, 14, 4.62, 0);
         createWall("west", 0.32, 14, -4.62, 0);
 
-        // 右上から左下へ進む迷路。手描き案の形を保ち、通路幅と壁の接続をそろえる。
-        // 上段は短い壁とコの字壁で、スタート直後に中央へ誘導する。
-        createWall("upperLeftV", 0.24, 3.7, -2.85, 4.45);
-        createWall("upperCenterH", 2.9, 0.24, -0.45, 4.8);
-        createWall("upperCenterV", 0.24, 1.7, -1.9, 3.95);
-        createWall("upperLowerH", 2.5, 0.24, -0.65, 3.1);
-        createWall("upperBridgeH", 1.2, 0.24, 0.3, 2.9);
-        createWall("upperRightH", 1.45, 0.24, 3.5, 4.95);
+        // 添付案を基準に、長い壁と大きな折り返しで構成する。
+        // 小さな箱や狭い入口をなくし、ボールが角へ引っ掛かりにくい通路幅を確保する。
+        createWall("topShelf", 6.6, 0.24, 1.3, 5.55);
+        createWall("topLeftV", 0.24, 1.45, -2.0, 4.825);
+        createWall("topLowerH", 5.3, 0.24, 0.65, 4.1);
+        createWall("rightSpine", 0.24, 9.8, 3.3, -0.8);
 
-        // 中段は四角い障害物と縦壁をつなぎ、左右どちらへ抜けるかを考えさせる。
-        createWall("upperBlock", 1.35, 1.55, 1.55, 2.15);
-        createWall("middleShelf", 3.0, 0.24, -1.9, 1.2);
-        createWall("middleBlock", 1.5, 1.55, -1.15, 0.1);
-        createWall("rightSpine", 0.24, 5.0, 2.45, -0.65);
+        // 左上の折り返し。
+        createWall("upperLeftH", 3.85, 0.24, -1.175, 2.7);
+        createWall("upperLeftV", 0.24, 1.45, -2.0, 1.975);
+        createWall("upperLeftReturn", 1.35, 0.24, -1.325, 1.25);
 
-        // 下段へは左端の隙間から回り込む。2つのブロック間が最後の難所になる。
-        createWall("lowerShelf", 3.7, 0.24, -0.85, -1.45);
-        createWall("lowerCenterV", 0.24, 5.7, 0.975, -4.1);
-        createWall("lowerLeftBlock", 1.1, 1.5, -3.55, -3.8);
-        createWall("lowerMiddleBlock", 1.1, 1.55, -1.05, -3.8);
-        createWall("lowerRightV", 0.24, 2.4, 2.45, -5.75);
+        // 中央左は、下まで伸びる壁につながるコの字形。
+        createWall("middleLeftTop", 1.35, 0.24, -1.325, -0.15);
+        createWall("middleLeftV", 0.24, 1.45, -2.0, -0.875);
+        createWall("middleLeftBottom", 1.35, 0.24, -1.325, -1.6);
+        createWall("middleSpine", 0.24, 5.55, -0.65, -2.925);
+
+        // 中央右は左右の縦壁の長さを変え、下側に広い抜け道を作る。
+        createWall("centerTop", 1.35, 0.24, 1.3, 1.25);
+        createWall("centerLeftV", 0.24, 5.7, 0.625, -1.6);
+        createWall("centerRightV", 0.24, 4.25, 1.975, -0.875);
+
+        // 左下と最下段の折り返し。外周との間にもボール一個分以上の余裕を残す。
+        createWall("lowerLeftTop", 1.1, 0.24, -2.55, -3.0);
+        createWall("lowerLeftV", 0.24, 1.45, -2.0, -3.725);
+        createWall("lowerLeftBottom", 1.1, 0.24, -2.55, -4.45);
+        createWall("bottomLeftTop", 1.35, 0.24, -1.325, -5.7);
+        createWall("bottomLeftV", 0.24, 1.42, -2.0, -6.41);
+        createWall("bottomCenterTop", 1.35, 0.24, 1.3, -5.7);
+        createWall("bottomRightV", 0.24, 2.51, 1.975, -5.705);
 
         const goalMat = new BABYLON.StandardMaterial("goalMat", scene);
         goalMat.diffuseColor = BABYLON.Color3.FromHexString("#d7ff4f");
         goalMat.emissiveColor = BABYLON.Color3.FromHexString("#344500");
         goalMat.specularColor = BABYLON.Color3.Black();
         const goal = BABYLON.MeshBuilder.CreateCylinder("goal", { diameter: 1.55, height: 0.04, tessellation: 48 }, scene);
-        goal.position.set(-3.25, -0.04, -5.85);
+        goal.position.set(-3.7, -0.04, -6.2);
         goal.material = goalMat;
         this.mazeVisuals.push({ mesh: goal, basePosition: goal.position.clone() });
 
