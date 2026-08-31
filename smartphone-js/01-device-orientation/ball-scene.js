@@ -10,7 +10,6 @@
       this.onStatus = onStatus;
       this.onGoal = onGoal;
       this.engine = null;
-      this.scene = null;
       this.camera = null;
       this.light = null;
       this.ball = null;
@@ -24,8 +23,8 @@
       this.resetVersion = 0;
       this.startLocal = { x: 0, z: -5.8 };
       this.motionInput = { x: 0, z: 0 };
-      this.mazeOffset = { x: 0, y: 0, z: 0 };
-      this.mazeVelocity = { x: 0, y: 0, z: 0 };
+      this.mazeOffset = { x: 0, z: 0 };
+      this.mazeVelocity = { x: 0, z: 0 };
       this.mazeRotation = null;
       this.mazePose = null;
       this.mazeAnchor = null;
@@ -49,11 +48,12 @@
       try {
         if (!window.BABYLON || !window.HavokPhysics) throw new Error("3Dライブラリを読み込めませんでした");
 
-        this.engine = new BABYLON.Engine(this.canvas, true, { preserveDrawingBuffer: true, stencil: true });
+        // アンチエイリアスだけを有効にし、不要な追加描画オプションは指定しない。
+        this.engine = new BABYLON.Engine(this.canvas, true);
         const scene = new BABYLON.Scene(this.engine);
         scene.clearColor = new BABYLON.Color4(0.025, 0.055, 0.06, 1);
-        this.scene = scene;
 
+        // カメラは迷路と同じ変換を受けるため、画面上では迷路が固定されて見える。
         const camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 19.1, -5.91), scene);
         this.camera = camera;
         this.cameraLocalPosition = new BABYLON.Vector3(0, 19.1, -5.91);
@@ -63,7 +63,6 @@
           origin: BABYLON.Vector3.Zero(),
           rotation: BABYLON.Quaternion.Identity()
         };
-        camera.inputs.clear();
         camera.fovMode = BABYLON.Camera.FOVMODE_HORIZONTAL_FIXED;
         camera.fov = 0.82;
         camera.upVector.copyFrom(this.cameraLocalUp);
@@ -86,6 +85,8 @@
         wallMat.diffuseColor = BABYLON.Color3.FromHexString("#d7e5d8");
         wallMat.specularColor = BABYLON.Color3.Black();
 
+        // 床と壁はANIMATEDボディとして動かし、ボールだけを動的ボディとして残す。
+        // これにより、端末を平行移動したときのボールの慣性を表現できる。
         const registerMovableBody = (mesh, friction, restitution) => {
           mesh.rotationQuaternion = mesh.rotationQuaternion || BABYLON.Quaternion.Identity();
           const aggregate = new BABYLON.PhysicsAggregate(
@@ -101,7 +102,6 @@
             basePosition: mesh.position.clone(),
             targetPosition: mesh.position.clone()
           });
-          return aggregate;
         };
 
         const board = BABYLON.MeshBuilder.CreateBox("board", { width: 9, height: 0.35, depth: 14 }, scene);
@@ -174,6 +174,7 @@
         this.ballShadow.position.y = -0.065;
 
         scene.onBeforeRenderObservable.add(() => {
+          // 物理迷路、影、ゴール判定を描画直前に同じ座標系へ同期する。
           this.updateMazeMotion(Math.min(this.engine.getDeltaTime() / 1000, 0.034));
           this.limitBallRise();
           const ballLocal = this.worldToMazeLocal(this.ball.position);
@@ -223,6 +224,7 @@
     }
 
     rotateVector(vector, quaternion) {
+      // Quaternionでベクトルを回転する。迷路座標とワールド座標の変換に共用する。
       const tx = 2 * (quaternion.y * vector.z - quaternion.z * vector.y);
       const ty = 2 * (quaternion.z * vector.x - quaternion.x * vector.z);
       const tz = 2 * (quaternion.x * vector.y - quaternion.y * vector.x);
@@ -252,6 +254,7 @@
       const mazeUp = this.rotateVector(new BABYLON.Vector3(0, 1, 0), this.mazePose.rotation).normalize();
       const upwardSpeed = BABYLON.Vector3.Dot(velocity, mazeUp);
       if (upwardSpeed <= MAX_UPWARD_SPEED) return;
+      // 横方向の速度は変えず、迷路面から離れる成分だけに上限をかける。
       velocity.subtractInPlace(mazeUp.scale(upwardSpeed - MAX_UPWARD_SPEED));
       this.ballAggregate.body.setLinearVelocity(velocity);
     }
@@ -279,6 +282,7 @@
 
     updateMazeMotion(deltaSeconds) {
       if (!this.ready || !this.camera) return;
+      // 加速度を速度・位置へ積分する。dragで端末を止めた後の移動を徐々に減衰させる。
       const accelerationGain = 24;
       const drag = Math.exp(-1.2 * deltaSeconds);
       const worldAcceleration = this.rotateVector(
@@ -290,22 +294,21 @@
       this.mazeVelocity.x = (this.mazeVelocity.x + worldAcceleration.x * accelerationGain * deltaSeconds) * drag;
       this.mazeVelocity.z = (this.mazeVelocity.z + worldAcceleration.z * accelerationGain * deltaSeconds) * drag;
       this.mazeVelocity.x = Math.max(-36, Math.min(36, this.mazeVelocity.x));
-      this.mazeVelocity.y = 0;
       this.mazeVelocity.z = Math.max(-36, Math.min(36, this.mazeVelocity.z));
       this.mazeOffset.x = Math.max(-48, Math.min(48, this.mazeOffset.x + this.mazeVelocity.x * deltaSeconds));
-      this.mazeOffset.y = 0;
       this.mazeOffset.z = Math.max(-56, Math.min(56, this.mazeOffset.z + this.mazeVelocity.z * deltaSeconds));
 
       for (const item of this.movableBodies) {
         const rotatedPosition = this.rotateVector(item.basePosition, this.mazeRotation);
         item.targetPosition.set(
           rotatedPosition.x + this.mazeOffset.x,
-          rotatedPosition.y + this.mazeOffset.y,
+          rotatedPosition.y,
           rotatedPosition.z + this.mazeOffset.z
         );
         item.body.setTargetTransform(item.targetPosition, this.mazeRotation);
       }
 
+      // Havokが確定した床の姿勢を、装飾・カメラ・ライトの共通基準にする。
       const anchorItem = this.movableBodies[0];
       const actualRotation = this.mazeAnchor.rotationQuaternion || this.mazeRotation;
       const rotatedAnchorBase = this.rotateVector(anchorItem.basePosition, actualRotation);
@@ -335,9 +338,11 @@
       this.outOfBounds = false;
       this.startedAt = performance.now();
       this.motionInput = { x: 0, z: 0 };
-      this.mazeVelocity = { x: 0, y: 0, z: 0 };
+      this.mazeVelocity = { x: 0, z: 0 };
       this.onGoal("");
       const resetVersion = ++this.resetVersion;
+      // iPhoneではsetTimeout(0)が物理同期より先に実行されることがある。
+      // 2フレームにわたりmesh→physicsを同期してから通常のphysics→mesh更新へ戻す。
       const syncBallToStart = () => {
         if (resetVersion !== this.resetVersion || !this.ballAggregate?.body) return;
         const startPosition = this.mazeLocalToWorld(new BABYLON.Vector3(this.startLocal.x, 0.75, this.startLocal.z));

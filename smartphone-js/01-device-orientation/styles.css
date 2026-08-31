@@ -21,9 +21,9 @@ html, body {
   font-family: Inter, "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif;
 }
 
-button, input { font: inherit; }
-button { touch-action: manipulation; }
+button { font: inherit; touch-action: manipulation; }
 
+/* 画面上部25%をセンサー、下部75%を迷路として固定する。 */
 .game-shell {
   position: relative;
   display: grid;
@@ -34,6 +34,7 @@ button { touch-action: manipulation; }
   overflow: hidden;
 }
 
+/* センサー表示 */
 .sensor-panel {
   position: relative;
   z-index: 5;
@@ -171,6 +172,7 @@ button { touch-action: manipulation; }
 .control-button:disabled { opacity: .35; cursor: not-allowed; }
 .control-button.accent { color: #152000; border-color: var(--acid); background: var(--acid); }
 
+/* 3D迷路 */
 .maze-stage {
   position: relative;
   min-height: 0;
@@ -233,6 +235,7 @@ button { touch-action: manipulation; }
   pointer-events: none;
 }
 
+/* センサー権限をユーザー操作から開始するための初期画面 */
 .start-overlay {
   position: absolute;
   inset: 0;

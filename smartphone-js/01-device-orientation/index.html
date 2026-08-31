@@ -16,6 +16,7 @@
 </head>
 <body>
   <main class="game-shell">
+    <!-- センサー値と、プレイ中に必要な最小限の操作を表示する領域。 -->
     <section class="sensor-panel" aria-label="端末姿勢センサーと操作">
       <div class="sensor-heading">
         <span class="sensor-label">DEVICE ORIENTATION</span>
@@ -54,6 +55,7 @@
       </div>
     </section>
 
+    <!-- Babylon.jsが描画する3D迷路。メッセージ類はcanvasの上へ重ねる。 -->
     <section class="maze-stage" aria-label="ボール転がし迷路">
       <canvas id="ball-canvas" aria-label="スマートフォンの傾きで操作する3D迷路"></canvas>
       <p class="motion-hint">傾けてROLL・横へ動かして迷路をスライド</p>
@@ -61,6 +63,7 @@
       <div class="loading-badge" id="physics-status">3Dを準備しています…</div>
     </section>
 
+    <!-- iOSではユーザー操作を起点にセンサー権限を要求する必要がある。 -->
     <div class="start-overlay" id="start-overlay">
       <section class="start-card" aria-label="センサー開始">
         <p class="start-number">DEVICE ORIENTATION</p>

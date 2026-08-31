@@ -2,6 +2,8 @@
   "use strict";
 
   const $ = (selector) => document.querySelector(selector);
+
+  // DOM参照を一か所に集約し、センサー処理と表示更新を分離する。
   const elements = {
     status: $("#sensor-status"),
     statusDot: $("#status-dot"),
@@ -34,27 +36,28 @@
     elements.statusDot.classList.toggle("is-error", ["denied", "unsupported", "silent"].includes(kind));
   }
 
+  // Androidなど対応ブラウザだけ縦向き固定を試す。
+  // 非対応端末では例外を画面へ出さず、そのまま通常表示を継続する。
   async function tryAutoPortraitLock() {
     let enteredFullscreen = false;
     try {
-      if (typeof window.screen.orientation?.lock !== "function") return false;
+      if (typeof window.screen.orientation?.lock !== "function") return;
       const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
       if (!document.fullscreenElement && !standalone) {
-        if (typeof document.documentElement.requestFullscreen !== "function") return false;
+        if (typeof document.documentElement.requestFullscreen !== "function") return;
         await document.documentElement.requestFullscreen({ navigationUI: "hide" });
         enteredFullscreen = true;
       }
       await window.screen.orientation.lock("portrait-primary");
-      return true;
     } catch (error) {
       console.info("Automatic portrait lock was not available.", error);
       if (enteredFullscreen && document.fullscreenElement && typeof document.exitFullscreen === "function") {
         try { await document.exitFullscreen(); } catch (_) { /* 通常表示を継続する */ }
       }
-      return false;
     }
   }
 
+  // 取得値を表示し、補正後のX/Y/方位を3D迷路へ渡す。
   function update(reading) {
     latest = reading;
     const { raw, x, y, heading, calibrated } = reading;
@@ -77,6 +80,7 @@
   const sensor = new window.SensorController({
     onUpdate: update,
     onStatus: setStatus,
+    // 加速度は端末の平行移動として扱い、迷路とカメラの慣性表現に使う。
     onMotion: ({ magnitude, available, motionX = 0, motionY = 0 }) => {
       elements.acceleration.textContent = available ? magnitude.toFixed(1) : "--";
       if (available) ballScene.setMotion(motionX, motionY);
@@ -90,6 +94,7 @@
   });
 
   ballScene.init().then(() => {
+    // 3D初期化中にセンサー値を受信していた場合は、最後の姿勢を反映する。
     if (latest) ballScene.setOrientation(latest.x, latest.y, latest.heading);
   });
 

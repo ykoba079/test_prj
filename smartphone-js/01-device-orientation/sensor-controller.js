@@ -8,6 +8,7 @@
   }
 
   function circularDelta(current, previous) {
+    // 359°→0°のような境界でも、最短方向の差分を返す。
     return ((current - previous + 540) % 360) - 180;
   }
 
@@ -41,6 +42,7 @@
         return false;
       }
 
+      // iOS Safariは、クリックなどのユーザー操作中にrequestPermission()を呼ぶ必要がある。
       const orientationPermission = typeof window.DeviceOrientationEvent.requestPermission === "function"
         ? window.DeviceOrientationEvent.requestPermission()
         : Promise.resolve("granted");
@@ -88,6 +90,7 @@
       if ([linear?.x, linear?.y, linear?.z].every(Number.isFinite)) {
         values = { x: linear.x, y: linear.y, z: linear.z };
       } else {
+        // accelerationがない端末では、重力込みの値をローパス処理して重力成分を差し引く。
         const gravity = event.accelerationIncludingGravity;
         if (![gravity?.x, gravity?.y, gravity?.z].every(Number.isFinite)) return;
         if (!this.gravityEstimate) {
@@ -106,6 +109,7 @@
       }
 
       const magnitude = Math.sqrt(values.x ** 2 + values.y ** 2 + values.z ** 2);
+      // 端末座標を画面座標へ直してから渡す。Xは迷路の見た目と合うよう符号を反転する。
       const screenMotion = this.toScreenCoordinates(values.y, values.x);
       this.filteredMotion += (magnitude - this.filteredMotion) * 0.32;
       this.onMotion?.({
@@ -134,6 +138,7 @@
     }
 
     toScreenCoordinates(beta, gamma) {
+      // 縦画面・横画面の回転角を吸収し、常に画面基準の左右(X)・前後(Y)にそろえる。
       const angle = this.getScreenAngle() * DEG;
       return {
         x: gamma * Math.cos(angle) + beta * Math.sin(angle),
@@ -142,6 +147,7 @@
     }
 
     consume(raw, screenX, screenY) {
+      // センサーの細かな揺れを一次遅れフィルターで滑らかにする。
       if (!this.filtered) {
         this.filtered = { alpha: raw.alpha, x: screenX, y: screenY };
       } else {
@@ -153,6 +159,7 @@
 
       const x = this.filtered.x - (this.reference?.x ?? 0);
       const y = this.filtered.y - (this.reference?.y ?? 0);
+      // alphaは0°/360°をまたぐため、単純な引き算ではなく循環差分を使う。
       if (this.alphaOrigin === null) this.alphaOrigin = this.filtered.alpha;
       const heading = circularDelta(this.filtered.alpha, this.reference?.alpha ?? this.alphaOrigin);
       this.lastReading = {
@@ -168,6 +175,7 @@
 
     calibrate() {
       if (!this.filtered) return false;
+      // 現在の姿勢を原点として保存し、以後はその姿勢からの相対角度を返す。
       this.reference = { x: this.filtered.x, y: this.filtered.y, alpha: this.filtered.alpha };
       if (this.lastReading) {
         this.lastReading.x = 0;
