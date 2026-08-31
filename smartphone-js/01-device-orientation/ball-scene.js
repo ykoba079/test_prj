@@ -104,15 +104,15 @@
         const board = BABYLON.MeshBuilder.CreateBox("board", { width: 9, height: 0.35, depth: 14 }, scene);
         board.position.y = -0.25;
         board.material = boardMat;
-        // 平行移動時は床にボールが貼り付かず、慣性で取り残されるよう低摩擦にする。
-        registerMovableBody(board, 0.02, 0.06);
+        // 慣性差を残しつつ、床で自然に転がる摩擦と低い反発にする。
+        registerMovableBody(board, 0.18, 0.01);
         this.mazeAnchor = board;
 
         const createWall = (name, width, depth, x, z, height = 1.55, material = wallMat) => {
           const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height, depth }, scene);
           wall.position.set(x, -0.075 + height / 2, z);
           wall.material = material;
-          registerMovableBody(wall, 0.65, 0.18);
+          registerMovableBody(wall, 0.65, 0.03);
         };
         createWall("north", 9.4, 0.32, 0, 7.12);
         createWall("south", 9.4, 0.32, 0, -7.12);
@@ -163,7 +163,7 @@
         this.ball = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 0.85, segments: 28 }, scene);
         this.ball.material = ballMat;
         this.ball.position.set(-3.35, 0.75, -5.75);
-        this.ballAggregate = new BABYLON.PhysicsAggregate(this.ball, BABYLON.PhysicsShapeType.SPHERE, { mass: 1, friction: 0.04, restitution: 0.16 }, scene);
+        this.ballAggregate = new BABYLON.PhysicsAggregate(this.ball, BABYLON.PhysicsShapeType.SPHERE, { mass: 1, friction: 0.16, restitution: 0.02 }, scene);
 
         const shadowMat = new BABYLON.StandardMaterial("shadowMat", scene);
         shadowMat.diffuseColor = BABYLON.Color3.Black();
@@ -274,14 +274,15 @@
         new BABYLON.Vector3(this.motionInput.x, 0, this.motionInput.z),
         this.mazeRotation
       );
+      // 端末の平行移動は画面内の慣性だけに使い、迷路を上下させてボールを跳ね上げない。
+      worldAcceleration.y = 0;
       this.mazeVelocity.x = (this.mazeVelocity.x + worldAcceleration.x * accelerationGain * deltaSeconds) * drag;
-      this.mazeVelocity.y = (this.mazeVelocity.y + worldAcceleration.y * accelerationGain * deltaSeconds) * drag;
       this.mazeVelocity.z = (this.mazeVelocity.z + worldAcceleration.z * accelerationGain * deltaSeconds) * drag;
       this.mazeVelocity.x = Math.max(-36, Math.min(36, this.mazeVelocity.x));
-      this.mazeVelocity.y = Math.max(-36, Math.min(36, this.mazeVelocity.y));
+      this.mazeVelocity.y = 0;
       this.mazeVelocity.z = Math.max(-36, Math.min(36, this.mazeVelocity.z));
       this.mazeOffset.x = Math.max(-48, Math.min(48, this.mazeOffset.x + this.mazeVelocity.x * deltaSeconds));
-      this.mazeOffset.y = Math.max(-32, Math.min(32, this.mazeOffset.y + this.mazeVelocity.y * deltaSeconds));
+      this.mazeOffset.y = 0;
       this.mazeOffset.z = Math.max(-56, Math.min(56, this.mazeOffset.z + this.mazeVelocity.z * deltaSeconds));
 
       for (const item of this.movableBodies) {
