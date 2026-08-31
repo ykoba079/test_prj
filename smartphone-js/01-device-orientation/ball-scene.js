@@ -21,6 +21,7 @@
       this.goalReached = false;
       this.outOfBounds = false;
       this.startedAt = null;
+      this.resetVersion = 0;
       this.startLocal = { x: 0, z: -5.8 };
       this.motionInput = { x: 0, z: 0 };
       this.mazeOffset = { x: 0, y: 0, z: 0 };
@@ -192,7 +193,7 @@
           }
           if (!this.outOfBounds && ballLocal.y < -8) {
             this.outOfBounds = true;
-            this.onGoal("OUT　「リトライ」で再開");
+            this.onGoal("OUT　「最初から」で再開");
           }
         });
 
@@ -336,14 +337,25 @@
       this.motionInput = { x: 0, z: 0 };
       this.mazeVelocity = { x: 0, y: 0, z: 0 };
       this.onGoal("");
-      this.ballAggregate.body.setLinearVelocity(BABYLON.Vector3.Zero());
-      this.ballAggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
-      this.ball.position.copyFrom(this.mazeLocalToWorld(new BABYLON.Vector3(this.startLocal.x, 0.75, this.startLocal.z)));
-      this.ball.computeWorldMatrix(true);
-      this.ballAggregate.body.disablePreStep = false;
-      window.setTimeout(() => {
-        if (this.ballAggregate?.body) this.ballAggregate.body.disablePreStep = true;
-      }, 0);
+      const resetVersion = ++this.resetVersion;
+      const syncBallToStart = () => {
+        if (resetVersion !== this.resetVersion || !this.ballAggregate?.body) return;
+        const startPosition = this.mazeLocalToWorld(new BABYLON.Vector3(this.startLocal.x, 0.75, this.startLocal.z));
+        this.ballAggregate.body.disablePreStep = false;
+        this.ballAggregate.body.setLinearVelocity(BABYLON.Vector3.Zero());
+        this.ballAggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
+        this.ball.position.copyFrom(startPosition);
+        this.ball.computeWorldMatrix(true);
+      };
+      syncBallToStart();
+      requestAnimationFrame(() => {
+        syncBallToStart();
+        requestAnimationFrame(() => {
+          if (resetVersion === this.resetVersion && this.ballAggregate?.body) {
+            this.ballAggregate.body.disablePreStep = true;
+          }
+        });
+      });
     }
   }
 

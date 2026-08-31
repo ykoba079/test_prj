@@ -7,17 +7,11 @@
     statusDot: $("#status-dot"),
     overlay: $("#start-overlay"),
     calibrate: $("#calibrate-button"),
-    clearCalibration: $("#clear-calibration-button"),
     alpha: $("#alpha-value"), beta: $("#beta-value"), gamma: $("#gamma-value"),
     tiltX: $("#tilt-x-value"), tiltY: $("#tilt-y-value"),
     screenAngle: $("#screen-angle-value"), reference: $("#reference-label"),
     physicsStatus: $("#physics-status"), resetBall: $("#reset-ball-button"),
-    goalMessage: $("#goal-message"), manualToggle: $("#manual-toggle-button"),
-    manualClose: $("#manual-close-button"), manualControls: $("#manual-controls"),
-    manualX: $("#manual-x"), manualY: $("#manual-y"),
-    manualXOutput: $("#manual-x-output"), manualYOutput: $("#manual-y-output"),
-    manualCenter: $("#manual-center-button"),
-    startManual: $("#start-manual-button"), acceleration: $("#acceleration-value"),
+    goalMessage: $("#goal-message"), acceleration: $("#acceleration-value"),
     motionState: $("#motion-state")
   };
 
@@ -36,7 +30,7 @@
 
   function setStatus(kind, message) {
     elements.status.textContent = message;
-    elements.statusDot.classList.toggle("is-live", ["live", "manual"].includes(kind));
+    elements.statusDot.classList.toggle("is-live", kind === "live");
     elements.statusDot.classList.toggle("is-error", ["denied", "unsupported", "silent"].includes(kind));
   }
 
@@ -69,10 +63,9 @@
     elements.gamma.textContent = `${raw.gamma.toFixed(1)}°`;
     elements.tiltX.textContent = formatAngle(x);
     elements.tiltY.textContent = formatAngle(y);
-    elements.screenAngle.textContent = reading.source === "manual" ? "Manual input" : screenName(reading.screenAngle);
-    elements.reference.textContent = calibrated ? "設定姿勢を基準" : "端末水平を基準";
+    elements.screenAngle.textContent = screenName(reading.screenAngle);
+    elements.reference.textContent = calibrated ? "今の角度を0°に設定中" : "端末水平を0°";
     elements.calibrate.disabled = false;
-    elements.clearCalibration.disabled = !calibrated;
     ballScene.setOrientation(x, y, heading);
   }
 
@@ -117,36 +110,5 @@
 
   document.querySelectorAll("[data-start-sensor]").forEach((button) => button.addEventListener("click", startSensor));
   elements.calibrate.addEventListener("click", () => sensor.calibrate());
-  elements.clearCalibration.addEventListener("click", () => sensor.clearCalibration());
   elements.resetBall.addEventListener("click", () => ballScene.reset());
-
-  function updateManual() {
-    const x = Number(elements.manualX.value);
-    const y = Number(elements.manualY.value);
-    elements.manualXOutput.textContent = formatAngle(x);
-    elements.manualYOutput.textContent = formatAngle(y);
-    sensor.useManual(x, y);
-  }
-
-  function setManualOpen(open) {
-    elements.manualControls.hidden = !open;
-    elements.manualToggle.setAttribute("aria-expanded", String(open));
-    if (open) updateManual();
-  }
-
-  elements.manualToggle.addEventListener("click", () => setManualOpen(elements.manualControls.hidden));
-  elements.manualClose.addEventListener("click", () => setManualOpen(false));
-  elements.startManual.addEventListener("click", async () => {
-    await ballScene.init();
-    ballScene.reset();
-    elements.overlay.classList.add("is-hidden");
-    setManualOpen(true);
-  });
-  elements.manualX.addEventListener("input", updateManual);
-  elements.manualY.addEventListener("input", updateManual);
-  elements.manualCenter.addEventListener("click", () => {
-    elements.manualX.value = "0";
-    elements.manualY.value = "0";
-    updateManual();
-  });
 })();

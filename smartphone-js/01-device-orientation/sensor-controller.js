@@ -20,7 +20,6 @@
       this.filtered = null;
       this.lastReading = null;
       this.listening = false;
-      this.manual = false;
       this.eventTimeout = 0;
       this.receivedSensorReading = false;
       this.filterStrength = 0.18;
@@ -34,12 +33,11 @@
     }
 
     async start() {
-      this.manual = false;
       this.receivedSensorReading = false;
       this.onStatus("requesting", "センサーの利用許可を確認しています");
 
       if (typeof window.DeviceOrientationEvent === "undefined") {
-        this.onStatus("unsupported", "この環境では端末姿勢を取得できません。手動操作を利用できます");
+        this.onStatus("unsupported", "この環境では傾きセンサーを利用できません");
         return false;
       }
 
@@ -75,8 +73,8 @@
 
       clearTimeout(this.eventTimeout);
       this.eventTimeout = window.setTimeout(() => {
-        if (!this.lastReading && !this.manual) {
-          this.onStatus("silent", "センサー値を受信できません。手動操作を利用できます");
+        if (!this.lastReading) {
+          this.onStatus("silent", "センサー値を受信できません。もう一度お試しください");
         }
       }, 2500);
       this.onStatus("waiting", "センサー値を待っています");
@@ -84,7 +82,6 @@
     }
 
     handleMotion(event) {
-      if (this.manual) return;
       const linear = event.acceleration;
       let values = null;
 
@@ -120,7 +117,7 @@
     }
 
     handleOrientation(event) {
-      if (this.manual || (event.alpha === null && event.beta === null && event.gamma === null)) return;
+      if (event.alpha === null && event.beta === null && event.gamma === null) return;
 
       clearTimeout(this.eventTimeout);
       const raw = {
@@ -129,7 +126,7 @@
         gamma: Number.isFinite(event.gamma) ? event.gamma : 0
       };
       const screen = this.toScreenCoordinates(raw.beta, raw.gamma);
-      this.consume(raw, screen.x, screen.y, "sensor");
+      this.consume(raw, screen.x, screen.y);
       if (!this.receivedSensorReading) {
         this.receivedSensorReading = true;
         this.onStatus("live", "センサー取得中");
@@ -144,7 +141,7 @@
       };
     }
 
-    consume(raw, screenX, screenY, source) {
+    consume(raw, screenX, screenY) {
       if (!this.filtered) {
         this.filtered = { alpha: raw.alpha, x: screenX, y: screenY };
       } else {
@@ -164,8 +161,7 @@
         y: clamp(Math.abs(y) < 0.15 ? 0 : y, -45, 45),
         heading,
         screenAngle: this.getScreenAngle(),
-        calibrated: Boolean(this.reference),
-        source
+        calibrated: Boolean(this.reference)
       };
       this.onUpdate(this.lastReading);
     }
@@ -180,40 +176,8 @@
         this.lastReading.calibrated = true;
         this.onUpdate(this.lastReading);
       }
-      this.onStatus("live", "現在位置を基準に設定しました");
+      this.onStatus("live", "今の角度を0°にしました");
       return true;
-    }
-
-    clearCalibration() {
-      this.reference = null;
-      if (this.filtered && this.lastReading) {
-        this.lastReading.x = clamp(this.filtered.x, -45, 45);
-        this.lastReading.y = clamp(this.filtered.y, -45, 45);
-        this.lastReading.heading = circularDelta(this.filtered.alpha, this.alphaOrigin ?? this.filtered.alpha);
-        this.lastReading.calibrated = false;
-        this.onUpdate(this.lastReading);
-      }
-      this.onStatus(this.manual ? "manual" : "live", this.manual ? "手動操作中" : "基準位置を解除しました");
-    }
-
-    useManual(x, y) {
-      this.manual = true;
-      clearTimeout(this.eventTimeout);
-      const raw = { alpha: 0, beta: y, gamma: x };
-      this.filtered = { alpha: 0, x, y };
-      const relativeX = x - (this.reference?.x ?? 0);
-      const relativeY = y - (this.reference?.y ?? 0);
-      this.lastReading = {
-        raw,
-        x: relativeX,
-        y: relativeY,
-        heading: 0,
-        screenAngle: 0,
-        calibrated: Boolean(this.reference),
-        source: "manual"
-      };
-      this.onUpdate(this.lastReading);
-      this.onStatus("manual", "手動操作中");
     }
 
     handleScreenChange() {
@@ -221,7 +185,7 @@
       this.reference = null;
       this.alphaOrigin = null;
       this.receivedSensorReading = false;
-      this.onStatus(this.manual ? "manual" : "waiting", "画面の向きが変わりました。必要に応じて基準を再設定してください");
+      this.onStatus("waiting", "画面の向きが変わりました。必要なら今の角度を0°にしてください");
     }
 
     getScreenAngle() {
