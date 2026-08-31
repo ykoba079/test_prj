@@ -67,7 +67,7 @@
     elements.tiltX.textContent = formatAngle(x);
     elements.tiltY.textContent = formatAngle(y);
     elements.screenAngle.textContent = screenName(reading.screenAngle);
-    elements.reference.textContent = calibrated ? "今の角度を0°に設定中" : "端末水平を0°";
+    elements.reference.textContent = calibrated ? "この傾きを水平に設定済み" : "端末の水平を基準";
     elements.calibrate.disabled = false;
     ballScene.setOrientation(x, y, heading);
   }

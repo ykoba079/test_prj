@@ -2,6 +2,7 @@
   "use strict";
 
   const DEG = Math.PI / 180;
+  const TILT_RESPONSE = 1.35;
   const MAX_UPWARD_SPEED = 2.2;
 
   class BallScene {
@@ -261,8 +262,9 @@
 
     setOrientation(xDegrees, yDegrees, headingDegrees = 0) {
       if (!this.ready) return;
-      const x = Math.max(-35, Math.min(35, xDegrees)) * DEG;
-      const y = Math.max(-35, Math.min(35, yDegrees)) * DEG;
+      // 実際の傾きを少し増幅し、小さな操作でもボールが早く動き始めるようにする。
+      const x = Math.max(-35, Math.min(35, xDegrees * TILT_RESPONSE)) * DEG;
+      const y = Math.max(-35, Math.min(35, yDegrees * TILT_RESPONSE)) * DEG;
       const heading = Math.max(-180, Math.min(180, headingDegrees)) * DEG;
       this.mazeRotation.copyFrom(
         BABYLON.Quaternion.RotationYawPitchRoll(-heading, -y, -x)

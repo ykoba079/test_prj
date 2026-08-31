@@ -23,7 +23,8 @@
       this.listening = false;
       this.eventTimeout = 0;
       this.receivedSensorReading = false;
-      this.filterStrength = 0.18;
+      // 大きいほど入力へ素早く追従する。0.30は安定性を残しつつ遅延を抑える値。
+      this.filterStrength = 0.30;
       this.motionListening = false;
       this.gravityEstimate = null;
       this.filteredMotion = 0;
@@ -184,7 +185,7 @@
         this.lastReading.calibrated = true;
         this.onUpdate(this.lastReading);
       }
-      this.onStatus("live", "今の角度を0°にしました");
+      this.onStatus("live", "この傾きを水平に設定しました");
       return true;
     }
 
@@ -193,7 +194,7 @@
       this.reference = null;
       this.alphaOrigin = null;
       this.receivedSensorReading = false;
-      this.onStatus("waiting", "画面の向きが変わりました。必要なら今の角度を0°にしてください");
+      this.onStatus("waiting", "画面の向きが変わりました。必要なら、この傾きを水平に設定してください");
     }
 
     getScreenAngle() {
