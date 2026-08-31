@@ -27,24 +27,24 @@
       </div>
 
       <div class="sensor-content">
-        <div class="reading-group">
-          <span class="reading-group-label">RAW姿勢</span>
-          <dl class="raw-values">
+        <div class="reading-group sensor-card orientation-card">
+          <span class="reading-group-label"><span>姿勢 / ORIENTATION</span><small>deg</small></span>
+          <dl class="orientation-values">
             <div><dt>α / Z軸回転</dt><dd id="alpha-value">--</dd></div>
             <div><dt>β / 前後傾き</dt><dd id="beta-value">--</dd></div>
             <div><dt>γ / 左右傾き</dt><dd id="gamma-value">--</dd></div>
           </dl>
         </div>
-        <div class="reading-group">
-          <span class="reading-group-label">CONTROL / 補正後</span>
-          <dl class="tilt-values">
-            <div><dt>X / 左右</dt><dd id="tilt-x-value">0.0°</dd></div>
-            <div><dt>Y / 前後</dt><dd id="tilt-y-value">0.0°</dd></div>
+        <div class="reading-group sensor-card acceleration-card">
+          <span class="reading-group-label"><span>加速度 / ACCELERATION</span><small>m/s²</small></span>
+          <dl class="acceleration-values">
+            <div><dt>X / 左右</dt><dd id="acceleration-x-value">--</dd></div>
+            <div><dt>Y / 上下</dt><dd id="acceleration-y-value">--</dd></div>
+            <div><dt>Z / 画面垂直</dt><dd id="acceleration-z-value">--</dd></div>
           </dl>
         </div>
         <div class="sensor-meta">
           <span id="reference-label">端末の水平を基準</span>
-          <span class="motion-readout"><span>MOTION</span> <strong id="acceleration-value">--</strong><span>m/s²</span> <b id="motion-state">WAIT</b></span>
           <span id="screen-angle-value">Portrait ↑</span>
         </div>
       </div>

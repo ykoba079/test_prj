@@ -27,7 +27,6 @@
       this.filterStrength = 0.45;
       this.motionListening = false;
       this.gravityEstimate = null;
-      this.filteredMotion = 0;
       this.alphaOrigin = null;
       this.handleOrientation = this.handleOrientation.bind(this);
       this.handleMotion = this.handleMotion.bind(this);
@@ -71,7 +70,7 @@
         window.addEventListener("devicemotion", this.handleMotion, true);
         this.motionListening = true;
       } else if (!this.motionListening) {
-        this.onMotion?.({ magnitude: null, available: false });
+        this.onMotion?.({ acceleration: null, available: false });
       }
 
       clearTimeout(this.eventTimeout);
@@ -109,12 +108,10 @@
         };
       }
 
-      const magnitude = Math.sqrt(values.x ** 2 + values.y ** 2 + values.z ** 2);
       // 端末座標を画面座標へ直してから渡す。Xは迷路の見た目と合うよう符号を反転する。
       const screenMotion = this.toScreenCoordinates(values.y, values.x);
-      this.filteredMotion += (magnitude - this.filteredMotion) * 0.32;
       this.onMotion?.({
-        magnitude: this.filteredMotion,
+        acceleration: values,
         available: true,
         motionX: -screenMotion.x,
         motionY: screenMotion.y

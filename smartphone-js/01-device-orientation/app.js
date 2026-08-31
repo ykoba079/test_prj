@@ -10,17 +10,18 @@
     overlay: $("#start-overlay"),
     calibrate: $("#calibrate-button"),
     alpha: $("#alpha-value"), beta: $("#beta-value"), gamma: $("#gamma-value"),
-    tiltX: $("#tilt-x-value"), tiltY: $("#tilt-y-value"),
+    accelerationX: $("#acceleration-x-value"),
+    accelerationY: $("#acceleration-y-value"),
+    accelerationZ: $("#acceleration-z-value"),
     screenAngle: $("#screen-angle-value"), reference: $("#reference-label"),
     physicsStatus: $("#physics-status"), resetBall: $("#reset-ball-button"),
-    goalMessage: $("#goal-message"), acceleration: $("#acceleration-value"),
-    motionState: $("#motion-state")
+    goalMessage: $("#goal-message")
   };
 
   let latest = null;
 
-  function formatAngle(value) {
-    return `${value >= 0 ? "+" : ""}${value.toFixed(1)}°`;
+  function formatAcceleration(value) {
+    return `${value >= 0 ? "+" : ""}${value.toFixed(1)}`;
   }
 
   function screenName(angle) {
@@ -57,15 +58,13 @@
     }
   }
 
-  // 取得値を表示し、補正後のX/Y/方位を3D迷路へ渡す。
+  // 生の姿勢値を表示し、補正後のX/Y/方位は表示せず3D迷路だけへ渡す。
   function update(reading) {
     latest = reading;
     const { raw, x, y, heading, calibrated } = reading;
     elements.alpha.textContent = `${raw.alpha.toFixed(1)}°`;
     elements.beta.textContent = `${raw.beta.toFixed(1)}°`;
     elements.gamma.textContent = `${raw.gamma.toFixed(1)}°`;
-    elements.tiltX.textContent = formatAngle(x);
-    elements.tiltY.textContent = formatAngle(y);
     elements.screenAngle.textContent = screenName(reading.screenAngle);
     elements.reference.textContent = calibrated ? "この傾きを水平に設定済み" : "端末の水平を基準";
     elements.calibrate.disabled = false;
@@ -80,16 +79,13 @@
   const sensor = new window.SensorController({
     onUpdate: update,
     onStatus: setStatus,
-    // 加速度は端末の平行移動として扱い、迷路とカメラの慣性表現に使う。
-    onMotion: ({ magnitude, available, motionX = 0, motionY = 0 }) => {
-      elements.acceleration.textContent = available ? magnitude.toFixed(1) : "--";
+    // 加速度3軸は学習用に表示し、画面方向へ変換した値は迷路の慣性表現に使う。
+    onMotion: ({ acceleration, available, motionX = 0, motionY = 0 }) => {
+      const values = available ? acceleration : null;
+      elements.accelerationX.textContent = values ? formatAcceleration(values.x) : "N/A";
+      elements.accelerationY.textContent = values ? formatAcceleration(values.y) : "N/A";
+      elements.accelerationZ.textContent = values ? formatAcceleration(values.z) : "N/A";
       if (available) ballScene.setMotion(motionX, motionY);
-      if (!available) elements.motionState.textContent = "N/A";
-      else {
-        if (magnitude <= 0.8) elements.motionState.textContent = "READY";
-        else if (Math.abs(motionX) >= Math.abs(motionY)) elements.motionState.textContent = motionX >= 0 ? "MOVE →" : "MOVE ←";
-        else elements.motionState.textContent = motionY >= 0 ? "MOVE ↑" : "MOVE ↓";
-      }
     }
   });
 

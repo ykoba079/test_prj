@@ -88,17 +88,17 @@ button { font: inherit; touch-action: manipulation; }
 
 .sensor-content {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: 1fr auto;
-  gap: 2px 16px;
+  gap: 4px 8px;
   min-height: 0;
   padding: 5px 0 3px;
 }
 
 .sensor-content dl { margin: 0; }
 .sensor-content dl div { min-width: 0; }
-.sensor-content dt { color: var(--muted); font: 700 12px ui-monospace, monospace; white-space: nowrap; }
-.sensor-content dd { margin: 0; font: 800 clamp(19px, 5.8vw, 27px) ui-monospace, SFMono-Regular, Consolas, monospace; line-height: 1.15; }
+.sensor-content dt { color: var(--muted); font: 700 clamp(8px, 2.5vw, 11px) ui-monospace, monospace; white-space: nowrap; }
+.sensor-content dd { margin: 0; font: 800 clamp(16px, 4.8vw, 22px) ui-monospace, SFMono-Regular, Consolas, monospace; line-height: 1.15; }
 
 .reading-group {
   display: grid;
@@ -106,17 +106,37 @@ button { font: inherit; touch-action: manipulation; }
   min-width: 0;
 }
 
+.sensor-card {
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, .13);
+}
+
+.orientation-card { border-color: rgba(104, 235, 194, .38); }
+.acceleration-card { border-color: rgba(215, 255, 79, .38); }
+
 .reading-group-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
   color: var(--mint);
   font: 800 8px ui-monospace, monospace;
   letter-spacing: .08em;
 }
 
-.raw-values,
-.tilt-values { display: grid; align-items: center; gap: 8px; }
-.raw-values { grid-template-columns: repeat(3, 1fr); }
-.tilt-values { grid-template-columns: repeat(2, 1fr); }
-.tilt-values dd { color: var(--acid); }
+.reading-group-label small { color: var(--muted); font: inherit; letter-spacing: 0; }
+.acceleration-card .reading-group-label { color: var(--acid); }
+
+.orientation-values,
+.acceleration-values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 4px;
+}
+
+.acceleration-values dd { color: var(--acid); }
 
 .sensor-meta {
   grid-column: 1 / -1;
@@ -124,26 +144,6 @@ button { font: inherit; touch-action: manipulation; }
   gap: 8px;
   color: var(--muted);
   font-size: 9px;
-}
-
-.motion-readout {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 3px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.motion-readout strong {
-  color: var(--ink);
-  font: 850 14px ui-monospace, monospace;
-}
-
-.motion-readout b {
-  min-width: 48px;
-  color: var(--mint);
-  font: 900 9px ui-monospace, monospace;
-  text-align: center;
 }
 
 .game-controls {
@@ -285,10 +285,8 @@ button { font: inherit; touch-action: manipulation; }
 
 @media (max-width: 390px) {
   .sensor-content { gap-column: 8px; }
-  .sensor-content dt { font-size: 10px; }
-  .sensor-meta > :first-child,
-  .sensor-meta > :last-child { display: none; }
-  .sensor-meta { justify-content: center; }
+  .sensor-content dt { font-size: 8px; }
+  .sensor-meta { display: none; }
   .game-controls { gap: 3px; }
   .control-button { padding-inline: 6px; font-size: 9px; }
 }
