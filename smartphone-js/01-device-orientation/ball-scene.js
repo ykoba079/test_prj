@@ -124,37 +124,43 @@
         createWall("east", 0.32, 14, 4.62, 0);
         createWall("west", 0.32, 14, -4.62, 0);
 
+        const mazeWallThickness = 0.3;
+
         // 添付案を基準に、長い壁と大きな折り返しで構成する。
         // 小さな箱や狭い入口をなくし、ボールが角へ引っ掛かりにくい通路幅を確保する。
-        createWall("topShelf", 6.6, 0.24, 1.3, 5.55);
-        createWall("topLeftV", 0.24, 1.45, -2.0, 4.825);
-        createWall("topLowerH", 5.3, 0.24, 0.65, 4.1);
-        createWall("rightSpine", 0.24, 9.8, 3.3, -0.8);
+        createWall("farUpperLeftV", mazeWallThickness, 2.8, -3.3, 5.7);
+        createWall("topShelf", 6.6, mazeWallThickness, 1.3, 5.55);
+        createWall("topLeftV", mazeWallThickness, 1.45, -2.0, 4.825);
+        createWall("topLowerH", 5.3, mazeWallThickness, 0.65, 4.1);
+        createWall("rightSpine", mazeWallThickness, 9.8, 3.3, -0.8);
 
         // 左上の折り返し。
-        createWall("upperLeftH", 3.85, 0.24, -1.175, 2.7);
-        createWall("upperLeftV", 0.24, 1.45, -2.0, 1.975);
-        createWall("upperLeftReturn", 1.35, 0.24, -1.325, 1.25);
+        createWall("upperFarLeftV", mazeWallThickness, 1.45, -3.3, 1.975);
+        createWall("upperLeftH", 4.05, mazeWallThickness, -1.275, 2.7);
+        createWall("upperLeftV", mazeWallThickness, 1.45, -2.0, 1.975);
+        createWall("upperLeftReturn", 1.35, mazeWallThickness, -1.325, 1.25);
 
         // 中央左は、下まで伸びる壁につながるコの字形。
-        createWall("middleLeftTop", 1.35, 0.24, -1.325, -0.15);
-        createWall("middleLeftV", 0.24, 1.45, -2.0, -0.875);
-        createWall("middleLeftBottom", 1.35, 0.24, -1.325, -1.6);
-        createWall("middleSpine", 0.24, 5.55, -0.65, -2.925);
+        createWall("leftEntryH", 1.32, mazeWallThickness, -3.96, -0.15);
+        createWall("leftSpine", mazeWallThickness, 5.55, -3.3, -2.925);
+        createWall("middleLeftTop", 1.35, mazeWallThickness, -1.325, -0.15);
+        createWall("middleLeftV", mazeWallThickness, 1.45, -2.0, -0.875);
+        createWall("middleLeftBottom", 1.35, mazeWallThickness, -1.325, -1.6);
+        createWall("middleSpine", mazeWallThickness, 5.55, -0.65, -2.925);
 
         // 中央右は左右の縦壁の長さを変え、下側に広い抜け道を作る。
-        createWall("centerTop", 1.35, 0.24, 1.3, 1.25);
-        createWall("centerLeftV", 0.24, 5.7, 0.625, -1.6);
-        createWall("centerRightV", 0.24, 4.25, 1.975, -0.875);
+        createWall("centerTop", 1.35, mazeWallThickness, 1.3, 1.25);
+        createWall("centerLeftV", mazeWallThickness, 5.7, 0.625, -1.6);
+        createWall("centerRightV", mazeWallThickness, 4.25, 1.975, -0.875);
 
         // 左下と最下段の折り返し。外周との間にもボール一個分以上の余裕を残す。
-        createWall("lowerLeftTop", 1.1, 0.24, -2.55, -3.0);
-        createWall("lowerLeftV", 0.24, 1.45, -2.0, -3.725);
-        createWall("lowerLeftBottom", 1.1, 0.24, -2.55, -4.45);
-        createWall("bottomLeftTop", 1.35, 0.24, -1.325, -5.7);
-        createWall("bottomLeftV", 0.24, 1.42, -2.0, -6.41);
-        createWall("bottomCenterTop", 1.35, 0.24, 1.3, -5.7);
-        createWall("bottomRightV", 0.24, 2.51, 1.975, -5.705);
+        createWall("lowerLeftTop", 1.3, mazeWallThickness, -2.65, -3.0);
+        createWall("lowerLeftV", mazeWallThickness, 1.45, -2.0, -3.725);
+        createWall("lowerLeftBottom", 1.3, mazeWallThickness, -2.65, -4.45);
+        createWall("bottomLeftTop", 1.35, mazeWallThickness, -1.325, -5.7);
+        createWall("bottomLeftV", mazeWallThickness, 1.42, -2.0, -6.41);
+        createWall("bottomCenterTop", 1.35, mazeWallThickness, 1.3, -5.7);
+        createWall("bottomRightV", mazeWallThickness, 2.51, 1.975, -5.705);
 
         const goalMat = new BABYLON.StandardMaterial("goalMat", scene);
         goalMat.diffuseColor = BABYLON.Color3.FromHexString("#d7ff4f");
