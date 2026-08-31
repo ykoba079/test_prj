@@ -2,6 +2,7 @@
   "use strict";
 
   const DEG = Math.PI / 180;
+  const MAX_UPWARD_SPEED = 2.2;
 
   class BallScene {
     constructor(canvas, { onStatus, onGoal }) {
@@ -20,6 +21,7 @@
       this.goalReached = false;
       this.outOfBounds = false;
       this.startedAt = null;
+      this.startLocal = { x: 0, z: -5.8 };
       this.motionInput = { x: 0, z: 0 };
       this.mazeOffset = { x: 0, y: 0, z: 0 };
       this.mazeVelocity = { x: 0, y: 0, z: 0 };
@@ -119,31 +121,27 @@
         createWall("east", 0.32, 14, 4.62, 0);
         createWall("west", 0.32, 14, -4.62, 0);
 
-        // 下段は広い練習路、中段は左右の判断、上段は狭いゴール進入路。
-        // 一本の正解ルートを保ちつつ、壁の枝と脇道で迷路らしさを加える。
-        createWall("mazeH1", 6.25, 0.24, -1.38, -4.75);
-        createWall("mazeV1", 0.24, 1.05, -1.85, -4.22);
-        createWall("mazeH2", 6.25, 0.24, 1.38, -2.25);
-        createWall("mazeV2", 0.24, 1.05, 1.85, -1.72);
-        createWall("mazeH3", 5.75, 0.24, -1.63, 0.25);
-        createWall("mazeV3", 0.24, 1.05, -1.55, 0.78);
-        createWall("mazeH4", 5.75, 0.24, 1.63, 2.75);
-        createWall("mazeV4", 0.24, 1.05, 1.55, 3.28);
-        createWall("mazeH5", 6.65, 0.24, -1.18, 5.15);
+        // 縦方向へ進みながら、中央付近だけを小さく左右へ避けるスラローム。
+        // 端から端への往復をなくし、画面が横向きになるほど端末を傾けずに遊べる。
+        createWall("mazeH1", 4.2, 0.24, -1.65, -4.1);
+        createWall("mazeV1", 0.24, 0.9, 0.45, -3.65);
+        createWall("mazeH2", 4.2, 0.24, 1.65, -1.6);
+        createWall("mazeV2", 0.24, 0.9, -0.45, -1.15);
+        createWall("mazeH3", 4.2, 0.24, -1.65, 0.9);
+        createWall("mazeV3", 0.24, 0.9, 0.45, 1.35);
+        createWall("mazeH4", 4.2, 0.24, 1.65, 3.4);
+        createWall("mazeV4", 0.24, 0.9, -0.45, 3.85);
 
-        // 外壁から伸びる短い壁は袋小路の目印。主経路は塞がない。
-        createWall("pocketR1", 1.2, 0.24, 4.0, -5.85);
-        createWall("pocketL1", 1.25, 0.24, -3.98, -3.45);
-        createWall("pocketR2", 1.25, 0.24, 3.98, -0.95);
-        createWall("pocketL2", 1.25, 0.24, -3.98, 1.55);
-        createWall("pocketR3", 1.25, 0.24, 3.98, 4.0);
+        // 最後は中央のゴールへ自然に収束する短い進入路。
+        createWall("goalLaneL", 0.24, 1.15, -1.45, 5.55);
+        createWall("goalLaneR", 0.24, 1.15, 1.45, 5.55);
 
         const goalMat = new BABYLON.StandardMaterial("goalMat", scene);
         goalMat.diffuseColor = BABYLON.Color3.FromHexString("#d7ff4f");
         goalMat.emissiveColor = BABYLON.Color3.FromHexString("#344500");
         goalMat.specularColor = BABYLON.Color3.Black();
         const goal = BABYLON.MeshBuilder.CreateCylinder("goal", { diameter: 1.55, height: 0.04, tessellation: 48 }, scene);
-        goal.position.set(3.25, -0.04, 6.05);
+        goal.position.set(0, -0.04, 6.05);
         goal.material = goalMat;
         this.mazeVisuals.push({ mesh: goal, basePosition: goal.position.clone() });
 
@@ -152,7 +150,7 @@
         startMat.emissiveColor = BABYLON.Color3.FromHexString("#123b45");
         startMat.specularColor = BABYLON.Color3.Black();
         const start = BABYLON.MeshBuilder.CreateCylinder("start", { diameter: 1.35, height: 0.035, tessellation: 48 }, scene);
-        start.position.set(-3.35, -0.045, -5.75);
+        start.position.set(this.startLocal.x, -0.045, this.startLocal.z);
         start.material = startMat;
         this.mazeVisuals.push({ mesh: start, basePosition: start.position.clone() });
 
@@ -162,7 +160,7 @@
         ballMat.specularColor = BABYLON.Color3.Black();
         this.ball = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 0.85, segments: 28 }, scene);
         this.ball.material = ballMat;
-        this.ball.position.set(-3.35, 0.75, -5.75);
+        this.ball.position.set(this.startLocal.x, 0.75, this.startLocal.z);
         this.ballAggregate = new BABYLON.PhysicsAggregate(this.ball, BABYLON.PhysicsShapeType.SPHERE, { mass: 1, friction: 0.16, restitution: 0.02 }, scene);
 
         const shadowMat = new BABYLON.StandardMaterial("shadowMat", scene);
@@ -176,6 +174,7 @@
 
         scene.onBeforeRenderObservable.add(() => {
           this.updateMazeMotion(Math.min(this.engine.getDeltaTime() / 1000, 0.034));
+          this.limitBallRise();
           const ballLocal = this.worldToMazeLocal(this.ball.position);
           const airHeight = Math.max(0, ballLocal.y - 0.35);
           const shadowScale = Math.max(0.45, 1 - airHeight * 0.28);
@@ -243,6 +242,17 @@
 
     worldToMazeLocal(worldPosition) {
       return this.inverseRotateVector(worldPosition.subtract(this.mazePose.origin), this.mazePose.rotation);
+    }
+
+    limitBallRise() {
+      if (!this.ready || !this.ballAggregate) return;
+      const velocity = this.ballAggregate.body.getLinearVelocity();
+      if (!velocity) return;
+      const mazeUp = this.rotateVector(new BABYLON.Vector3(0, 1, 0), this.mazePose.rotation).normalize();
+      const upwardSpeed = BABYLON.Vector3.Dot(velocity, mazeUp);
+      if (upwardSpeed <= MAX_UPWARD_SPEED) return;
+      velocity.subtractInPlace(mazeUp.scale(upwardSpeed - MAX_UPWARD_SPEED));
+      this.ballAggregate.body.setLinearVelocity(velocity);
     }
 
     setOrientation(xDegrees, yDegrees, headingDegrees = 0) {
@@ -328,7 +338,7 @@
       this.onGoal("");
       this.ballAggregate.body.setLinearVelocity(BABYLON.Vector3.Zero());
       this.ballAggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
-      this.ball.position.copyFrom(this.mazeLocalToWorld(new BABYLON.Vector3(-3.35, 0.75, -5.75)));
+      this.ball.position.copyFrom(this.mazeLocalToWorld(new BABYLON.Vector3(this.startLocal.x, 0.75, this.startLocal.z)));
       this.ball.computeWorldMatrix(true);
       this.ballAggregate.body.disablePreStep = false;
       window.setTimeout(() => {
