@@ -15,7 +15,6 @@
   const scanContext = scanCanvas.getContext("2d", { alpha: false, willReadFrequently: true });
   const previewPanel = document.querySelector(".preview-panel");
   const previewMessage = document.querySelector("#preview-message");
-  const scanGuide = document.querySelector("#scan-guide");
   const cameraToggleButton = document.querySelector("#camera-toggle-button");
   const imageInput = document.querySelector("#image-input");
   const statusChip = document.querySelector(".status-chip");
@@ -329,7 +328,6 @@
 
   modeInputs.forEach((input) => {
     input.addEventListener("change", async () => {
-      scanGuide.dataset.mode = currentMode();
       detections = [];
       renderResults([]);
       if (sourceType === "photo") {

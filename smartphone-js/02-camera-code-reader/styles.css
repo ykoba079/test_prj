@@ -176,36 +176,6 @@ h2 { margin: 0; font-size: 14px; }
 
 .preview-message.is-hidden { display: none; }
 
-.scan-guide {
-  position: absolute;
-  z-index: 2;
-  display: none;
-  width: min(55%, 270px);
-  aspect-ratio: 1;
-  border: 2px solid rgba(215, 255, 79, .75);
-  border-radius: 14px;
-  box-shadow: 0 0 0 999px rgba(0, 0, 0, .08);
-  pointer-events: none;
-}
-
-.preview-panel.is-active .scan-guide { display: block; }
-.scan-guide[data-mode="barcode"] { width: min(78%, 440px); aspect-ratio: 3.2 / 1; border-radius: 8px; }
-.scan-guide[data-mode="both"] { width: min(70%, 360px); aspect-ratio: 1.55 / 1; }
-
-.scan-guide span::before,
-.scan-guide span::after {
-  position: absolute;
-  left: 50%;
-  width: 34%;
-  height: 2px;
-  content: "";
-  background: var(--acid);
-  transform: translateX(-50%);
-}
-
-.scan-guide span::before { top: -2px; }
-.scan-guide span::after { bottom: -2px; }
-
 .source-controls {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
