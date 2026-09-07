@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071a1d">
+  <meta name="description" content="スマートフォンのカメラや写真から、QRコードと一次元バーコードをブラウザ内で読み取るデモです。">
+  <title>Camera Code Reader | スマホ × JavaScript #02</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="./vendor/zxing-wasm/index.js"></script>
+  <script defer src="./camera-controller.js"></script>
+  <script defer src="./code-reader.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">SMARTPHONE × JAVASCRIPT #02</p>
+        <h1>Camera Code Reader</h1>
+      </div>
+      <div class="status-chip" aria-live="polite">
+        <span class="status-dot" id="status-dot" aria-hidden="true"></span>
+        <span id="status-text">カメラまたは写真を選んでください</span>
+      </div>
+    </header>
+
+    <section class="mode-panel" aria-labelledby="mode-heading">
+      <div class="section-heading">
+        <h2 id="mode-heading">読み取るコード</h2>
+        <span>最大10件</span>
+      </div>
+      <fieldset class="mode-switch">
+        <legend class="visually-hidden">解析対象を選択</legend>
+        <label>
+          <input type="radio" name="scan-mode" value="qr" checked>
+          <span>QR</span>
+        </label>
+        <label>
+          <input type="radio" name="scan-mode" value="barcode">
+          <span>バーコード</span>
+        </label>
+        <label>
+          <input type="radio" name="scan-mode" value="both">
+          <span>両方</span>
+        </label>
+      </fieldset>
+    </section>
+
+    <section class="preview-panel" aria-label="カメラまたは写真のプレビュー">
+      <video id="camera-video" autoplay muted playsinline aria-hidden="true"></video>
+      <canvas id="preview-canvas"></canvas>
+      <div class="scan-guide" id="scan-guide" data-mode="qr" aria-hidden="true">
+        <span></span>
+      </div>
+      <p class="preview-message" id="preview-message">カメラを起動するか、写真を選択してください</p>
+    </section>
+
+    <section class="source-controls" aria-label="画像の入力方法">
+      <button class="button primary" id="start-camera-button" type="button">カメラを起動</button>
+      <label class="button secondary" for="image-input">写真を選択</label>
+      <input class="visually-hidden" id="image-input" type="file" accept="image/*">
+      <button class="button ghost" id="stop-camera-button" type="button" disabled>カメラを停止</button>
+    </section>
+
+    <p class="privacy-note">
+      カメラ映像と写真はこのブラウザ内だけで処理し、サーバーへ送信・保存しません。
+    </p>
+
+    <section class="results-panel" aria-labelledby="results-heading">
+      <div class="section-heading">
+        <h2 id="results-heading">読み取り結果</h2>
+        <span id="result-count">0件</span>
+      </div>
+      <ol class="result-list" id="result-list">
+        <li class="empty-result">コードを読み取ると、種類と内容をここに表示します。</li>
+      </ol>
+    </section>
+  </main>
+</body>
+</html>
