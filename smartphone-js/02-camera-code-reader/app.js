@@ -16,12 +16,10 @@
   const previewPanel = document.querySelector(".preview-panel");
   const previewMessage = document.querySelector("#preview-message");
   const scanGuide = document.querySelector("#scan-guide");
-  const startCameraButton = document.querySelector("#start-camera-button");
-  const stopCameraButton = document.querySelector("#stop-camera-button");
+  const cameraToggleButton = document.querySelector("#camera-toggle-button");
   const imageInput = document.querySelector("#image-input");
   const statusChip = document.querySelector(".status-chip");
   const statusText = document.querySelector("#status-text");
-  const resultCount = document.querySelector("#result-count");
   const resultList = document.querySelector("#result-list");
   const modeInputs = [...document.querySelectorAll('input[name="scan-mode"]')];
 
@@ -34,6 +32,7 @@
   let scanTimerId = 0;
   let scanBusy = false;
   let detections = [];
+  let retainedResults = [];
 
   function currentMode() {
     return modeInputs.find((input) => input.checked)?.value ?? "qr";
@@ -109,8 +108,8 @@
   }
 
   function renderResults(results) {
+    retainedResults = [...results];
     resultList.replaceChildren();
-    resultCount.textContent = `${results.length}件`;
 
     if (results.length === 0) {
       const empty = document.createElement("li");
@@ -175,8 +174,19 @@
       scanContext.drawImage(source, 0, 0, scanCanvas.width, scanCanvas.height);
       const imageData = scanContext.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
       detections = await reader.read(imageData, currentMode(), thorough);
-      renderResults(detections);
-      setStatus(detections.length ? `${detections.length}件読み取りました` : "コードを探しています", "live");
+
+      // カメラからコードが外れても、最後に読めた内容は一覧へ残す。
+      // 写真の場合は「見つからなかった」ことも結果として表示する。
+      if (detections.length > 0 || sourceType === "photo") {
+        renderResults(detections);
+      }
+      if (detections.length > 0) {
+        setStatus(`${detections.length}件読み取りました`, "live");
+      } else if (sourceType === "camera" && retainedResults.length > 0) {
+        setStatus(`${retainedResults.length}件の結果を保持中`, "live");
+      } else {
+        setStatus("コードを探しています", "live");
+      }
 
       if (sourceType === "photo" && photoImage) {
         drawSource(photoImage);
@@ -214,20 +224,18 @@
 
     if (sourceType === "camera") {
       sourceType = "none";
-      detections = [];
-      renderResults([]);
       setPreviewActive(false);
       if (showMessage) {
         previewMessage.textContent = "カメラを停止しました";
         setStatus("カメラを停止しました");
       }
     }
-    startCameraButton.disabled = false;
-    stopCameraButton.disabled = true;
+    cameraToggleButton.disabled = false;
+    cameraToggleButton.textContent = "カメラを起動";
   }
 
   async function startCamera() {
-    startCameraButton.disabled = true;
+    cameraToggleButton.disabled = true;
     setStatus("カメラの利用許可を確認しています", "busy");
 
     try {
@@ -240,14 +248,15 @@
       renderResults([]);
       previewMessage.textContent = "カメラを起動するか、写真を選択してください";
       setPreviewActive(true);
-      stopCameraButton.disabled = false;
+      cameraToggleButton.disabled = false;
+      cameraToggleButton.textContent = "カメラを停止";
       setStatus("カメラでコードを探しています", "live");
       cameraRenderLoop();
       scheduleCameraScan();
     } catch (error) {
       console.error(error);
-      startCameraButton.disabled = false;
-      stopCameraButton.disabled = true;
+      cameraToggleButton.disabled = false;
+      cameraToggleButton.textContent = "カメラを起動";
       setPreviewActive(false);
       previewMessage.textContent = "カメラを利用できません。許可設定を確認するか、写真を選択してください。";
       setStatus("カメラを利用できません", "error");
@@ -295,8 +304,13 @@
     }
   }
 
-  startCameraButton.addEventListener("click", startCamera);
-  stopCameraButton.addEventListener("click", () => stopCamera());
+  cameraToggleButton.addEventListener("click", () => {
+    if (sourceType === "camera" && camera.isActive) {
+      stopCamera();
+    } else {
+      startCamera();
+    }
+  });
 
   imageInput.addEventListener("change", async () => {
     const [file] = imageInput.files;

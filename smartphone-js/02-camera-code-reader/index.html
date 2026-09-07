@@ -57,25 +57,20 @@
     </section>
 
     <section class="source-controls" aria-label="画像の入力方法">
-      <button class="button primary" id="start-camera-button" type="button">カメラを起動</button>
+      <button class="button primary" id="camera-toggle-button" type="button">カメラを起動</button>
       <label class="button secondary" for="image-input">写真を選択</label>
       <input class="visually-hidden" id="image-input" type="file" accept="image/*">
-      <button class="button ghost" id="stop-camera-button" type="button" disabled>カメラを停止</button>
+    </section>
+
+    <section class="results-panel" aria-label="読み取り結果">
+      <ol class="result-list" id="result-list">
+        <li class="empty-result">コードを読み取ると、種類と内容をここに表示します。</li>
+      </ol>
     </section>
 
     <p class="privacy-note">
       カメラ映像と写真はこのブラウザ内だけで処理し、サーバーへ送信・保存しません。
     </p>
-
-    <section class="results-panel" aria-labelledby="results-heading">
-      <div class="section-heading">
-        <h2 id="results-heading">読み取り結果</h2>
-        <span id="result-count">0件</span>
-      </div>
-      <ol class="result-list" id="result-list">
-        <li class="empty-result">コードを読み取ると、種類と内容をここに表示します。</li>
-      </ol>
-    </section>
   </main>
 </body>
 </html>
