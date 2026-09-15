@@ -8,7 +8,7 @@ class FluidSimulation {
     this.mode = mode; this.viscosity = viscosity; this.released = false;
     this.spacing = { low: 0.30, medium: 0.24, high: 0.20 }[quality] || 0.24;
     this.radius = this.spacing * 0.46; this.h = this.spacing * 2;
-    this.h2 = this.h * this.h; this.dt = 1 / 90; this.time = 0;
+    this.h2 = this.h * this.h; this.dt = 1 / 60; this.iterations = 2; this.time = 0;
     this.accumulator = 0; this.bodies = []; this.nextId = 1;
     this.bounds = { x: 3, z: 1.8, height: 3.6 };
     const positions = [], s = this.spacing;
@@ -26,6 +26,8 @@ class FluidSimulation {
     this.velocities = new Float32Array(positions.length); this.previous = new Float32Array(positions.length);
     this.lambda = new Float32Array(this.count); this.delta = new Float32Array(positions.length);
     this.nextVelocity = new Float32Array(positions.length);
+    this.renderSizes = new Float32Array(this.count * 2);
+    this.renderSizes.fill(this.spacing * 1.65);
     this.maxNeighbors = 100; this.neighbors = new Uint16Array(this.count * this.maxNeighbors);
     this.neighborCount = new Uint8Array(this.count); this.links = new Int32Array(this.count);
     this.gx = Math.ceil(6 / this.h) + 2; this.gy = Math.ceil(7 / this.h) + 2; this.gz = Math.ceil(3.6 / this.h) + 2;
@@ -37,6 +39,15 @@ class FluidSimulation {
       if (q > 0) this.restDensity += q*q*q;
     }
     this.surface = this.radius + (ny - 1) * s;
+  }
+  updateRenderSize(i, support) {
+    // Bulk particles overlap to form the surface. Low-support spray particles
+    // use a much smaller visual footprint, independent of collision radius.
+    const t = Math.max(0, Math.min(1, (support - 0.12) / 1.4));
+    const blend = t*t*(3-2*t);
+    const target = this.spacing * (0.20 + 1.45 * blend);
+    const a = i*2, size = this.renderSizes[a] + (target-this.renderSizes[a])*0.65;
+    this.renderSizes[a] = this.renderSizes[a+1] = size;
   }
   drop({ shape = 'sphere', size = 0.65, height = 2, x = 0 } = {}) {
     if (this.bodies.length >= 8) return false;
@@ -103,7 +114,7 @@ class FluidSimulation {
   advance(seconds) {
     this.accumulator += Math.min(0.05, Math.max(0, seconds));
     let steps = 0;
-    while (this.accumulator >= this.dt && steps < 5) { this.step(); this.accumulator -= this.dt; steps++; }
+    while (this.accumulator >= this.dt && steps < 3) { this.step(); this.accumulator -= this.dt; steps++; }
     return steps;
   }
   step() {
@@ -120,7 +131,7 @@ class FluidSimulation {
       for (let c=0;c<3;c++) p[a+c] += v[a+c]*dt;
       this.collide(i);
     }
-    for (let iteration=0; iteration<3; iteration++) {
+    for (let iteration=0; iteration<this.iterations; iteration++) {
       this.buildNeighbors();
       for (let i=0;i<this.count;i++) {
         const a=i*3; let density=1, sx=0, sy=0, sz=0, grad2=0;
@@ -165,6 +176,7 @@ class FluidSimulation {
         dx+=(v[b]-v[a])*w;dy+=(v[b+1]-v[a+1])*w;dz+=(v[b+2]-v[a+2])*w;weight+=w;
       }
       const factor=smooth/Math.max(1,weight);
+      this.updateRenderSize(i, weight);
       this.nextVelocity[a]=(v[a]+dx*factor)*0.999;
       this.nextVelocity[a+1]=(v[a+1]+dy*factor)*0.999;
       this.nextVelocity[a+2]=(v[a+2]+dz*factor)*0.999;

@@ -1,5 +1,5 @@
 /* global FluidSimulation */
-importScripts('solver.js');
+importScripts('solver.js?v=2');
 let sim;
 self.onmessage = ({ data }) => {
   if (data.type === 'reset') { sim = new FluidSimulation(data.options); }
@@ -9,5 +9,6 @@ self.onmessage = ({ data }) => {
   else if (data.type === 'viscosity') { sim.viscosity = data.value; return; }
   else return;
   const positions = sim.positions.slice();
-  self.postMessage({ generation: data.generation, type: data.type, positions, bodies: sim.bodies, count: sim.count, radius: sim.radius, spacing: sim.spacing, time: sim.time }, [positions.buffer]);
+  const sizes = sim.renderSizes.slice();
+  self.postMessage({ generation: data.generation, type: data.type, positions, sizes, bodies: sim.bodies, count: sim.count, radius: sim.radius, spacing: sim.spacing, time: sim.time }, [positions.buffer, sizes.buffer]);
 };

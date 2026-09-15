@@ -16,7 +16,7 @@
     camera.radius*=fit/cameraFit;cameraFit=fit;
     camera.lowerRadiusLimit=6.5*fit;camera.upperRadiusLimit=20*fit;
   }
-  function options() { return { mode, quality: 'medium', layers: 7, viscosity: 8 }; }
+  function options() { return { mode, quality: 'low', layers: 7, viscosity: 8 }; }
   function send(type, extra = {}) {
     const message = { type, generation, ...extra };
     if (worker) { worker.postMessage(message); return; }
@@ -25,7 +25,7 @@
     else if (type === 'drop') localSim.drop(message.options);
     else if (type === 'release') localSim.release();
     else if (type === 'viscosity') { localSim.viscosity = message.value; return; }
-    receive({ generation, type, positions: localSim.positions, bodies: localSim.bodies, count: localSim.count, radius: localSim.radius, spacing: localSim.spacing, time: localSim.time });
+    receive({ generation, type, positions: localSim.positions, sizes: localSim.renderSizes, bodies: localSim.bodies, count: localSim.count, radius: localSim.radius, spacing: localSim.spacing, time: localSim.time });
   }
   function receive(data) {
     if (data.generation !== generation) return;
@@ -105,21 +105,22 @@
   function buildFluid(data) {
     if(fluidObject) fluidRenderer.removeRenderObject(fluidObject,true);
     BABYLON.FluidRenderingObject.UsePerParticleSizeAttribute=true;
-    const sizes=new Float32Array(data.count*2);sizes.fill(data.spacing*1.65);
-    fluidObject=fluidRenderer.addCustomParticles({position:data.positions,size:sizes},data.count);
+    fluidObject=fluidRenderer.addCustomParticles({position:data.positions,size:data.sizes},data.count);
     fluidObject.object.particleSize=data.spacing*1.65;
     const target=fluidObject.targetRenderer;
-    target.depthMapSize=Math.min(engine.getRenderWidth(),768);
-    target.thicknessMapSize=Math.min(engine.getRenderWidth(),512);
+    target.depthMapSize=Math.min(engine.getRenderWidth(),512);
+    target.thicknessMapSize=Math.min(engine.getRenderWidth(),256);
     target.fluidColor=new BABYLON.Color3(.12,.56,.65);target.density=1.7;
-    target.refractionStrength=.035;target.fresnelClamp=.8;target.specularPower=150;
-    target.blurDepthFilterSize=15;target.blurDepthNumIterations=3;target.blurThicknessNumIterations=2;
+    target.refractionStrength=.035;target.fresnelClamp=.6;target.specularPower=120;
+    target.blurDepthFilterSize=12;target.blurDepthMaxFilterSize=32;
+    target.blurDepthNumIterations=2;target.blurThicknessNumIterations=1;
     target.dirLight=new BABYLON.Vector3(.4,-1,-.6).normalize();
     $('particle-count').textContent=data.count.toLocaleString('ja-JP');
   }
   function updateVisuals(data) {
     if(!fluidObject) return;
     fluidObject.object.vertexBuffers.position.update(data.positions);
+    fluidObject.object.vertexBuffers.size.update(data.sizes);
     for(const body of data.bodies){
       let mesh=meshes.get(body.id);
       if(!mesh){
@@ -167,13 +168,13 @@
     if(!new URLSearchParams(location.search).has('webgl')){
       try{if(await BABYLON.WebGPUEngine.IsSupportedAsync){engine=new BABYLON.WebGPUEngine(canvas,{antialias:true});await engine.initAsync();webgpu=true;}}catch{engine?.dispose();engine=null;}
     }
-    if(!engine)engine=new BABYLON.Engine(canvas,true,{preserveDrawingBuffer:true,stencil:true});
+    if(!engine)engine=new BABYLON.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true});
     if(!webgpu&&engine.webGLVersion<2)throw new Error('WebGL 2またはWebGPU対応のブラウザが必要です。');
-    engine.setHardwareScalingLevel(Math.max(1,window.devicePixelRatio/1.5));
+    engine.setHardwareScalingLevel(Math.max(1.25,window.devicePixelRatio/1.25));
     buildScene();
     try{
       if(location.protocol==='file:')throw new Error('Local file');
-      worker=new Worker('worker.js');worker.onmessage=event=>receive(event.data);
+      worker=new Worker('worker.js?v=2');worker.onmessage=event=>receive(event.data);
       worker.onerror=()=>{worker.terminate();worker=null;localSim=null;reset();$('engine-label').textContent=`${webgpu?'WebGPU':'WebGL 2'} · CPU`;};
     }catch{worker=null;}
     $('engine-label').textContent=`${webgpu?'WebGPU':'WebGL 2'} · CPU${worker?' Worker':''}`;
@@ -182,13 +183,13 @@
       const now=performance.now(),seconds=Math.min(.05,(now-lastFrame)/1000);lastFrame=now;
       if(ready&&!document.hidden){
         pendingSeconds=Math.min(.05,pendingSeconds+seconds);
-        if(!busy&&pendingSeconds>=1/90){const elapsed=pendingSeconds;pendingSeconds=0;busy=true;send('advance',{seconds:elapsed});}
+        if(!busy&&pendingSeconds>=1/60){const elapsed=pendingSeconds;pendingSeconds=0;busy=true;send('advance',{seconds:elapsed});}
       }
       scene.render();
       if(now-lastStats>600){$('fps').textContent=Math.round(engine.getFps());lastStats=now;}
     });
     // Read-only inspection aid for reproducible smoke checks.
-    window.fluidLab={getSnapshot:()=>({mode,released,worker:!!worker,engine:webgpu?'WebGPU':'WebGL 2',count:latest?.count,time:latest?.time,bodies:latest?.bodies.map(b=>({...b})),positions:latest?.positions.slice()})};
+    window.fluidLab={getSnapshot:()=>({mode,released,worker:!!worker,engine:webgpu?'WebGPU':'WebGL 2',count:latest?.count,time:latest?.time,bodies:latest?.bodies.map(b=>({...b})),positions:latest?.positions.slice(),sizes:latest?.sizes.slice(),fps:engine.getFps()})};
   }catch(error){
     console.error(error);$('loading').hidden=false;$('loading').textContent=`実験室を起動できませんでした。${error.message}`;notice('ページを再読み込みしてください。WebGPUの問題はURLに ?webgl=1 を付けて切り替えられます。');
   }
