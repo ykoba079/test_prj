@@ -100,3 +100,26 @@ WebGPU limits: https://developer.mozilla.org/en-US/docs/Web/API/GPUSupportedLimi
 参考: https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-v3_1.html
 
 
+
+## gzip圧縮の検証
+
+通常のアクセスは `sample-million.csv.gz` を読み込みます。画面の「100万件データの読み込み方式」で非圧縮CSVへ切り替えられます。`?data=sample-million.csv` でも非圧縮版を開けます。
+
+既存CSVを再生成せず、gzipレベル6で一度圧縮しました。
+
+- 元CSV: 49,726,929 bytes
+- gzip: 7,599,465 bytes
+- 削減: 84.7%（元の約1/6.54）
+- 展開後のCSVは元ファイルと完全一致
+
+Workerがダウンロード済みのgzipをDecompressionStreamで展開し、UTF-8文字列に変換してCSV解析します。データ欄の「取得」はレスポンス取得からバイト読込まで、「展開・文字列化」はその後の処理時間です。取得はネットワークだけでなくブラウザキャッシュやレスポンス読込も含みます。CPU/GPU比較時間には両方含みません。
+
+今回は圧縮効果の確認が目的で、CSV解析は従来どおり全件展開です。通信量は減りますが、展開後のCPU解析メモリとGPU配列は減りません。大規模化ではCSV解析のストリーム化を別途実装します。非対応環境では読み込み方式を非圧縮CSVに変更してください。手元の .csv.gz の選択にも対応。
+
+再圧縮が必要な場合だけ実行してください。
+
+```powershell
+python compress_data.py --force
+```
+
+`node verify.cjs` は実際のDecompressionStreamを使ったgzip展開、元CSVとの一致、圧縮URL読み込み、集計値、破損gzip・非対応・HTTPエラーを検証します。Nodeでの展開時間はブラウザの実測値ではありません。
