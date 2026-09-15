@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08151c">
+  <title>Fluid Lab — Babylon.js 流体実験室</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/babylonjs@9.26.1/babylon.js" onerror="document.getElementById('loading').textContent='Babylon.jsを読み込めませんでした。ネットワーク接続を確認して再読み込みしてください。'"></script>
+  <script defer src="solver.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header><a class="brand" href="../"><span class="brand-icon">≈</span><span>FLUID <b>LAB</b><small>流体実験室</small></span></a><span class="version">BABYLON.JS <b>9.26.1</b></span></header>
+  <main>
+    <section class="viewport" aria-label="流体の3Dビュー">
+      <canvas id="canvas" aria-label="ドラッグで回転、ホイールまたはピンチで拡大" tabindex="0"></canvas>
+      <div class="scene-title"><span class="eyebrow">INTERACTIVE FLUID EXPERIMENT</span><h1>水の動きを、触って確かめる。</h1><p id="scene-description">球や箱を落として、水の押しのけと波を観察。</p></div>
+      <div class="stats"><span><i id="running-dot"></i><b id="state-label">実行中</b></span><span><b id="fps">—</b> FPS</span><span><b id="particle-count">—</b> 粒子</span><span id="engine-label">初期化中</span></div>
+      <div id="loading" role="status">実験室を準備しています…</div>
+      <div class="view-tools"><button id="camera-reset" title="カメラを初期位置に戻す">視点を戻す ↗</button><button id="fullscreen" title="3Dビューを全画面で表示">全画面 ⛶</button></div>
+      <div class="view-bottom"><span>ドラッグで回転 · ホイール / ピンチで拡大</span><span class="scale-label">SIMULATION / 01</span></div>
+    </section>
+    <aside aria-label="実験の操作パネル">
+      <div class="panel-head"><span class="eyebrow">EXPERIMENT CONTROLS</span><h2>実験をはじめる</h2><p>条件を変えて、動きを比べてみましょう。</p></div>
+      <fieldset><legend><span>01</span> 実験モード</legend><div class="segmented"><button data-mode="tank" class="active" aria-pressed="true">水槽への落下</button><button data-mode="dam" aria-pressed="false">ダム崩壊</button></div><p id="mode-help" class="help">水を張った水槽に、物体を落とします。</p></fieldset>
+      <div class="experiment-actions" aria-label="実験の開始とリセット">
+        <button id="action" class="primary" disabled><span>↓</span> 水槽に落とす</button>
+        <button id="reset" class="reset-button" disabled>↺ リセット</button>
+      </div>
+      <fieldset id="drop-controls"><legend><span>02</span> 落とす物体</legend><div class="shapes"><button data-shape="sphere" class="active" aria-pressed="true"><span>●</span>球</button><button data-shape="box" aria-pressed="false"><span>■</span>箱</button></div>
+        <label for="size">大きさ <output id="size-value">0.65</output></label><input id="size" type="range" min="0.4" max="0.95" step="0.05" value="0.65">
+        <label for="height">落下の高さ <output id="height-value">2.0</output></label><input id="height" type="range" min="0.5" max="3" step="0.1" value="2">
+        <label for="position">落下位置 <output id="position-value">中央</output></label><input id="position" type="range" min="-1.7" max="1.7" step="0.1" value="0">
+      </fieldset>
+      <p id="notice" class="notice" role="status">準備中です。</p>
+      <details><summary>このデモの計算について</summary><p>水の動きは、粒子間の密度を補正する簡易PBF（Position Based Fluids）で計算しています。重力・粘性・水槽と物体への衝突を扱います。水面はBabylon.jsのFluid Rendererで描画します。</p><p>流体計算はCPUで実行し、利用可能な場合はWeb Workerに分離します。WebGPUは描画に使用します。物体は水を押しのけますが、水の力で浮いたり動いたりする双方向の連成はありません。工学的な精度を保証するものではありません。</p><a href="https://doc.babylonjs.com/features/featuresDeepDive/particles/fluid_renderer/" target="_blank" rel="noopener noreferrer">Fluid Rendererの公式資料 ↗</a></details>
+    </aside>
+  </main>
+  <footer><span>FLUID LAB <span class="separator">/</span> 水槽・重力・粒子からできた、小さな実験室。</span><a href="../">デモ一覧へ ↗</a></footer>
+</body>
+</html>
