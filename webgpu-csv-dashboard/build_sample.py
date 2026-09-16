@@ -5,7 +5,7 @@ parser.add_argument('--rows',type=int,default=1000000)
 parser.add_argument('--output',default='sample-million.csv')
 parser.add_argument('--force',action='store_true',help='Overwrite an existing dataset')
 args=parser.parse_args()
-if not 1<=args.rows<=5000000:parser.error('--rows must be 1..5000000')
+if not 1<=args.rows<=10000000:parser.error('--rows must be 1..10000000')
 root=Path(__file__).resolve().parent;output=root/args.output
 if output.exists() and not args.force:parser.error('Data already exists. Reuse it, or specify --force to regenerate.')
 prefs=['北海道','東京都','神奈川県','愛知県','大阪府','福岡県'];tags=['産業','生活','観光'];sums={};seed=42;totals=[0,0]
