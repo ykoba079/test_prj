@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080b12">
+  <title>Plasma SPZ Viewer</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #080b12;
+      color: #f5f7ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body,
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 50% 42%, rgba(83, 104, 160, 0.18), transparent 42%),
+        #080b12;
+    }
+
+    #renderCanvas {
+      display: block;
+      touch-action: none;
+      outline: none;
+    }
+
+    .topbar {
+      position: fixed;
+      z-index: 2;
+      top: max(18px, env(safe-area-inset-top));
+      left: max(18px, env(safe-area-inset-left));
+      right: max(18px, env(safe-area-inset-right));
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .title,
+    .actions,
+    .status {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(10, 14, 24, 0.68);
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.24);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .title {
+      padding: 13px 16px;
+      border-radius: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(16px, 2vw, 21px);
+      font-weight: 650;
+      letter-spacing: 0.01em;
+    }
+
+    .title p {
+      margin: 5px 0 0;
+      color: #aeb7cb;
+      font-size: 12px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      padding: 7px;
+      border-radius: 14px;
+      pointer-events: auto;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 9px;
+      padding: 9px 12px;
+      background: rgba(255, 255, 255, 0.1);
+      color: inherit;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 160ms ease, transform 160ms ease;
+    }
+
+    button:hover { background: rgba(255, 255, 255, 0.17); }
+    button:active { transform: scale(0.97); }
+
+    .status {
+      position: fixed;
+      z-index: 2;
+      left: 50%;
+      bottom: max(20px, env(safe-area-inset-bottom));
+      min-width: min(330px, calc(100vw - 36px));
+      max-width: calc(100vw - 36px);
+      padding: 11px 14px;
+      border-radius: 13px;
+      color: #cbd2e2;
+      font-size: 12px;
+      text-align: center;
+      transform: translateX(-50%);
+      transition: opacity 220ms ease;
+      pointer-events: none;
+    }
+
+    .status[data-state="ready"] { opacity: 0.72; }
+    .status[data-state="error"] { color: #ffd1d1; border-color: rgba(255, 92, 92, 0.4); }
+
+    @media (max-width: 560px) {
+      .topbar { align-items: stretch; }
+      .title p { display: none; }
+      .actions { flex-direction: column; }
+      button { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="renderCanvas" aria-label="plasma_sample0926.spz 3D viewer"></canvas>
+
+  <header class="topbar">
+    <div class="title">
+      <h1>Plasma</h1>
+      <p>ドラッグで回転・ホイール / ピンチでズーム</p>
+    </div>
+    <div class="actions">
+      <button id="resetView" type="button">視点を戻す</button>
+      <button id="fullscreen" type="button">全画面</button>
+    </div>
+  </header>
+
+  <div id="status" class="status" role="status" aria-live="polite">モデルを読み込んでいます…</div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const MODEL_URL = "../models/plasma_sample0926.spz";
+      const FALLBACK_MODEL_URL = "https://raw.githubusercontent.com/ykoba079/test_prj/main/models/plasma_sample0926.spz";
+      const canvas = document.getElementById("renderCanvas");
+      const status = document.getElementById("status");
+      const engine = new BABYLON.Engine(canvas, true, {
+        antialias: true,
+        adaptToDeviceRatio: true,
+        preserveDrawingBuffer: false,
+        stencil: false
+      });
+
+      const scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0.031, 0.043, 0.071, 1);
+
+      const camera = new BABYLON.ArcRotateCamera(
+        "camera",
+        0,
+        Math.PI / 2.35,
+        4,
+        BABYLON.Vector3.Zero(),
+        scene
+      );
+      camera.attachControl(canvas, true);
+      camera.wheelDeltaPercentage = 0.01;
+      camera.pinchDeltaPercentage = 0.01;
+      camera.panningSensibility = 650;
+      camera.lowerBetaLimit = 0.04;
+      camera.upperBetaLimit = Math.PI - 0.04;
+      camera.inertia = 0.72;
+
+      let homeView = null;
+
+      function setStatus(message, state = "loading") {
+        status.textContent = message;
+        status.dataset.state = state;
+      }
+
+      function frameMeshes(meshes) {
+        const visibleMeshes = meshes.filter((mesh) => mesh && mesh.getBoundingInfo);
+        if (!visibleMeshes.length) return;
+
+        visibleMeshes.forEach((mesh) => mesh.computeWorldMatrix(true));
+        const bounds = scene.getWorldExtends((mesh) => visibleMeshes.includes(mesh));
+        const center = bounds.min.add(bounds.max).scale(0.5);
+        const size = bounds.max.subtract(bounds.min);
+        const radius = Math.max(size.x, size.y, size.z) * 0.5;
+
+        if (!Number.isFinite(radius) || radius <= 0) return;
+
+        camera.setTarget(center);
+        camera.radius = Math.max(radius * 2.6, 0.1);
+        camera.minZ = Math.max(radius / 1000, 0.001);
+        camera.maxZ = Math.max(radius * 100, 1000);
+        camera.lowerRadiusLimit = Math.max(radius * 0.05, 0.01);
+        camera.upperRadiusLimit = Math.max(radius * 20, camera.radius * 2);
+        homeView = {
+          alpha: camera.alpha,
+          beta: camera.beta,
+          radius: camera.radius,
+          target: center.clone()
+        };
+      }
+
+      function resetView() {
+        if (!homeView) return;
+        camera.alpha = homeView.alpha;
+        camera.beta = homeView.beta;
+        camera.radius = homeView.radius;
+        camera.setTarget(homeView.target);
+      }
+
+      async function loadModel() {
+        let lastError;
+
+        for (const url of [MODEL_URL, FALLBACK_MODEL_URL]) {
+          try {
+            const result = await BABYLON.SceneLoader.ImportMeshAsync(
+              null,
+              "",
+              url,
+              scene,
+              (event) => {
+                if (!event.lengthComputable) return;
+                const percent = Math.round((event.loaded / event.total) * 100);
+                setStatus(`モデルを読み込んでいます… ${percent}%`);
+              }
+            );
+
+            frameMeshes(result.meshes);
+            setStatus("読み込み完了", "ready");
+            return;
+          } catch (error) {
+            lastError = error;
+            console.warn(`Model load failed: ${url}`, error);
+          }
+        }
+
+        console.error(lastError);
+        setStatus("モデルを読み込めませんでした。URLと GitHub Pages の公開設定を確認してください。", "error");
+      }
+
+      document.getElementById("resetView").addEventListener("click", resetView);
+      document.getElementById("fullscreen").addEventListener("click", async () => {
+        try {
+          if (document.fullscreenElement) {
+            await document.exitFullscreen();
+          } else {
+            await document.documentElement.requestFullscreen();
+          }
+        } catch (error) {
+          console.warn("Fullscreen is not available.", error);
+        }
+      });
+
+      window.addEventListener("resize", () => engine.resize());
+      engine.runRenderLoop(() => scene.render());
+      loadModel();
+    })();
+  </script>
+</body>
+</html>
