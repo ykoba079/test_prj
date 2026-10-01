@@ -35,6 +35,7 @@ let browser;
     assert.equal(ready.ready, true, JSON.stringify(ready));
     assert.equal(ready.meshes, 2);
     assert.equal(ready.counts[0], 150000);
+    assert.equal(await page.locator('#count').textContent(), '150,000');
     assert.equal(await page.locator('#surface').inputValue(), 'pressure');
     assert.equal(await page.evaluate(() => oneraViewer.wing[0].useVertexColors), true);
     assert.deepEqual(errors, []);

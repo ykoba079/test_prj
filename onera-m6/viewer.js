@@ -55,7 +55,7 @@
   resize();
 
   async function getJson(url) {
-    const response = await fetch(url);
+    const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
     return response.json();
   }
@@ -78,7 +78,7 @@
   }
 
   async function loadSplat(url) {
-    const result = await BABYLON.ImportMeshAsync(url, scene, { pluginOptions: { splat: { flipY: false } } });
+    const result = await BABYLON.ImportMeshAsync(url, scene, { pluginExtension: '.spz', pluginOptions: { splat: { flipY: false } } });
     const meshes = result.meshes.filter(mesh => mesh instanceof BABYLON.GaussianSplattingMesh);
     if (meshes.length !== 1) throw new Error(`Expected one GaussianSplattingMesh in ${url}`);
     return meshes[0];
@@ -125,14 +125,16 @@
       state.manifest = manifest;
       state.wing.push(makeWing(meshData, false), makeWing(meshData, true));
       status.textContent = '気流のSPZを読み込んでいます…';
-      const flow = await loadSplat('assets/flow.spz');
+      const flow = await loadSplat(`assets/flow.spz?v=${manifest.flow_spz.sha256}`);
       state.flow.push(flow);
-      const forces = await loadSplat('assets/pressure-force.spz');
+      const actualFlowCount = flow.getTotalVertices();
+      if (actualFlowCount !== manifest.flow_spz.count) throw new Error('Flow SPZ does not match the current manifest');
+      const forces = await loadSplat(`assets/pressure-force.spz?v=${manifest.wing.pressure_force_spz.sha256}`);
       state.forces.push(forces);
       sync();
       byId('mach').textContent = manifest.mach.toFixed(4);
       byId('aoa').textContent = `${manifest.angle_of_attack_degrees.toFixed(2)}°`;
-      byId('count').textContent = manifest.flow_spz.count.toLocaleString('ja-JP');
+      byId('count').textContent = actualFlowCount.toLocaleString('ja-JP');
       byId('velocity').textContent = `${Math.round(manifest.freestream_velocity_m_s)} m/s`;
       // Wait for Gaussian sorting and shaders, not only network completion.
       await scene.whenReadyAsync();
