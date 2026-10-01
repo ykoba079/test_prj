@@ -1,0 +1,104 @@
+{
+  "title": "ONERA M6 \u2014 static CFD splats",
+  "solver": {
+    "solver": "SU2 8.5.0 win64 OpenMP",
+    "exit_code": 0,
+    "elapsed_seconds": 104.37286949157715,
+    "threads": 4,
+    "mach": 0.6,
+    "mesh_sha256": "4293af48a08165633c872bf12c4dbc896a398e338f0165182acb4e1f696130e4",
+    "config_sha256": "90222f55f8eda8a20fa8a76f21b996e7f409c5feae95fa3a36b7e1d5c5c62c51"
+  },
+  "equations": "3-D steady compressible Euler (inviscid)",
+  "mach": 0.6,
+  "angle_of_attack_degrees": 3.06,
+  "freestream_temperature_K": 288.15,
+  "freestream_pressure_Pa": 101325,
+  "freestream_velocity_m_s": 204.17821725345723,
+  "mesh_points": 108396,
+  "mesh_tetrahedra": 582752,
+  "symmetry": "Original half-wing CFD mirrored across y=0 for full-wing display",
+  "display_transform": "(x,y,z) -> (x,z,-y); meters; right-handed",
+  "convergence": {
+    "Time_Iter": 0.0,
+    "Outer_Iter": 0.0,
+    "Inner_Iter": 91.0,
+    "rms[Rho]": -11.01693031,
+    "rms[RhoU]": -10.67071316,
+    "rms[RhoV]": -10.50860772,
+    "rms[RhoW]": -10.28423608,
+    "rms[RhoE]": -10.14200076,
+    "RefForce": 0.3793010679,
+    "CD": 0.005239212787,
+    "CL": 0.2231355842,
+    "CSF": 0.0125202033,
+    "CMx": 0.1185241199,
+    "CMy": -0.04903186415,
+    "CMz": 0.01089912937,
+    "CFx": -0.006679611913,
+    "CFy": 0.0125202033,
+    "CFz": 0.2230971113,
+    "CEff": 42.58952505
+  },
+  "last_20_iteration_coefficient_change": {
+    "CL": 1.1558000000133628e-06,
+    "CD": 3.779399999990357e-08
+  },
+  "interpolation_max_absolute_error": 5.0237591864288333e-14,
+  "flow_spz": {
+    "count": 150000,
+    "bytes": 807133,
+    "max_position_error": 0.00012207021280670471,
+    "sha256": "f08db661b770af46b0e78def2940f6e60f939534e7d57994bea7a07ab2db39d8"
+  },
+  "wing": {
+    "vertices": 36570,
+    "triangles": 72908,
+    "cp_range": [
+      -1.4787856259078236,
+      1.6009088671600162
+    ],
+    "relative_pressure_force_full_wing_N": [
+      -258.76911498744437,
+      0.0,
+      8642.813805020027
+    ],
+    "pressure_force_spz": {
+      "count": 8100,
+      "bytes": 47349,
+      "max_position_error": 0.00012206631436578741,
+      "sha256": "f3c71579e73f5921952413d6f5916cba698f2375a0eb7684975fa42d7844ac11"
+    }
+  },
+  "su2_export_max_errors": {
+    "Cp": 4.998085161300736e-07,
+    "nondimensional_velocity": 4.99955176369582e-07
+  },
+  "streamline_count_half_wing": 1176,
+  "streamline_points_half_wing": 283453,
+  "speed_color_range_m_s": [
+    180,
+    420
+  ],
+  "cp_color_range": [
+    -1.2,
+    0.6
+  ],
+  "sampled_speed_range_m_s": [
+    95.34931583904455,
+    306.1274804746251
+  ],
+  "head_tail": "Bright head downstream; six fading upstream splats along computed streamline",
+  "sources": {
+    "tutorial": "https://su2code.github.io/tutorials/Inviscid_ONERAM6/",
+    "mesh": "https://raw.githubusercontent.com/su2code/Tutorials/master/compressible_flow/Inviscid_ONERAM6/mesh_ONERAM6_inv_ffd.su2",
+    "solver": "https://github.com/su2code/SU2/releases/tag/v8.5.0"
+  },
+  "limitations": [
+    "No viscosity, skin friction, boundary-layer separation or stall prediction",
+    "Single mesh; no grid-convergence or experimental validation performed",
+    "Static streamline packets, not particle trajectories from an unsteady solution",
+    "Pressure arrows show force per area relative to ambient; not total force or viscous stress"
+  ],
+  "asset_build_seconds": 8.858000040054321
+}

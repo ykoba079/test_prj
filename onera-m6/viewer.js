@@ -5,7 +5,10 @@
   const canvas = byId('canvas');
   const status = byId('status');
   const controls = ['flow', 'forces', 'surface', 'mirror', 'reset', 'top'];
-  const state = { ready: false, errors: [], flow: [], forces: [], wing: [], manifest: null };
+  const state = { ready: false, errors: [], flow: [], forces: [], wing: [], manifest: null,
+    cases: [], activeCaseIndex: null, loading: false, lastSwitchError: null };
+  let selectionSerial = 0;
+  let speedTimer;
   window.oneraViewer = state;
   function fail(error) {
     state.errors.push(String(error));
@@ -48,7 +51,7 @@
   function resize() {
     engine.resize();
     camera.viewport = innerWidth < 650
-      ? new BABYLON.Viewport(0, 0.2, 1, 0.8)
+      ? new BABYLON.Viewport(0, 0.32, 1, 0.68)
       : new BABYLON.Viewport(0, 0, 1, 1);
   }
   window.addEventListener('resize', resize);
@@ -71,7 +74,7 @@
     geometry.normals = [];
     BABYLON.VertexData.ComputeNormals(geometry.positions, geometry.indices, geometry.normals, { useRightHandedSystem: true });
     geometry.colors = data.colors.slice(vertexOffset * 4, (vertexOffset + count) * 4);
-    geometry.applyToMesh(mesh);
+    geometry.applyToMesh(mesh, true);
     mesh.material = metal;
     mesh.useVertexColors = false;
     return mesh;
@@ -118,28 +121,106 @@
     camera.alpha = -Math.PI / 2; camera.beta = 0.02; camera.radius = 4.4;
   });
 
-  (async () => {
+  function selectedSpeedLabel(index) {
+    const text = `${Math.round(state.cases[index].velocity_m_s)} m/s`;
+    byId('speedLabel').textContent = text;
+    byId('speed').setAttribute('aria-valuetext', text);
+    return text;
+  }
+
+  async function selectSpeed(index) {
+    const serial = ++selectionSerial;
+    if (index === state.activeCaseIndex) {
+      state.loading = false;
+      byId('speed').setAttribute('aria-busy', 'false');
+      status.classList.remove('error');
+      status.textContent = '静止した解析結果 · 速度ごとの計算済み結果';
+      return;
+    }
+    state.loading = true;
+    state.lastSwitchError = null;
+    byId('speed').setAttribute('aria-busy', 'true');
+    status.classList.remove('error');
+    status.textContent = `${selectedSpeedLabel(index)} の解析結果を読み込んでいます…（表示は直前の結果）`;
+    const entry = state.cases[index];
+    const pending = [];
     try {
-      if (engine.webGLVersion < 2) throw new Error('This viewer requires WebGL 2');
-      const [manifest, meshData] = await Promise.all([getJson('assets/manifest.json'), getJson('assets/wing.json')]);
+      const [manifest, data] = await Promise.all([
+        getJson(`${entry.base_url}/manifest.json`),
+        getJson(`${entry.base_url}/pressure.json?v=${entry.pressure_sha256}`)
+      ]);
+      if (serial !== selectionSerial) return;
+      if (manifest.mach !== entry.mach || data.colors.length !== state.wing[0].getTotalVertices() * 8)
+        throw new Error('Speed-case pressure data does not match the wing');
+      // Release superseded imports as soon as they finish.
+      const flow = await loadSplat(`${entry.base_url}/flow.spz?v=${manifest.flow_spz.sha256}`);
+      flow.setEnabled(false);
+      pending.push(flow);
+      if (serial !== selectionSerial) return;
+      const forces = await loadSplat(`${entry.base_url}/pressure-force.spz?v=${manifest.wing.pressure_force_spz.sha256}`);
+      forces.setEnabled(false);
+      pending.push(forces);
+      if (serial !== selectionSerial) return;
+      if (flow.getTotalVertices() !== manifest.flow_spz.count || flow.getTotalVertices() !== 150000 ||
+          forces.getTotalVertices() !== manifest.wing.pressure_force_spz.count)
+        throw new Error('Speed-case SPZ does not match its manifest');
+      const outgoing = [...state.flow, ...state.forces];
+      const half = data.colors.length / 2;
+      state.wing.forEach((mesh, i) => mesh.updateVerticesData(BABYLON.VertexBuffer.ColorKind, data.colors.slice(i * half, (i + 1) * half)));
+      state.flow = [flow];
+      state.forces = [forces];
+      pending.length = 0;
       state.manifest = manifest;
-      state.wing.push(makeWing(meshData, false), makeWing(meshData, true));
-      status.textContent = '気流のSPZを読み込んでいます…';
-      const flow = await loadSplat(`assets/flow.spz?v=${manifest.flow_spz.sha256}`);
-      state.flow.push(flow);
-      const actualFlowCount = flow.getTotalVertices();
-      if (actualFlowCount !== manifest.flow_spz.count) throw new Error('Flow SPZ does not match the current manifest');
-      const forces = await loadSplat(`assets/pressure-force.spz?v=${manifest.wing.pressure_force_spz.sha256}`);
-      state.forces.push(forces);
+      state.activeCaseIndex = index;
+      outgoing.forEach(mesh => mesh.dispose());
       sync();
       byId('mach').textContent = manifest.mach.toFixed(4);
       byId('aoa').textContent = `${manifest.angle_of_attack_degrees.toFixed(2)}°`;
-      byId('count').textContent = actualFlowCount.toLocaleString('ja-JP');
+      byId('count').textContent = flow.getTotalVertices().toLocaleString('ja-JP');
       byId('velocity').textContent = `${Math.round(manifest.freestream_velocity_m_s)} m/s`;
-      // Wait for Gaussian sorting and shaders, not only network completion.
+      byId('recordLink').href = `${entry.base_url}/manifest.json`;
       await scene.whenReadyAsync();
-      controls.forEach(id => { byId(id).disabled = false; });
-      status.textContent = '静止した解析結果 · 計算は読み込み前に完了';
+      if (serial !== selectionSerial) return;
+      status.textContent = '静止した解析結果 · 速度ごとの計算済み結果';
+    } catch (error) {
+      if (serial !== selectionSerial) return;
+      if (state.activeCaseIndex === null) throw error;
+      state.lastSwitchError = String(error);
+      byId('speed').value = state.activeCaseIndex;
+      selectedSpeedLabel(state.activeCaseIndex);
+      status.textContent = '切り替えられませんでした。直前の結果を表示しています。速度を選び直すと再試行できます。';
+      status.classList.add('error');
+    } finally {
+      pending.forEach(mesh => mesh.dispose());
+      if (serial === selectionSerial) {
+        state.loading = false;
+        byId('speed').setAttribute('aria-busy', 'false');
+      }
+    }
+  }
+
+  byId('speed').addEventListener('input', () => {
+    clearTimeout(speedTimer);
+    // Invalidate in-flight work immediately, before the debounce expires.
+    ++selectionSerial;
+    selectedSpeedLabel(Number(byId('speed').value));
+    speedTimer = setTimeout(() => selectSpeed(Number(byId('speed').value)), 180);
+  });
+  byId('speed').addEventListener('change', () => {
+    clearTimeout(speedTimer);
+    selectSpeed(Number(byId('speed').value));
+  });
+
+  (async () => {
+    try {
+      if (engine.webGLVersion < 2) throw new Error('This viewer requires WebGL 2');
+      const [registry, meshData] = await Promise.all([getJson('assets/speeds.json'), getJson('assets/wing.json')]);
+      state.cases = registry.cases;
+      state.wing.push(makeWing(meshData, false), makeWing(meshData, true));
+      byId('speed').max = registry.cases.length - 1;
+      byId('speed').value = registry.default_index;
+      await selectSpeed(registry.default_index);
+      [...controls, 'speed'].forEach(id => { byId(id).disabled = false; });
       state.ready = true;
     } catch (error) { fail(error); }
   })();

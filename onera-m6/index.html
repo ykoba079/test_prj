@@ -31,11 +31,18 @@
     .status {position:fixed;bottom:22px;right:22px;max-width:48vw;font-size:11px;color:#8fb4c8;text-align:right}
     details {margin-top:15px;font-size:10px;color:#91a5bb;line-height:1.7}summary {cursor:pointer}details p {margin-bottom:0}details a {color:#79d2e0}
     .error {color:#ffb5b5}
+    .speed-control {margin-bottom:17px;font-size:12px}
+    .speed-label {display:flex;justify-content:space-between;gap:8px}
+    .speed-label output {color:#75d8e7}
+    input[type=range] {width:100%;margin:12px 0 3px;accent-color:#59d5de;cursor:pointer}
+    .speed-ticks {display:flex;justify-content:space-between;font-size:9px;color:#91a5bb}
+    .speed-note {font-size:10px;color:#91a5bb;margin-top:7px;line-height:1.5}
     @media(max-width:650px) {
       .header {top:17px;left:16px}h1 {font-size:28px}.subtitle {max-width:210px;font-size:10px}
       .panel {top:auto;bottom:max(14px,env(safe-area-inset-bottom));right:12px;width:210px;padding:12px;border-radius:13px}
       .panel h2 {margin-bottom:8px}.toggle {margin:8px 0;font-size:11px}.stats {margin-top:10px;padding-top:9px;gap:6px}
       .stat strong {font-size:12px}.buttons {margin-top:10px}details {display:none}
+      .speed-control {margin-bottom:10px;font-size:11px}.speed-note {font-size:9px}
       .legend {left:14px;bottom:70px;width:145px;padding:10px}.legend-title {font-size:10px}.hint {left:14px;bottom:40px;width:130px;line-height:1.6;font-size:10px}
       .status {top:115px;bottom:auto;left:16px;right:auto;text-align:left;max-width:90vw;font-size:10px}
     }
@@ -49,6 +56,12 @@
     <div class="subtitle">有限翼を回り込む空気を、頭と尾のある粒子で。<br>明るい頭が下流側、薄い尾が上流側です。</div>
   </header>
   <aside class="panel">
+    <div class="speed-control">
+      <label class="speed-label" for="speed">自由流速<output id="speedLabel" for="speed">286 m/s</output></label>
+      <input id="speed" type="range" min="0" max="4" step="1" value="3" disabled aria-describedby="speedNote">
+      <div class="speed-ticks" aria-hidden="true"><span>204</span><span>238</span><span>272</span><span>286</span><span>306</span></div>
+      <div class="speed-note" id="speedNote">5段階の計算済み結果を切替 · m/s<br>連続的な再計算ではありません</div>
+    </div>
     <h2>表示レイヤー</h2>
     <label class="toggle">気流のスプラット<input id="flow" type="checkbox" checked disabled></label>
     <label class="toggle">圧力差による力の向き<input id="forces" type="checkbox" disabled></label>
@@ -62,11 +75,11 @@
       <div class="stat"><span>気流 splats</span><strong id="count">—</strong></div>
       <div class="stat"><span>自由流速</span><strong id="velocity">—</strong></div>
     </div>
-    <details><summary>解析条件・出典</summary><p>SU2による3次元定常Euler解析。半翼の解析結果を対称に反映しています。粘性・摩擦・剥離・失速は扱いません。力の粒子は周囲圧力との差による面積当たりの力を表し、長さは表示用の尺度です。</p><p><a href="https://su2code.github.io/tutorials/Inviscid_ONERAM6/" target="_blank" rel="noopener">SU2公式例</a> · <a href="assets/manifest.json" target="_blank">計算記録</a></p></details>
+    <details><summary>解析条件・出典</summary><p>速度ごとにSU2による3次元定常Euler解析。迎角3.06°・気温288.15 K・周囲圧力101325 Paは固定です。半翼の解析結果を対称に反映しています。粘性・摩擦・剥離・失速は扱いません。力の粒子は周囲圧力との差による面積当たりの力を表し、長さは表示用の尺度です。</p><p><a href="https://su2code.github.io/tutorials/Inviscid_ONERAM6/" target="_blank" rel="noopener">SU2公式例</a> · <a id="recordLink" href="assets/manifest.json" target="_blank">現在の計算記録</a></p></details>
   </aside>
   <div class="legend" id="legend"><div class="legend-title" id="legendTitle">流速 · m/s</div><div class="gradient" id="gradient"></div><div class="range"><span id="low">180</span><span id="high">420</span></div></div>
   <div class="hint">ドラッグ：回転<br>ホイール / ピンチ：拡大・縮小</div>
   <div class="status" id="status" role="status" aria-live="polite">翼と解析結果を読み込んでいます…</div>
-  <script src="viewer.js?v=150k-20261001"></script>
+  <script src="viewer.js?v=speeds-20261001"></script>
 </body>
 </html>

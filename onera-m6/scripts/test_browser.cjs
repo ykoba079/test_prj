@@ -29,7 +29,7 @@ let browser;
     await page.route('https://cdn.jsdelivr.net/npm/babylonjs@8.45.3/babylon.js', route => route.fulfill({ path: path.join(root,'work/babylon.js'), contentType: 'text/javascript' }));
     await page.route('https://cdn.jsdelivr.net/npm/babylonjs-loaders@8.45.3/babylonjs.loaders.min.js', route => route.fulfill({ path: path.join(root,'work/babylonjs.loaders.min.js'), contentType: 'text/javascript' }));
     await page.route('https://unpkg.com/fflate/**', route => route.fulfill({ path: path.join(root,'work/fflate.js'), contentType: 'text/javascript' }));
-    await page.goto(address);
+    await page.goto(process.env.ONERA_TEST_URL || address);
     await page.waitForFunction(() => window.oneraViewer?.ready || window.oneraViewer?.errors.length, { timeout: 60000 });
     const ready = await page.evaluate(() => ({ ready: oneraViewer.ready, errors: oneraViewer.errors, counts: oneraViewer.flow.map(mesh => mesh.getTotalVertices()), meshes: oneraViewer.wing.length }));
     assert.equal(ready.ready, true, JSON.stringify(ready));
@@ -39,6 +39,55 @@ let browser;
     assert.equal(await page.locator('#surface').inputValue(), 'pressure');
     assert.equal(await page.evaluate(() => oneraViewer.wing[0].useVertexColors), true);
     assert.deepEqual(errors, []);
+    const caseChecks=[];
+    for (const index of [0,1,2,4,3]) {
+      await page.locator('#speed').fill(String(index));
+      await page.waitForFunction(i => oneraViewer.activeCaseIndex === i && !oneraViewer.loading, index, { timeout: 60000 });
+      const check = await page.evaluate(() => ({
+        index:oneraViewer.activeCaseIndex,mach:oneraViewer.manifest.mach,
+        velocity:oneraViewer.manifest.freestream_velocity_m_s,
+        count:oneraViewer.flow[0].getTotalVertices(),
+        sceneMeshes:oneraViewer.wing[0].getScene().meshes.length,
+        meshNames:oneraViewer.wing[0].getScene().meshes.map(mesh=>({name:mesh.name,type:mesh.getClassName()})),
+        cpRange:oneraViewer.manifest.wing.cp_range,
+        colors:Array.from(oneraViewer.wing[0].getVerticesData(BABYLON.VertexBuffer.ColorKind).slice(0,32)),
+        residual:oneraViewer.manifest.convergence['rms[Rho]'],
+        error:oneraViewer.lastSwitchError
+      }));
+      assert.equal(check.index,index);
+      assert.equal(check.mach,[.6,.7,.8,.8395,.9][index]);
+      assert.equal(check.count,150000);
+      // Babylon creates one camera-support mesh per Gaussian mesh.
+      assert.equal(check.sceneMeshes,6);
+      assert.equal(check.meshNames.filter(mesh=>mesh.type==='GaussianSplattingMesh').length,2);
+      assert.equal(check.error,null);
+      assert.ok(check.residual < -11);
+      assert.equal(await page.locator('#velocity').textContent(),`${Math.round(check.velocity)} m/s`);
+      assert.equal(await page.evaluate(() => oneraViewer.wing[0].useVertexColors),true);
+      caseChecks.push(check);
+      await page.screenshot({path:path.join(root,`qa/speed-${index}.png`)});
+    }
+    assert.notDeepEqual(caseChecks[0].colors,caseChecks[3].colors);
+    const failedPressure = '**/cases/m080/pressure.json*';
+    await page.route(failedPressure,route => route.fulfill({status:200,contentType:'application/json',body:'{"cp":[],"colors":[]}'}));
+    await page.locator('#speed').fill('2');
+    await page.waitForFunction(() => oneraViewer.lastSwitchError !== null && !oneraViewer.loading);
+    assert.equal(await page.evaluate(() => oneraViewer.activeCaseIndex),3);
+    assert.equal(await page.locator('#speed').inputValue(),'3');
+    assert.equal(await page.evaluate(() => oneraViewer.wing[0].getScene().meshes.length),6);
+    await page.unroute(failedPressure);
+    await page.locator('#speed').fill('2');
+    await page.waitForFunction(() => oneraViewer.activeCaseIndex === 2 && !oneraViewer.loading);
+    assert.equal(await page.evaluate(() => oneraViewer.lastSwitchError),null);
+    // Fast dragging: only the last choice can become the visible result.
+    await page.locator('#speed').fill('0');
+    await page.locator('#speed').fill('4');
+    await page.locator('#speed').fill('1');
+    await page.waitForFunction(() => oneraViewer.activeCaseIndex === 1 && !oneraViewer.loading);
+    await page.waitForTimeout(600);
+    assert.equal(await page.evaluate(() => oneraViewer.activeCaseIndex),1);
+    await page.locator('#speed').fill('3');
+    await page.waitForFunction(() => oneraViewer.activeCaseIndex === 3 && !oneraViewer.loading);
     await page.screenshot({ path: path.join(root,'qa/desktop-flow.png') });
     await page.locator('#flow').uncheck();
     await page.locator('#surface').selectOption('pressure');
@@ -57,6 +106,11 @@ let browser;
     await page.screenshot({ path: path.join(root,'qa/desktop-forces.png') });
     await page.locator('#mirror').uncheck();
     assert.equal(await page.evaluate(() => oneraViewer.wing[1].isEnabled()), false);
+    await page.locator('#speed').fill('0');
+    await page.waitForFunction(() => oneraViewer.activeCaseIndex === 0 && !oneraViewer.loading);
+    assert.equal(await page.evaluate(() => oneraViewer.wing[1].isEnabled()), false);
+    assert.equal(await page.evaluate(() => oneraViewer.flow[0].isEnabled()), false);
+    assert.equal(await page.evaluate(() => oneraViewer.forces[0].isEnabled()), true);
     await page.screenshot({ path: path.join(root,'qa/desktop-half.png') });
     await page.locator('#mirror').check();
     await page.locator('#flow').check();
@@ -69,8 +123,8 @@ let browser;
     assert.equal(layout.scroll, layout.width);
     assert.ok(layout.panel.x >= 0 && layout.panel.right <= layout.width);
     assert.deepEqual(errors, []);
-    fs.writeFileSync(path.join(root,'qa/browser-report.json'), JSON.stringify({ ready, layout, errors, url: address, note: 'Isolated headless Edge with software WebGL; CDN bytes served from matching downloaded version.' }, null, 2));
-    console.log(JSON.stringify({ ready, layout, errors }));
+    fs.writeFileSync(path.join(root,'qa/browser-report.json'), JSON.stringify({ ready, caseChecks, layout, errors, url: process.env.ONERA_TEST_URL || address, note: 'Isolated headless Edge with software WebGL; CDN bytes served from matching downloaded version.' }, null, 2));
+    console.log(JSON.stringify({ ready, caseChecks, layout, errors }));
   } finally {
     if (browser) await browser.close();
     await new Promise(resolve => server.close(resolve));

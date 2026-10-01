@@ -11,6 +11,7 @@ import hashlib
 import json
 import struct
 import time
+import argparse
 from mesh import ROOT, read_mesh, np
 from scipy.spatial import cKDTree
 
@@ -20,6 +21,8 @@ QA.mkdir(exist_ok=True)
 ASSETS.mkdir(exist_ok=True)
 GAMMA, MACH, TEMP, GAS_R = 1.4, 0.8395, 288.15, 287.058
 UINF = MACH * np.sqrt(GAMMA * GAS_R * TEMP)
+REFERENCE_MACH = 0.8395
+REFERENCE_SPEED = REFERENCE_MACH * np.sqrt(GAMMA * GAS_R * TEMP)
 TARGET_FLOW_SPLATS = 150_000
 
 
@@ -146,7 +149,7 @@ def build_flow(paths, speeds):
         head = paths[line, index]
         velocity = speeds[line, index]
         rgb = palette(velocity, 180, 420)
-        length_ratio = np.clip(velocity/UINF, 0.35, 1.6)
+        length_ratio = np.clip(velocity/REFERENCE_SPEED, 0.35, 1.6)
         for j in range(7):
             at = index-j
             point = paths[line, at]
@@ -196,7 +199,9 @@ def build_wing(points, tetra, triangles, cp, pressure):
             'indices':allindices.ravel().tolist(),
             'cp':np.round(np.tile(cp[ids],2),6).tolist(),
             'colors':np.round(np.column_stack([np.tile(colors,(2,1)),np.ones(len(ids)*2)]),4).ravel().tolist()}
-    (ASSETS/'wing.json').write_text(json.dumps(mesh,separators=(',',':')),encoding='utf-8',newline='\n')
+    output = {key:mesh[key] for key in ['cp','colors']} if ASSETS != ROOT/'assets' else mesh
+    filename = 'pressure.json' if ASSETS != ROOT/'assets' else 'wing.json'
+    (ASSETS/filename).write_text(json.dumps(output,separators=(',',':')),encoding='utf-8',newline='\n')
     centers = points[triangles].mean(axis=1)
     normal = np.cross(points[triangles[:,1]]-points[triangles[:,0]],points[triangles[:,2]]-points[triangles[:,0]])
     area = np.linalg.norm(normal,axis=1)*0.5
@@ -224,7 +229,10 @@ def build_wing(points, tetra, triangles, cp, pressure):
     selected=rng.choice(len(centers),size=450,replace=False,p=area/area.sum())
     base=centers[selected]+normal[selected]*0.006
     direction=-normal[selected]*np.sign(face_cp[selected,None])
-    mag=np.minimum(np.abs(face_cp[selected]),1.2)*0.12+0.015
+    # Common dynamic-pressure reference: length comparisons across cases reflect
+    # physical pressure traction, not just Cp. Preserve the original default.
+    relative_traction = np.abs(face_cp[selected]) * (MACH/REFERENCE_MACH)**2
+    mag=np.minimum(relative_traction,1.2)*0.12+0.015
     # Positive-pressure arrows approach the surface from outside, so their
     # downstream heads do not disappear inside the solid wing.
     base += normal[selected]*(mag*(face_cp[selected]>0))[:,None]
@@ -314,4 +322,16 @@ def main():
     print(json.dumps({'flow':flow,'wing':mesh,'convergence':last,'build_seconds':time.time()-start}),flush=True)
 
 
-if __name__=='__main__': main()
+if __name__=='__main__':
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--case', choices=['m060','m070','m080','m090'])
+    args=parser.parse_args()
+    if args.case:
+        WORK=ROOT/'work/cases'/args.case
+        ASSETS=ROOT/'assets/cases'/args.case
+        QA=ROOT/'qa'/args.case
+        ASSETS.mkdir(parents=True,exist_ok=True)
+        QA.mkdir(parents=True,exist_ok=True)
+        MACH=json.loads((WORK/'run.json').read_text())['mach']
+        UINF=MACH*np.sqrt(GAMMA*GAS_R*TEMP)
+    main()
