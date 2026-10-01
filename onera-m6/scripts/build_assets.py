@@ -20,7 +20,7 @@ QA.mkdir(exist_ok=True)
 ASSETS.mkdir(exist_ok=True)
 GAMMA, MACH, TEMP, GAS_R = 1.4, 0.8395, 288.15, 287.058
 UINF = MACH * np.sqrt(GAMMA * GAS_R * TEMP)
-TARGET_FLOW_SPLATS = 300_000
+TARGET_FLOW_SPLATS = 150_000
 
 
 def display(p):

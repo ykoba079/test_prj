@@ -34,7 +34,7 @@ let browser;
     const ready = await page.evaluate(() => ({ ready: oneraViewer.ready, errors: oneraViewer.errors, counts: oneraViewer.flow.map(mesh => mesh.getTotalVertices()), meshes: oneraViewer.wing.length }));
     assert.equal(ready.ready, true, JSON.stringify(ready));
     assert.equal(ready.meshes, 2);
-    assert.equal(ready.counts[0], 300000);
+    assert.equal(ready.counts[0], 150000);
     assert.equal(await page.locator('#surface').inputValue(), 'pressure');
     assert.equal(await page.evaluate(() => oneraViewer.wing[0].useVertexColors), true);
     assert.deepEqual(errors, []);

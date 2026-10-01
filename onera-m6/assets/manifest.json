@@ -45,10 +45,10 @@
   },
   "interpolation_max_absolute_error": 4.296563105299356e-14,
   "flow_spz": {
-    "count": 300000,
-    "bytes": 1612541,
-    "max_position_error": 0.00012206992130600613,
-    "sha256": "dae30dc6519e68ebbbb860565dfe9004b0f18d433c40350e55727ee6bdb12441"
+    "count": 150000,
+    "bytes": 838969,
+    "max_position_error": 0.00012206941708176045,
+    "sha256": "86a4a84f4b2c2ea42956218e7b361bc575c12ba6688d3af145beb0ad7df3cec5"
   },
   "wing": {
     "vertices": 36570,
@@ -99,5 +99,5 @@
     "Static streamline packets, not particle trajectories from an unsteady solution",
     "Pressure arrows show force per area relative to ambient; not total force or viscous stress"
   ],
-  "asset_build_seconds": 6.964277267456055
+  "asset_build_seconds": 7.074967622756958
 }
