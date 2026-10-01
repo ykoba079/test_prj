@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#080f18">
+  <title>ONERA M6 · Airflow in splats</title>
+  <script src="https://cdn.jsdelivr.net/npm/babylonjs@8.45.3/babylon.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/babylonjs-loaders@8.45.3/babylonjs.loaders.min.js"></script>
+  <style>
+    :root {color-scheme:dark;font-family:Inter,"Segoe UI",system-ui,sans-serif;color:#eef4fc;background:#080f18}
+    * {box-sizing:border-box} body {margin:0} html,body,canvas {width:100%;height:100%;overflow:hidden}
+    canvas {display:block;touch-action:none;outline:none}
+    .header {position:fixed;top:max(22px,env(safe-area-inset-top));left:24px;pointer-events:none}
+    .eyebrow {color:#75d8e7;font-size:10px;letter-spacing:.23em;text-transform:uppercase}
+    h1 {margin:7px 0 5px;font-size:clamp(26px,4vw,40px);letter-spacing:-.04em;font-weight:600}
+    .subtitle {font-size:12px;color:#a3b1c4;max-width:400px;line-height:1.7}
+    .panel {position:fixed;right:22px;top:22px;width:255px;padding:18px;border:1px solid #263849;border-radius:17px;background:#0e1926e8;backdrop-filter:blur(18px)}
+    .panel h2 {font-size:12px;margin:0 0 16px;color:#b6c5d7;font-weight:500;letter-spacing:.06em}
+    .toggle {display:flex;align-items:center;justify-content:space-between;font-size:12px;margin:14px 0;gap:8px}
+    input[type=checkbox] {width:17px;height:17px;accent-color:#59d5de;cursor:pointer}
+    select,button {font:inherit;font-size:12px;color:inherit;border:1px solid #344657;border-radius:8px;background:#172637;padding:9px}
+    select {width:100%} button {cursor:pointer} button:hover {background:#233e51} button:disabled {opacity:.4;cursor:wait}
+    .buttons {display:flex;gap:8px;margin-top:18px}.buttons button {flex:1}
+    .stats {border-top:1px solid #283b4d;margin-top:18px;padding-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:11px}
+    .stat span {display:block;font-size:10px;color:#8da2b9}.stat strong {font-size:15px;font-weight:500;display:block;margin-top:3px}
+    .legend {position:fixed;left:24px;bottom:65px;width:240px;padding:12px 14px;background:#0e1926dc;border:1px solid #263849;border-radius:12px}
+    .legend-title {font-size:11px;margin-bottom:8px;color:#c4d2e1}.gradient {height:7px;border-radius:4px;background:linear-gradient(90deg,#4565ce,#2cbed6,#75e958,#f4d044,#e23a21)}
+    .range {display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:#a7bad0}
+    .hint {position:fixed;left:24px;bottom:25px;color:#8da2b9;font-size:11px}
+    .status {position:fixed;bottom:22px;right:22px;max-width:48vw;font-size:11px;color:#8fb4c8;text-align:right}
+    details {margin-top:15px;font-size:10px;color:#91a5bb;line-height:1.7}summary {cursor:pointer}details p {margin-bottom:0}details a {color:#79d2e0}
+    .error {color:#ffb5b5}
+    @media(max-width:650px) {
+      .header {top:17px;left:16px}h1 {font-size:28px}.subtitle {max-width:210px;font-size:10px}
+      .panel {top:auto;bottom:max(14px,env(safe-area-inset-bottom));right:12px;width:210px;padding:12px;border-radius:13px}
+      .panel h2 {margin-bottom:8px}.toggle {margin:8px 0;font-size:11px}.stats {margin-top:10px;padding-top:9px;gap:6px}
+      .stat strong {font-size:12px}.buttons {margin-top:10px}details {display:none}
+      .legend {left:14px;bottom:70px;width:145px;padding:10px}.legend-title {font-size:10px}.hint {left:14px;bottom:40px;width:130px;line-height:1.6;font-size:10px}
+      .status {top:115px;bottom:auto;left:16px;right:auto;text-align:left;max-width:90vw;font-size:10px}
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" aria-label="ONERA M6翼と計算済みの静止気流"></canvas>
+  <header class="header">
+    <div class="eyebrow">Computed flow · Static splats</div>
+    <h1>ONERA M6</h1>
+    <div class="subtitle">有限翼を回り込む空気を、頭と尾のある粒子で。<br>明るい頭が下流側、薄い尾が上流側です。</div>
+  </header>
+  <aside class="panel">
+    <h2>表示レイヤー</h2>
+    <label class="toggle">気流のスプラット<input id="flow" type="checkbox" checked disabled></label>
+    <label class="toggle">圧力差による力の向き<input id="forces" type="checkbox" disabled></label>
+    <label class="toggle" for="surface">翼の表面</label>
+    <select id="surface" disabled><option value="solid">単色</option><option value="pressure" selected>圧力分布</option><option value="hidden">非表示</option></select>
+    <label class="toggle">全翼を表示（対称に反映）<input id="mirror" type="checkbox" checked disabled></label>
+    <div class="buttons"><button id="reset" disabled>視点を戻す</button><button id="top" disabled>上から見る</button></div>
+    <div class="stats">
+      <div class="stat"><span>Mach</span><strong id="mach">—</strong></div>
+      <div class="stat"><span>迎角</span><strong id="aoa">—</strong></div>
+      <div class="stat"><span>気流 splats</span><strong id="count">—</strong></div>
+      <div class="stat"><span>自由流速</span><strong id="velocity">—</strong></div>
+    </div>
+    <details><summary>解析条件・出典</summary><p>SU2による3次元定常Euler解析。半翼の解析結果を対称に反映しています。粘性・摩擦・剥離・失速は扱いません。力の粒子は周囲圧力との差による面積当たりの力を表し、長さは表示用の尺度です。</p><p><a href="https://su2code.github.io/tutorials/Inviscid_ONERAM6/" target="_blank" rel="noopener">SU2公式例</a> · <a href="assets/manifest.json" target="_blank">計算記録</a></p></details>
+  </aside>
+  <div class="legend" id="legend"><div class="legend-title" id="legendTitle">流速 · m/s</div><div class="gradient" id="gradient"></div><div class="range"><span id="low">180</span><span id="high">420</span></div></div>
+  <div class="hint">ドラッグ：回転<br>ホイール / ピンチ：拡大・縮小</div>
+  <div class="status" id="status" role="status" aria-live="polite">翼と解析結果を読み込んでいます…</div>
+  <script src="viewer.js"></script>
+</body>
+</html>
