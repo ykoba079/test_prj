@@ -73,8 +73,10 @@
     <details><summary>解析情報</summary><div class="info">
       <p id="conditionInfo">読込中…</p><p id="clcd">—</p>
       <p>翼面の最大マッハ数：<span id="machMax">—</span></p>
-      <p>表示中の粒子（全表示合計）：<span id="particleCount">0</span></p>
-      <p>マッハ数は計算の速度・密度・圧力から算出。粒子は定常CFD速度場を格子補間した表示で、非定常シミュレーションではありません。</p>
+      <p>翼表面の超音速面積率：<span id="supersonicArea">—</span>（補間による概算）</p>
+      <p>臨界Cp*：<span id="criticalCp">—</span>（等エントロピーの参考値）</p>
+      <p>表示中の粒子（左右合計）：<span id="particleCount">0</span></p>
+      <p>マッハ数は計算の速度・密度・圧力から算出。暗い等値線は0.05刻み、白線はM＝1です。粒子は定常CFD速度場を格子補間した表示で、非定常シミュレーションではありません。</p>
       <p>非粘性Euler解析。粘性・摩擦・剥離・失速を扱わず、実験検証や格子収束確認は未実施です。</p>
       <p>流速の色は180–420 m/sで飽和しますが、フィルターは数値速度を使います。</p>
       <p><a id="recordLink" href="assets/cases/m08395/manifest.json" target="_blank" rel="noopener">現在の計算記録</a> · <a href="README.md">説明</a></p>
@@ -88,6 +90,6 @@
   </div>
   <div id="status" class="status" role="status" aria-live="polite">翼と速度場を読み込んでいます…</div>
   <div id="fatal" class="fatal" role="alert" hidden><h2>デモを起動できませんでした</h2><p id="fatalMessage"></p><button id="retry">再読み込み</button></div>
-  <script type="module" src="main.js?v=particles-20261004"></script>
+  <script type="module" src="main.js?v=particles-20261004b"></script>
 </body>
 </html>

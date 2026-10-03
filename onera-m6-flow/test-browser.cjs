@@ -34,7 +34,7 @@ let browser;
   const cameraAfter=await page.evaluate(()=>{const c=flowViewer.scene.activeCamera;return[c.alpha,c.beta,c.radius,...c.target.asArray()];});
   cameraBefore.forEach((v,i)=>assert.ok(Math.abs(v-cameraAfter[i])<1e-6));
   await page.locator('#particles').uncheck();assert.equal(await page.locator('#particleCount').textContent(),'0');
-  for(const id of ['pause','animSpeed','reseed'])assert.equal(await page.locator('#'+id).isDisabled(),true);
+  for(const id of ['pause','animSpeed','reseed','fast','slow','all','vmin','vmax'])assert.equal(await page.locator('#'+id).isDisabled(),true);
   await page.locator('#particles').check();
   const cases=[];
   for(const i of [0,1,2,4,3]){
@@ -42,6 +42,8 @@ let browser;
     cases.push(await page.evaluate(()=>({index:flowViewer.demo.state.activeCaseIndex,mach:flowViewer.demo.state.data.manifest.mach,velocityRange:flowViewer.demo.state.data.manifest.grid_speed_range_m_s,surfaceMach:flowViewer.demo.state.data.manifest.surface_mach})));
   }
   assert.deepEqual(cases.map(c=>c.mach),[.6,.7,.8,.9,.8395]);assert.ok(cases.every(c=>c.surfaceMach.includes('not Cp inversion')));
+  assert.ok(Number.isFinite(parseFloat(await page.locator('#criticalCp').textContent())));
+  const supArea=parseFloat(await page.locator('#supersonicArea').textContent());assert.ok(supArea>=0&&supArea<=100);
   await page.locator('#speed').fill('0');await page.waitForFunction(()=>flowViewer.demo.state.activeCaseIndex===0&&!flowViewer.demo.state.loading);
   await page.locator('#fast').click();assert.equal(await page.evaluate(()=>flowViewer.demo.filter(220)),true);assert.equal(await page.evaluate(()=>flowViewer.demo.filter(200)),false);
   await page.locator('#slow').click();assert.equal(await page.evaluate(()=>flowViewer.demo.filter(190)),true);assert.equal(await page.evaluate(()=>flowViewer.demo.filter(204)),false);

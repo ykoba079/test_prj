@@ -101,6 +101,8 @@ export default function createScene(engine,canvas) {
     const lut=new BABYLON.DynamicTexture('mach-colors',{width:1024,height:4},scene,false);
     const ctx=lut.getContext();
     for(let x=0;x<1024;x++){ctx.fillStyle=machColor(MACH_LO+(x+.5)/1024*(MACH_HI-MACH_LO)).toHexString();ctx.fillRect(x,0,1,4);}
+    ctx.fillStyle='#08101c70';
+    for(let n=9;n<36;n++)if(n!==20)ctx.fillRect(Math.round((n*.05-MACH_LO)/(MACH_HI-MACH_LO)*1024)-1,0,2,4);
     ctx.fillStyle='#ffffff';ctx.fillRect(Math.round((1-MACH_LO)/(MACH_HI-MACH_LO)*1024)-3,0,6,4);
     lut.update(false);lut.wrapU=lut.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
     const machMaterial=new BABYLON.StandardMaterial('wing-mach',scene);machMaterial.disableLighting=true;machMaterial.emissiveTexture=lut;machMaterial.backFaceCulling=false;
@@ -180,7 +182,7 @@ export default function createScene(engine,canvas) {
         else{scene.clipPlane=scene.clipPlane2=null;}
         particles.setEnabled(opts.anim);arrows.setEnabled(opts.forces);
         for(const id of ['eta','thickness','sectionView'])byId(id).disabled=!state.ready||!opts.slab;
-        for(const id of ['pause','animSpeed','reseed'])byId(id).disabled=!state.ready||!opts.anim;
+        for(const id of ['pause','animSpeed','reseed','fast','slow','all','vmin','vmax'])byId(id).disabled=!state.ready||!opts.anim;
         byId('mirror').disabled=!state.ready||opts.slab;
         byId('surface').disabled=!state.ready||!byId('wingVisible').checked;
         byId('pause').textContent=opts.paused?'再生':'一時停止';
@@ -240,6 +242,18 @@ export default function createScene(engine,canvas) {
             byId('conditionInfo').textContent='Mach '+m.mach.toFixed(4)+' · '+Math.round(m.freestream_velocity_m_s)+' m/s · 迎角3.06°';
             byId('clcd').textContent='CL '+m.convergence.CL.toFixed(3)+' / CD '+m.convergence.CD.toFixed(4)+'（非粘性）';
             byId('machMax').textContent=Math.max(...data.surface.mach).toFixed(2);
+            const cpStar=2/(GAMMA*m.mach*m.mach)*(Math.pow((2+(GAMMA-1)*m.mach*m.mach)/(GAMMA+1),GAMMA/(GAMMA-1))-1);
+            byId('criticalCp').textContent=cpStar.toFixed(3);
+            let supersonicArea=0;
+            for(let t=0;t<state.geom.area.length;t++){
+                const values=state.geom.tris.slice(t*3,t*3+3).map(i=>data.surface.mach[i]);
+                const above=values.filter(v=>v>1),below=values.filter(v=>v<=1);let fraction=0;
+                if(above.length===3)fraction=1;
+                else if(above.length===1)fraction=(above[0]-1)**2/((above[0]-below[0])*(above[0]-below[1]));
+                else if(above.length===2)fraction=1-(1-below[0])**2/((above[0]-below[0])*(above[1]-below[0]));
+                supersonicArea+=state.geom.area[t]*fraction;
+            }
+            byId('supersonicArea').textContent=(supersonicArea/state.geom.totalArea*100).toFixed(1)+'%';
             byId('recordLink').href=entryUrl(index)+'/manifest.json';
             reseed();sync();await scene.whenReadyAsync();if(token!==serial)return;
             status('定常解析の速度場を補間 · 粒子はスロー再生');
@@ -304,7 +318,13 @@ export default function createScene(engine,canvas) {
         const [registry,geometry]=await Promise.all([json('assets/speeds.json'),json('assets/wing.json')]);
         state.cases=registry.cases;const count=geometry.positions.length/6,indices=geometry.indices.slice(0,geometry.indices.length/2);
         let span=0;for(let i=0;i<count;i++)span=Math.max(span,-geometry.positions[i*3+2]);
-        state.geom={count,positions:geometry.positions.slice(0,count*3),tris:indices,span};
+        const positions=geometry.positions.slice(0,count*3),area=new Float32Array(indices.length/3);let totalArea=0;
+        for(let t=0;t<area.length;t++){
+            const a=indices[t*3]*3,b=indices[t*3+1]*3,c=indices[t*3+2]*3;
+            const u=[0,1,2].map(k=>positions[b+k]-positions[a+k]),v=[0,1,2].map(k=>positions[c+k]-positions[a+k]);
+            area[t]=.5*Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]);totalArea+=area[t];
+        }
+        state.geom={count,positions,tris:indices,span,area,totalArea};
         state.H=buildWingHeight(state.geom.positions,indices);
         for(let half=0;half<2;half++){
             const mesh=new BABYLON.Mesh('wing-'+half,scene),v=new BABYLON.VertexData();
