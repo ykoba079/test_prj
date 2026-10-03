@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#080f18">
+  <title>ONERA M6 · 気流の粒子表示</title>
+  <style>
+    :root {color-scheme:dark;font-family:"Segoe UI",system-ui,sans-serif;background:#080f18;color:#eef4fc}
+    * {box-sizing:border-box} html,body {width:100%;height:100%;margin:0;overflow:hidden}
+    canvas {display:block;width:100%;height:100%;touch-action:none;outline:none}
+    .header {position:fixed;top:24px;left:24px;pointer-events:none}.eyebrow {font-size:10px;color:#75d8e7;letter-spacing:.18em}
+    h1 {font-size:36px;margin:8px 0} .header p {font-size:12px;line-height:1.7;color:#a8bdcf;margin:0}
+    .panel {position:fixed;right:20px;top:20px;width:290px;max-height:calc(100dvh - 40px);overflow:auto;padding:18px;border:1px solid #263849;border-radius:14px;background:#0e1926ee;backdrop-filter:blur(14px)}
+    h2 {font-size:13px;font-weight:500;margin:0 0 14px;color:#b6c5d7} .row {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;margin:12px 0}
+    .row label {flex:1} .block {display:block;font-size:12px;margin:14px 0 8px} output {color:#75d8e7;font-size:11px}
+    input[type=range] {width:100%;accent-color:#59d5de;margin:6px 0} input[type=checkbox] {width:17px;height:17px;accent-color:#59d5de}
+    button,select {font:inherit;font-size:12px;color:inherit;background:#172637;border:1px solid #344657;border-radius:8px;padding:8px;cursor:pointer}
+    select {width:100%} button:disabled,input:disabled,select:disabled {opacity:.45;cursor:default}
+    .buttons {display:flex;gap:5px}.buttons button {flex:1;font-size:11px;padding:8px 5px}
+    .note {font-size:10px;line-height:1.7;color:#91a5bb;margin:8px 0}.ticks {display:flex;justify-content:space-between;color:#91a5bb;font-size:9px}
+    details {border-top:1px solid #283b4d;margin-top:16px;padding-top:12px;font-size:12px} summary {cursor:pointer;color:#b6c5d7}
+    .info {font-size:11px;color:#a8bdcf;line-height:1.8;margin-top:12px}.info p {margin:6px 0} a {color:#79d2e0}
+    .legends {position:fixed;left:24px;bottom:65px;display:flex;gap:8px;pointer-events:none}.legend {width:205px;padding:10px 12px;border:1px solid #263849;border-radius:10px;background:#0e1926e8;font-size:10px}
+    .gradient {height:7px;border-radius:3px;margin-top:8px}.range {display:flex;justify-content:space-between;color:#a7bad0;margin-top:6px;font-size:9px}
+    #cpLegend .gradient {background:linear-gradient(90deg,#3b4cc0,#8db0fe,#dddcdc,#f4987a,#b40426)}
+    #flowLegend .gradient {background:linear-gradient(90deg,#4565ce,#2cbed6,#75e958,#f4d044,#e23a21)}
+    #machLegend .gradient {background:linear-gradient(90deg,#163a73,#1f7a8c,#d6ecea 41%,white 43%,#ffd23f 44%,#ff8c1a,#8e1b5a)}
+    [hidden] {display:none!important}.status {position:fixed;left:24px;bottom:28px;font-size:11px;color:#8fb4c8;max-width:calc(100vw - 350px)}.error-text {color:#ffb5b5}
+    #menu {display:none}.fatal {position:fixed;inset:0;z-index:10;display:grid;place-content:center;padding:24px;background:#080f18f5;text-align:center}
+    @media(max-width:850px) {
+      .header {top:20px;left:16px}h1 {font-size:28px}.header p {font-size:10px;max-width:240px}
+      #menu {display:block;position:fixed;right:14px;top:16px;z-index:3}
+      .panel {top:62px;right:12px;width:min(290px,calc(100vw - 24px));max-height:calc(100dvh - 78px);display:none;z-index:2}.panel.open {display:block}
+      .legends {left:16px;bottom:70px;flex-direction:column;gap:5px}.legend {width:175px;padding:8px 10px;font-size:9px}
+      .status {left:16px;bottom:20px;max-width:90vw;font-size:10px}
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/babylonjs@8.45.3/babylon.js"></script>
+</head>
+<body>
+  <canvas id="canvas" aria-label="ONERA M6翼の圧力分布と、計算速度場に沿って動く粒子"></canvas>
+  <header class="header"><div class="eyebrow">COMPUTED FLOW · PARTICLES</div><h1>ONERA M6</h1><p>計算済みの速度場に沿った粒子表示。<br>動きはスロー再生です。</p></header>
+  <button id="menu" aria-expanded="false" aria-controls="panel">メニュー</button>
+  <aside class="panel" id="panel" aria-label="表示設定">
+    <h2>気流の表示</h2>
+    <div class="row"><label for="speed">自由流速（計算条件）</label><output id="speedLabel" for="speed">286 m/s</output></div>
+    <input id="speed" type="range" min="0" max="4" step="1" value="3" disabled data-ready aria-describedby="speedNote">
+    <div class="ticks" aria-hidden="true"><span>204</span><span>238</span><span>272</span><span>286</span><span>306</span></div>
+    <p class="note" id="speedNote">5段階の計算済み結果を切替。迎角3.06°は固定。ブラウザーで再計算はしません。</p>
+    <div class="row"><label for="particles">気流の粒子を表示</label><input id="particles" type="checkbox" checked disabled data-ready></div>
+    <div class="row"><label for="pause">粒子の動き</label><button id="pause" disabled data-ready>一時停止</button></div>
+    <label class="block" for="surface">翼の色</label>
+    <select id="surface" disabled data-ready><option value="pressure">圧力分布（Cp）</option><option value="mach">マッハ数（計算値）</option><option value="solid">単色</option></select>
+    <div class="row"><label for="section">断面だけを見る</label><input id="section" type="checkbox" disabled data-ready></div>
+    <div class="row"><label for="eta">断面位置</label><output id="etaLabel" for="eta">44%</output></div><input id="eta" type="range" min="5" max="98" step="1" value="44" disabled>
+    <div class="row"><label for="thickness">断面の厚さ</label><output id="thickLabel" for="thickness">±3.0 cm</output></div><input id="thickness" type="range" min="1" max="8" step=".5" value="3" disabled>
+    <div class="buttons"><button id="sectionView" disabled>断面を横から</button><button id="home" disabled data-ready>初期視点</button><button id="top" disabled data-ready>上から</button></div>
+    <details id="advanced"><summary>詳細設定</summary>
+      <div class="row"><label for="animSpeed">粒子の再生速度</label><output id="animSpeedLabel" for="animSpeed">1.00×</output></div><input id="animSpeed" type="range" min=".1" max="3" step=".05" value="1" disabled>
+      <button id="reseed" disabled>粒子をリセット</button>
+      <div class="row"><label for="mirror">全翼を表示（対称反映）</label><input id="mirror" type="checkbox" checked disabled data-ready></div>
+      <p class="note">断面表示中は半翼のみを表示します。</p>
+      <div class="row"><label for="wingVisible">翼を表示</label><input id="wingVisible" type="checkbox" checked disabled data-ready></div>
+      <div class="row"><label for="forces">周囲との差圧の向き</label><input id="forces" type="checkbox" disabled data-ready></div>
+      <p class="note">矢印は面積当たりの圧力作用。長さは共通の表示尺度で、上下限があります。</p>
+      <label class="block">粒子の速度フィルター</label><p class="note" id="filterLabel">すべて表示</p>
+      <div class="buttons"><button id="fast" disabled data-ready>5%以上速い</button><button id="slow" disabled data-ready>5%以上遅い</button><button id="all" disabled data-ready>全表示</button></div>
+      <p class="note">速い・遅いは現在の自由流速との比較です。</p>
+      <label class="block" for="vmin">下限（m/s）</label><input id="vmin" type="range" min="0" max="500" step="1" value="0" disabled data-ready>
+      <label class="block" for="vmax">上限（m/s）</label><input id="vmax" type="range" min="0" max="500" step="1" value="500" disabled data-ready>
+    </details>
+    <details><summary>解析情報</summary><div class="info">
+      <p id="conditionInfo">読込中…</p><p id="clcd">—</p>
+      <p>翼面の最大マッハ数：<span id="machMax">—</span></p>
+      <p>表示中の粒子（全表示合計）：<span id="particleCount">0</span></p>
+      <p>マッハ数は計算の速度・密度・圧力から算出。粒子は定常CFD速度場を格子補間した表示で、非定常シミュレーションではありません。</p>
+      <p>非粘性Euler解析。粘性・摩擦・剥離・失速を扱わず、実験検証や格子収束確認は未実施です。</p>
+      <p>流速の色は180–420 m/sで飽和しますが、フィルターは数値速度を使います。</p>
+      <p><a id="recordLink" href="assets/cases/m08395/manifest.json" target="_blank" rel="noopener">現在の計算記録</a> · <a href="README.md">説明</a></p>
+    </div></details>
+    <details id="sharing"><summary>保存・共有</summary><p class="note">現在の視点を640×480・3秒のGIFで保存します。メニューは画像に入りません。</p><button id="gif" disabled data-ready>GIFを保存（3秒）</button></details>
+  </aside>
+  <div class="legends">
+    <div class="legend" id="cpLegend"><span id="cpLegendTitle">圧力係数 Cp</span><div class="gradient"></div><div class="range"><span>≤ −1.2</span><span>≥ +0.6</span></div></div>
+    <div class="legend" id="machLegend" hidden>翼面マッハ数 · 白線 M＝1<div class="gradient"></div><div class="range"><span>≤ 0.4</span><span>≥ 1.8</span></div></div>
+    <div class="legend" id="flowLegend">粒子の流速 · m/s<div class="gradient"></div><div class="range"><span>≤ 180</span><span>≥ 420</span></div></div>
+  </div>
+  <div id="status" class="status" role="status" aria-live="polite">翼と速度場を読み込んでいます…</div>
+  <div id="fatal" class="fatal" role="alert" hidden><h2>デモを起動できませんでした</h2><p id="fatalMessage"></p><button id="retry">再読み込み</button></div>
+  <script type="module" src="main.js?v=particles-20261004"></script>
+</body>
+</html>

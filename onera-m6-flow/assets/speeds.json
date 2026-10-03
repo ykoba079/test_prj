@@ -1,0 +1,55 @@
+{
+  "default_index": 3,
+  "cases": [
+    {
+      "id": "m060",
+      "mach": 0.6,
+      "velocity_m_s": 204.17821725345723,
+      "base_url": "assets/cases/m060",
+      "speed_range_m_s": [
+        53.46608352661133,
+        303.2549133300781
+      ]
+    },
+    {
+      "id": "m070",
+      "mach": 0.7,
+      "velocity_m_s": 238.20792012903345,
+      "base_url": "assets/cases/m070",
+      "speed_range_m_s": [
+        62.297264099121094,
+        392.2347717285156
+      ]
+    },
+    {
+      "id": "m080",
+      "mach": 0.8,
+      "velocity_m_s": 272.2376230046097,
+      "base_url": "assets/cases/m080",
+      "speed_range_m_s": [
+        71.16680145263672,
+        445.3506164550781
+      ]
+    },
+    {
+      "id": "m08395",
+      "mach": 0.8395,
+      "velocity_m_s": 285.6793556404623,
+      "base_url": "assets/cases/m08395",
+      "speed_range_m_s": [
+        74.70116424560547,
+        456.4734802246094
+      ]
+    },
+    {
+      "id": "m090",
+      "mach": 0.9,
+      "velocity_m_s": 306.26732588018587,
+      "base_url": "assets/cases/m090",
+      "speed_range_m_s": [
+        79.72297668457031,
+        465.1563720703125
+      ]
+    }
+  ]
+}

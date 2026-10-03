@@ -1,0 +1,62 @@
+{
+  "mach": 0.9,
+  "freestream_velocity_m_s": 306.26732588018587,
+  "angle_of_attack_degrees": 3.06,
+  "solver": {
+    "solver": "SU2 8.5.0 win64 OpenMP",
+    "exit_code": 0,
+    "elapsed_seconds": 124.76429271697998,
+    "threads": 4,
+    "mach": 0.9,
+    "mesh_sha256": "4293af48a08165633c872bf12c4dbc896a398e338f0165182acb4e1f696130e4",
+    "config_sha256": "6fc2125fc024220864740412d2cf679c61394a0d220bf1e3985f56a5b4f6fde2"
+  },
+  "convergence": {
+    "Time_Iter": 0.0,
+    "Outer_Iter": 0.0,
+    "Inner_Iter": 107.0,
+    "rms[Rho]": -11.03407192,
+    "rms[RhoU]": -11.1302728,
+    "rms[RhoV]": -11.07875471,
+    "rms[RhoW]": -10.90208519,
+    "rms[RhoE]": -10.45428385,
+    "RefForce": 0.3793010679,
+    "CD": 0.03172767264,
+    "CL": 0.3537356182,
+    "CSF": 0.01264545491,
+    "CMx": 0.1862941937,
+    "CMy": -0.11366382,
+    "CMz": 0.007651389066,
+    "CFx": 0.0127994297,
+    "CFy": 0.01264545491,
+    "CFz": 0.3549249321,
+    "CEff": 11.14911964
+  },
+  "equations": "3-D steady compressible Euler (inviscid)",
+  "grid": {
+    "x0": -0.27,
+    "y0": -0.33,
+    "z0": -1.65,
+    "hx": 0.03,
+    "hy": 0.012,
+    "hz": 0.03,
+    "nx": 98,
+    "ny": 69,
+    "nz": 56
+  },
+  "velocity_encoding": "gzip of little-endian Float32 xyz, x-fastest; m/s; NaN marks unavailable fluid data",
+  "grid_speed_range_m_s": [
+    79.72297668457031,
+    465.1563720703125
+  ],
+  "valid_grid_fraction": 0.9916788143828961,
+  "velocity_sha256": "6405bf36c951e97d8ddf06b5bd92e13d74f3e19523baca3dc03cad6e8227c336",
+  "surface_sha256": "a91498eff119e53e2af2d280a4f40e772a9d3989ffe6fd879508eef22991cc1f",
+  "interpolation_check_max_error_m_s": 4.263256414560601e-12,
+  "surface_mach": "|velocity| / sqrt(gamma * pressure / density), from SU2 conserved variables, not Cp inversion",
+  "limitations": [
+    "Inviscid steady Euler; no viscosity, separation or stall prediction",
+    "Particles use a resampled regular velocity grid and are a slowed visualization, not an unsteady CFD solution",
+    "No grid-convergence or experimental validation performed"
+  ]
+}
