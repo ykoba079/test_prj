@@ -197,6 +197,9 @@
       opacity: 0.58;
     }
 
+    #selectDropButton { grid-column: 1 / -1; }
+    #selectDropButton[aria-pressed="true"] { background: var(--cyan); color: #111512; }
+
     .ideas {
       position: fixed;
       right: 12px;
@@ -353,21 +356,31 @@
         </label>
       </div>
       <div class="row advancedControl">
-        <span>X <b id="pointerXValue">0.0</b></span>
-        <input id="pointerXInput" type="range" min="-6" max="6" step="0.1" value="0">
+        <span>X <b id="pointerXValue">0.00</b></span>
+        <input id="pointerXInput" type="range" min="-6" max="6" step="0.01" value="0">
       </div>
       <div class="row advancedControl">
-        <span>Z <b id="pointerZValue">0.0</b></span>
-        <input id="pointerZInput" type="range" min="-6" max="6" step="0.1" value="0">
+        <span>Z <b id="pointerZValue">0.00</b></span>
+        <input id="pointerZInput" type="range" min="-6" max="6" step="0.01" value="0">
       </div>
       <div class="row advancedControl">
-        <span>Height <b id="pointerYValue">4.0</b></span>
-        <input id="pointerYInput" type="range" min="0.5" max="10" step="0.1" value="4">
+        <span>表面から <b id="pointerYValue">2.00</b></span>
+        <input id="pointerYInput" aria-label="表面からの投下高さ" type="range" min="0.1" max="10" step="0.01" value="2">
+      </div>
+      <div class="row advancedControl">
+        <span>箱の縮小</span>
+        <label class="checkRow">
+          <input id="fitBoxesInput" type="checkbox" checked>
+          <span>点の分布に合わせる</span>
+        </label>
       </div>
       <div class="buttonGrid">
+        <button id="selectDropButton" class="secondary" type="button" aria-pressed="false" disabled>投下位置を指定</button>
         <button id="resetButton" type="button">Reset View</button>
         <button id="densityButton" class="secondary" type="button">Density Preview</button>
-        <button id="dropButton" type="button">Drop 50</button>
+        <button id="dropLargeButton" type="button">大玉を落とす</button>
+        <button id="dropSmallButton" type="button">小玉を落とす</button>
+        <button id="dropMixedButton" type="button">混合で落とす</button>
         <button id="cookieButton" type="button">Drop Cookies</button>
         <button id="clearBallsButton" class="secondary" type="button">Clear Balls</button>
       </div>
@@ -392,6 +405,10 @@
     });
 
     const DEFAULT_SPZ = "../models/%E4%BA%94%E7%95%B3%E5%BA%A7%E6%95%B7%E5%89%8D%E6%89%8B%E6%B0%B4%E9%89%A2.spz";
+    // Center of the top recess, measured in this SPZ's source coordinates.
+    const BASIN_RECESS_LOCAL = new BABYLON.Vector3(-0.86886, 0.40368, -0.67007);
+    const DEFAULT_CAMERA_ALPHA = -1.2;
+    const BASIN_CAMERA_ALPHA = DEFAULT_CAMERA_ALPHA + 120 * Math.PI / 180;
 
     const ui = {
       fileInput: document.getElementById("fileInput"),
@@ -402,15 +419,19 @@
       solidThresholdInput: document.getElementById("solidThresholdInput"),
       solidThresholdValue: document.getElementById("solidThresholdValue"),
       splitInput: document.getElementById("splitInput"),
+      fitBoxesInput: document.getElementById("fitBoxesInput"),
       pointerXInput: document.getElementById("pointerXInput"),
       pointerXValue: document.getElementById("pointerXValue"),
       pointerZInput: document.getElementById("pointerZInput"),
       pointerZValue: document.getElementById("pointerZValue"),
       pointerYInput: document.getElementById("pointerYInput"),
       pointerYValue: document.getElementById("pointerYValue"),
+      selectDropButton: document.getElementById("selectDropButton"),
       resetButton: document.getElementById("resetButton"),
       densityButton: document.getElementById("densityButton"),
-      dropButton: document.getElementById("dropButton"),
+      dropLargeButton: document.getElementById("dropLargeButton"),
+      dropSmallButton: document.getElementById("dropSmallButton"),
+      dropMixedButton: document.getElementById("dropMixedButton"),
       cookieButton: document.getElementById("cookieButton"),
       clearBallsButton: document.getElementById("clearBallsButton"),
       controlsToggle: document.getElementById("controlsToggle"),
@@ -437,7 +458,7 @@
 
     const camera = new BABYLON.ArcRotateCamera(
       "camera",
-      -1.2,
+      BASIN_CAMERA_ALPHA,
       1.15,
       11,
       new BABYLON.Vector3(0, 0, 0),
@@ -473,7 +494,11 @@
       densityVisible: false,
       densityBoxes: [],
       physicsReady: false,
-      balls: []
+      balls: [],
+      dropTimers: new Set(),
+      selectingDropPosition: false,
+      dropSurfaceLocal: BABYLON.Vector3.Zero(),
+      dropSurfaceFound: false
     };
 
     const pointerRoot = new BABYLON.TransformNode("dropPointer", scene);
@@ -489,6 +514,15 @@
     pointerRing.rotation.x = Math.PI / 2;
     pointerRing.parent = pointerRoot;
     pointerRing.isPickable = false;
+
+    const landingMarker = BABYLON.MeshBuilder.CreateTorus("landingMarker", { diameter: 0.2, thickness: 0.012, tessellation: 32 }, scene);
+    landingMarker.material = pointerMat;
+    landingMarker.isPickable = false;
+    const dropGuide = BABYLON.MeshBuilder.CreateLines("dropGuide", {
+      points: [BABYLON.Vector3.Zero(), new BABYLON.Vector3(0, 1, 0)], updatable: true
+    }, scene);
+    dropGuide.color = new BABYLON.Color3(1, 0.72, 0.22);
+    dropGuide.isPickable = false;
 
     let messageTimer = 0;
 
@@ -525,17 +559,102 @@
     function pointerPosition() {
       return new BABYLON.Vector3(
         Number(ui.pointerXInput.value),
-        Number(ui.pointerYInput.value),
+        localToWorld(state.dropSurfaceLocal).y + Number(ui.pointerYInput.value),
         Number(ui.pointerZInput.value)
       );
     }
 
-    function updatePointer() {
-      pointerRoot.position.copyFrom(pointerPosition());
-      ui.pointerXValue.textContent = Number(ui.pointerXInput.value).toFixed(1);
-      ui.pointerYValue.textContent = Number(ui.pointerYInput.value).toFixed(1);
-      ui.pointerZValue.textContent = Number(ui.pointerZInput.value).toFixed(1);
+    function surfaceBelow(x, z) {
+      let top = -Infinity;
+      for (const box of state.densityBoxes) {
+        const center = localToWorld(box.localCenter);
+        const half = box.mesh.scaling.scale(0.5);
+        if (Math.abs(x - center.x) <= half.x && Math.abs(z - center.z) <= half.z) {
+          top = Math.max(top, center.y + half.y);
+        }
+      }
+      return Number.isFinite(top) ? new BABYLON.Vector3(x, top, z) : null;
     }
+
+    function worldToLocal(point) {
+      return point.subtract(state.offset).scale(1 / displayScale());
+    }
+
+    function refreshDropSurface() {
+      const surface = surfaceBelow(Number(ui.pointerXInput.value), Number(ui.pointerZInput.value));
+      state.dropSurfaceFound = !!surface;
+      if (surface) state.dropSurfaceLocal = worldToLocal(surface);
+      updatePointer();
+    }
+
+    function updatePointer() {
+      const origin = pointerPosition();
+      pointerRoot.position.copyFrom(origin);
+      const surface = new BABYLON.Vector3(origin.x, localToWorld(state.dropSurfaceLocal).y, origin.z);
+      landingMarker.position.copyFrom(surface.add(new BABYLON.Vector3(0, 0.015, 0)));
+      landingMarker.setEnabled(state.dropSurfaceFound);
+      BABYLON.MeshBuilder.CreateLines("dropGuide", { points: [surface, origin], instance: dropGuide });
+      dropGuide.setEnabled(state.dropSurfaceFound);
+      ui.pointerXValue.textContent = Number(ui.pointerXInput.value).toFixed(2);
+      ui.pointerYValue.textContent = Number(ui.pointerYInput.value).toFixed(2);
+      ui.pointerZValue.textContent = Number(ui.pointerZInput.value).toFixed(2);
+    }
+
+    function setInitialDropPosition(sourceName) {
+      const position = sourceName.normalize("NFC") === "五畳座敷前手水鉢.spz"
+        ? localToWorld(BASIN_RECESS_LOCAL)
+        : new BABYLON.Vector3(0, 2, 0);
+      state.dropSurfaceLocal = sourceName.normalize("NFC") === "五畳座敷前手水鉢.spz"
+        ? BASIN_RECESS_LOCAL.clone() : worldToLocal(new BABYLON.Vector3(0, 0, 0));
+      state.dropSurfaceFound = sourceName.normalize("NFC") === "五畳座敷前手水鉢.spz";
+      ui.pointerXInput.value = position.x.toFixed(2);
+      ui.pointerYInput.value = Math.max(0.1, 2 - localToWorld(state.dropSurfaceLocal).y).toFixed(2);
+      ui.pointerZInput.value = position.z.toFixed(2);
+      updatePointer();
+    }
+
+    function setSelectingDropPosition(active) {
+      state.selectingDropPosition = active;
+      ui.selectDropButton.setAttribute("aria-pressed", String(active));
+      ui.selectDropButton.textContent = active ? "位置指定をキャンセル" : "投下位置を指定";
+      canvas.style.cursor = active ? "crosshair" : "";
+      if (active) {
+        camera.detachControl();
+        camera.inertialAlphaOffset = camera.inertialBetaOffset = camera.inertialRadiusOffset = 0;
+        camera.inertialPanningX = camera.inertialPanningY = 0;
+      } else {
+        camera.attachControl(canvas, true);
+      }
+    }
+
+    function beginDropSelection() {
+      if (state.selectingDropPosition) { setSelectingDropPosition(false); return; }
+      if (!state.mesh) return;
+      if (!state.densityBoxes.length) buildDensityPreview();
+      if (!state.densityBoxes.length) { setMessage("選択できるコライダーがありません"); return; }
+      setControlsOpen(false);
+      setSelectingDropPosition(true);
+    }
+
+    scene.onPointerObservable.add(info => {
+      if (!state.selectingDropPosition || info.type !== BABYLON.PointerEventTypes.POINTERTAP) return;
+      const hit = scene.pick(scene.pointerX, scene.pointerY, mesh => mesh.metadata?.dropCollider === true);
+      if (!hit?.hit || !hit.pickedPoint) { setMessage("対象なし"); return; }
+      for (const [input, value] of [[ui.pointerXInput, hit.pickedPoint.x], [ui.pointerZInput, hit.pickedPoint.z]]) {
+        input.min = String(Math.min(Number(input.min), value - 0.1));
+        input.max = String(Math.max(Number(input.max), value + 0.1));
+        input.value = value.toFixed(2);
+      }
+      state.dropSurfaceLocal = worldToLocal(hit.pickedPoint);
+      state.dropSurfaceFound = true;
+      refreshDropSurface();
+      setSelectingDropPosition(false);
+      setMessage("投下位置を変更");
+    });
+
+    window.addEventListener("keydown", event => {
+      if (event.key === "Escape" && state.selectingDropPosition) setSelectingDropPosition(false);
+    });
 
     function disposeBoxAggregate(box) {
       box.aggregate?.dispose();
@@ -557,35 +676,52 @@
     }
 
     function clearBalls() {
+      for (const timer of state.dropTimers) clearTimeout(timer);
+      state.dropTimers.clear();
       for (const ball of state.balls) {
         ball.aggregate?.dispose();
-        ball.mesh.dispose(false, true);
+        ball.mesh.dispose();
       }
       state.balls = [];
+    }
+
+    function scheduleDrop(callback, delay) {
+      const timer = setTimeout(() => {
+        state.dropTimers.delete(timer);
+        callback();
+      }, delay);
+      state.dropTimers.add(timer);
     }
 
     function trimPhysicsItems() {
       while (state.balls.length > 260) {
         const old = state.balls.shift();
         old.aggregate?.dispose();
-        old.mesh.dispose(false, true);
+        old.mesh.dispose();
       }
     }
 
-    function spawnBall(position, index) {
+    const BALL_TYPES = {
+      large: { diameter: 0.18, color: new BABYLON.Color3(0.95, 0.72, 0.28) },
+      small: { diameter: 0.06, color: new BABYLON.Color3(0.25, 0.78, 0.95) }
+    };
+
+    function spawnBall(position, index, type) {
+      const { diameter, color } = BALL_TYPES[type];
       const mesh = BABYLON.MeshBuilder.CreateSphere(`dropBall_${Date.now()}_${index}`, {
-        diameter: 0.18,
+        diameter,
         segments: 16
       }, scene);
       mesh.position.copyFrom(position);
-      const mat = scene.getMaterialByName("dropBallMat") ?? new BABYLON.StandardMaterial("dropBallMat", scene);
-      mat.diffuseColor = new BABYLON.Color3(0.95, 0.72, 0.28);
-      mat.emissiveColor = new BABYLON.Color3(0.12, 0.06, 0.01);
+      const matName = `dropBallMat_${type}`;
+      const mat = scene.getMaterialByName(matName) ?? new BABYLON.StandardMaterial(matName, scene);
+      mat.diffuseColor = color;
+      mat.emissiveColor = color.scale(0.08);
       mesh.material = mat;
       const aggregate = new BABYLON.PhysicsAggregate(
         mesh,
         BABYLON.PhysicsShapeType.SPHERE,
-        { mass: 0.32, friction: 0.52, restitution: 0.2 },
+        { mass: 0.32 * Math.pow(diameter / BALL_TYPES.large.diameter, 3), friction: 0.52, restitution: 0.2 },
         scene
       );
       state.balls.push({ mesh, aggregate });
@@ -1147,28 +1283,22 @@
       return true;
     }
 
-    function dropBalls() {
-      if (!state.physicsReady) {
-        setMessage("物理準備中");
-        return;
-      }
-      if (!state.densityBoxes.length) {
-        buildDensityPreview();
-      } else {
-        rebuildPhysicsColliders();
-      }
+    function dropBalls(mode) {
+      if (!state.mesh || !ensurePhysicsColliders()) return;
+      if (state.selectingDropPosition) setSelectingDropPosition(false);
       const origin = pointerPosition();
       for (let i = 0; i < 50; i++) {
-        setTimeout(() => {
+        const type = mode === "mixed" ? (i % 2 === 0 ? "large" : "small") : mode;
+        scheduleDrop(() => {
           const jitter = new BABYLON.Vector3(
-            (Math.random() - 0.5) * 0.28,
-            i * 0.012,
-            (Math.random() - 0.5) * 0.28
+            (Math.random() - 0.5) * 0.04,
+            0,
+            (Math.random() - 0.5) * 0.04
           );
-          spawnBall(origin.add(jitter), i);
-        }, i * 55);
+          spawnBall(origin.add(jitter), i, type);
+        }, i * 220);
       }
-      setMessage("ボールを落下");
+      setMessage(`${mode === "large" ? "大玉50個" : mode === "small" ? "小玉50個" : "大玉25個・小玉25個"}を落下`);
     }
 
     function dropCookies() {
@@ -1177,7 +1307,7 @@
       }
       const origin = pointerPosition();
       for (let i = 0; i < 30; i++) {
-        setTimeout(() => {
+        scheduleDrop(() => {
           const jitter = new BABYLON.Vector3(
             (Math.random() - 0.5) * 0.34,
             i * 0.018,
@@ -1251,11 +1381,13 @@
       const radius = Math.max(size.x, size.y, size.z, 1) * 1.35;
       camera.setTarget(BABYLON.Vector3.Zero());
       camera.radius = BABYLON.Scalar.Clamp(radius, 3.5, 60);
-      camera.alpha = -1.2;
+      camera.alpha = state.sourceName.normalize("NFC") === "五畳座敷前手水鉢.spz"
+        ? BASIN_CAMERA_ALPHA : DEFAULT_CAMERA_ALPHA;
       camera.beta = 1.12;
     }
 
     function clearDensityBoxes() {
+      if (state.selectingDropPosition) setSelectingDropPosition(false);
       state.densityBoxes.forEach((box) => {
         disposeBoxAggregate(box);
         box.mesh.dispose();
@@ -1264,6 +1396,8 @@
       state.densityVisible = false;
       ui.densityLabel.textContent = "density preview off";
       ui.densityButton.textContent = "Density Preview";
+      state.dropSurfaceFound = false;
+      updatePointer();
     }
 
     function percentile(values, ratio) {
@@ -1281,13 +1415,53 @@
       return mat;
     }
 
-    function makePreviewBox(name, localCenter, localSize, material, edgeColor, density) {
+    function createPointDistribution() {
+      return { count: 0, min: new BABYLON.Vector3(Infinity, Infinity, Infinity), max: new BABYLON.Vector3(-Infinity, -Infinity, -Infinity), sumY: 0 };
+    }
+
+    function addDistributionPoint(distribution, point) {
+      distribution.count++;
+      distribution.min.minimizeInPlace(point);
+      distribution.max.maximizeInPlace(point);
+      distribution.sumY += point.y;
+    }
+
+    function fitBoxToDistribution(center, size, distribution, floor = false) {
+      if (!ui.fitBoxesInput.checked || !distribution?.count) return { center, size };
+      const fittedCenter = center.clone();
+      const fittedSize = size.clone();
+      for (const axis of ["x", "y", "z"]) {
+        if (floor && axis === "y") continue;
+        const cellMin = center[axis] - size[axis] * 0.5;
+        const cellMax = center[axis] + size[axis] * 0.5;
+        // Retain a small margin and thickness for collision stability, within the cell.
+        const padding = size[axis] * 0.05;
+        let lo = Math.max(cellMin, distribution.min[axis] - padding);
+        let hi = Math.min(cellMax, distribution.max[axis] + padding);
+        const minSize = size[axis] * 0.08;
+        if (hi - lo < minSize) {
+          lo = Math.max(cellMin, Math.min((lo + hi - minSize) * 0.5, cellMax - minSize));
+          hi = lo + minSize;
+        }
+        fittedCenter[axis] = (lo + hi) * 0.5;
+        fittedSize[axis] = hi - lo;
+      }
+      // Place the top of a floor slab at the sampled surface, keeping its thickness below it.
+      if (floor) fittedCenter.y = distribution.sumY / distribution.count - size.y * 0.5;
+      return { center: fittedCenter, size: fittedSize };
+    }
+
+    function makePreviewBox(name, localCenter, localSize, material, edgeColor, density, distribution, floor = false) {
+      const fitted = fitBoxToDistribution(localCenter, localSize, distribution, floor);
+      localCenter = fitted.center;
+      localSize = fitted.size;
       const mesh = BABYLON.MeshBuilder.CreateBox(name, { size: 1 }, scene);
       mesh.material = material;
       mesh.enableEdgesRendering();
       mesh.edgesWidth = 0.25;
       mesh.edgesColor = edgeColor;
-      mesh.isPickable = false;
+      mesh.isPickable = true;
+      mesh.metadata = { dropCollider: true };
       state.densityBoxes.push({ mesh, localCenter, localSize, density });
     }
 
@@ -1317,10 +1491,10 @@
         const objectKey = `${ogx},${ogy},${ogz}`;
         let objectCell = objectCells.get(objectKey);
         if (!objectCell) {
-          objectCell = { gx: ogx, gy: ogy, gz: ogz, count: 0, fineCells: new Map() };
+          objectCell = { ...createPointDistribution(), gx: ogx, gy: ogy, gz: ogz, fineCells: new Map() };
           objectCells.set(objectKey, objectCell);
         }
-        objectCell.count++;
+        addDistributionPoint(objectCell, p);
         const localMinX = state.bounds.min.x + ogx * objectCellSize;
         const localMinY = state.bounds.min.y + ogy * objectCellSize;
         const localMinZ = state.bounds.min.z + ogz * objectCellSize;
@@ -1328,7 +1502,8 @@
         const fy = BABYLON.Scalar.Clamp(Math.floor((p.y - localMinY) / fineObjectCellSize), 0, 1);
         const fz = BABYLON.Scalar.Clamp(Math.floor((p.z - localMinZ) / fineObjectCellSize), 0, 1);
         const fineKey = `${fx},${fy},${fz}`;
-        objectCell.fineCells.set(fineKey, (objectCell.fineCells.get(fineKey) ?? 0) + 1);
+        if (!objectCell.fineCells.has(fineKey)) objectCell.fineCells.set(fineKey, createPointDistribution());
+        addDistributionPoint(objectCell.fineCells.get(fineKey), p);
 
         const fgx = Math.floor((p.x - state.bounds.min.x) / floorCellSize);
         const fgy = Math.floor((p.y - state.bounds.min.y) / floorCellSize);
@@ -1339,11 +1514,12 @@
           column = { gx: fgx, gz: fgz, yBins: new Map() };
           floorColumns.set(columnKey, column);
         }
-        column.yBins.set(fgy, (column.yBins.get(fgy) ?? 0) + 1);
+        if (!column.yBins.has(fgy)) column.yBins.set(fgy, createPointDistribution());
+        addDistributionPoint(column.yBins.get(fgy), p);
       }
 
       const objectCounts = Array.from(objectCells.values()).map((cell) => cell.count);
-      const floorBinCounts = Array.from(floorColumns.values()).flatMap((column) => Array.from(column.yBins.values()));
+      const floorBinCounts = Array.from(floorColumns.values()).flatMap((column) => Array.from(column.yBins.values(), (bin) => bin.count));
       const objectMinCount = Math.max(4, percentile(objectCounts, solidThreshold));
       const highObjectCount = objectMinCount;
       const floorMinCount = Math.max(1, percentile(floorBinCounts, 0.16));
@@ -1357,11 +1533,11 @@
       for (const column of floorColumns.values()) {
         if (floorMade >= maxFloorBoxes) break;
         const floorBins = Array.from(column.yBins.entries())
-          .filter(([, density]) => density >= floorMinCount)
+          .filter(([, distribution]) => distribution.count >= floorMinCount)
           .sort((a, b) => a[0] - b[0]);
         const floorBin = floorBins[0];
         if (!floorBin) continue;
-        const [gy, density] = floorBin;
+        const [gy, distribution] = floorBin;
         const localCenter = new BABYLON.Vector3(
           state.bounds.min.x + (column.gx + 0.5) * floorCellSize,
           state.bounds.min.y + (gy + 0.5) * floorCellSize,
@@ -1378,7 +1554,9 @@
           localSize,
           floorMat,
           new BABYLON.Color4(0.48, 0.88, 1, 0.12),
-          density
+          distribution.count,
+          distribution,
+          true
         );
         floorMade++;
       }
@@ -1399,8 +1577,8 @@
             state.bounds.min.z + cell.gz * objectCellSize
           );
           const fineEntries = Array.from(cell.fineCells.entries())
-            .filter(([, fineDensity]) => fineDensity >= fineMinCount)
-            .sort((a, b) => b[1] - a[1]);
+            .filter(([, distribution]) => distribution.count >= fineMinCount)
+            .sort((a, b) => b[1].count - a[1].count);
 
           if (fineEntries.length === 0 || fineEntries.length === 8) {
             makePreviewBox(
@@ -1409,11 +1587,12 @@
               new BABYLON.Vector3(objectCellSize, objectCellSize, objectCellSize),
               objectMat,
               new BABYLON.Color4(0.68, 1, 0.78, 0.16),
-              density
+              density,
+              cell
             );
             objectMade++;
           } else {
-            for (const [fineKey, fineDensity] of fineEntries) {
+            for (const [fineKey, distribution] of fineEntries) {
               if (objectMade >= maxObjectBoxes) break;
               const [fx, fy, fz] = fineKey.split(",").map(Number);
               makePreviewBox(
@@ -1426,7 +1605,8 @@
                 new BABYLON.Vector3(fineObjectCellSize, fineObjectCellSize, fineObjectCellSize),
                 objectMat,
                 new BABYLON.Color4(0.68, 1, 0.78, 0.14),
-                fineDensity
+                distribution.count,
+                distribution
               );
               objectMade++;
             }
@@ -1438,7 +1618,8 @@
             new BABYLON.Vector3(objectCellSize, objectCellSize, objectCellSize),
             objectMat,
             new BABYLON.Color4(0.68, 1, 0.78, 0.16),
-            density
+            density,
+            cell
           );
           objectMade++;
         }
@@ -1457,21 +1638,22 @@
       for (const box of state.densityBoxes) {
         disposeBoxAggregate(box);
         box.mesh.position.copyFrom(localToWorld(box.localCenter));
-        const sx = Math.max(box.localSize.x * scale, 0.025);
-        const sy = Math.max(box.localSize.y * scale, 0.025);
-        const sz = Math.max(box.localSize.z * scale, 0.025);
+        const sx = Math.max(box.localSize.x * scale, 0.005);
+        const sy = Math.max(box.localSize.y * scale, 0.005);
+        const sz = Math.max(box.localSize.z * scale, 0.005);
         box.mesh.scaling.set(sx, sy, sz);
       }
       rebuildPhysicsColliders();
+      refreshDropSurface();
     }
 
     function updateHud() {
       ui.scaleValue.textContent = ui.scaleInput.value;
       ui.densityValue.textContent = ui.densityInput.value;
       ui.solidThresholdValue.textContent = ui.solidThresholdInput.value;
-      ui.pointerXValue.textContent = Number(ui.pointerXInput.value).toFixed(1);
-      ui.pointerYValue.textContent = Number(ui.pointerYInput.value).toFixed(1);
-      ui.pointerZValue.textContent = Number(ui.pointerZInput.value).toFixed(1);
+      ui.pointerXValue.textContent = Number(ui.pointerXInput.value).toFixed(2);
+      ui.pointerYValue.textContent = Number(ui.pointerYInput.value).toFixed(2);
+      ui.pointerZValue.textContent = Number(ui.pointerZInput.value).toFixed(2);
       if (state.bounds) {
         const size = state.bounds.max.subtract(state.bounds.min);
         ui.countLabel.textContent = `${state.bounds.count.toLocaleString()} splats`;
@@ -1482,8 +1664,10 @@
     async function loadSplat(source, sourceName) {
       ui.resetButton.disabled = true;
       ui.densityButton.disabled = true;
+      ui.selectDropButton.disabled = true;
       setMessage("読み込み中", { sticky: true });
       try {
+        clearBalls();
         clearDensityBoxes();
         state.mesh?.dispose(false, true);
         const result = await BABYLON.ImportMeshAsync(source, scene, {
@@ -1497,6 +1681,7 @@
         state.baseScale = BABYLON.Scalar.Clamp(8 / Math.max(size.x, size.z, 0.001), 0.25, 4);
         ui.sourceLabel.textContent = sourceName;
         applySplatTransform();
+        setInitialDropPosition(sourceName);
         resetCamera();
         updateHud();
         setMessage("読み込み完了");
@@ -1506,6 +1691,7 @@
       } finally {
         ui.resetButton.disabled = false;
         ui.densityButton.disabled = false;
+        ui.selectDropButton.disabled = !state.mesh;
       }
     }
 
@@ -1535,9 +1721,15 @@
       if (state.densityVisible) buildDensityPreview();
     });
 
-    [ui.pointerXInput, ui.pointerYInput, ui.pointerZInput].forEach((input) => {
-      input.addEventListener("input", updatePointer);
+    ui.fitBoxesInput.addEventListener("change", () => {
+      if (state.densityVisible) buildDensityPreview();
     });
+
+    [ui.pointerXInput, ui.pointerZInput].forEach((input) => {
+      input.addEventListener("input", refreshDropSurface);
+    });
+    ui.pointerYInput.addEventListener("input", updatePointer);
+    ui.selectDropButton.addEventListener("click", beginDropSelection);
 
     ui.resetButton.addEventListener("click", resetCamera);
     ui.densityButton.addEventListener("click", () => {
@@ -1548,7 +1740,9 @@
         buildDensityPreview();
       }
     });
-    ui.dropButton.addEventListener("click", dropBalls);
+    ui.dropLargeButton.addEventListener("click", () => dropBalls("large"));
+    ui.dropSmallButton.addEventListener("click", () => dropBalls("small"));
+    ui.dropMixedButton.addEventListener("click", () => dropBalls("mixed"));
     ui.cookieButton.addEventListener("click", dropCookies);
     ui.clearBallsButton.addEventListener("click", clearBalls);
 
