@@ -107,9 +107,9 @@ export default function createScene(engine,canvas) {
     lut.update(false);lut.wrapU=lut.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
     const machMaterial=new BABYLON.StandardMaterial('wing-mach',scene);machMaterial.disableLighting=true;machMaterial.emissiveTexture=lut;machMaterial.backFaceCulling=false;
     const state={ready:false,errors:[],wing:[],cases:[],activeCaseIndex:null,data:null,field:null,H:null,geom:null,loading:false,shownParticles:0};
-    const opts={surface:'pressure',anim:true,paused:false,animSpeed:1,forces:false,mirror:true,slab:false,eta:.44,thick:.03,band:'all',vmin:0,vmax:500};
+    const opts={surface:'pressure',paused:false,animSpeed:1,forces:false,band:'all'};
     const N=8000,K=.35/286,S={p:new Float32Array(N*3),d:new Float32Array(N*3),v:new Float32Array(N),age:new Float32Array(N)};
-    const cache=new Map();let serial=0,speedTimer,beforeSection=null,recording=false;
+    const cache=new Map();let serial=0,speedTimer,recording=false;
     const matrix=new Float32Array(N*2*16),colors=new Float32Array(N*2*4);
     const arrowMatrix=new Float32Array(900*16),arrowColors=new Float32Array(900*4);
     function arrowMesh(name,m,c){
@@ -128,7 +128,7 @@ export default function createScene(engine,canvas) {
     function spawn(i,scatter=false){
         S.p[i*3]=scatter?FIELD_BOX.x0+.02+Math.random()*(FIELD_BOX.x1-FIELD_BOX.x0-.1):FIELD_BOX.x0+.02+Math.random()*.06;
         S.p[i*3+1]=-.22+Math.random()*.44;
-        S.p[i*3+2]=opts.slab?-opts.eta*state.geom.span+(Math.random()*2-1)*opts.thick:-(.01+Math.random()*1.55);
+        S.p[i*3+2]=-(.01+Math.random()*1.55);
         S.age[i]=0;S.v[i]=0;
     }
     function inside(x,y,z){const c=wingCell(state.H,x,z);return c>=0&&y>state.H.lo[c]&&y<state.H.up[c];}
@@ -140,7 +140,7 @@ export default function createScene(engine,canvas) {
             if(ok)ok=sampleField(state.field,x+.5*dt*K*a[0],y+.5*dt*K*a[1],z+.5*dt*K*a[2],b);
             const speed=ok?Math.hypot(...b):0;
             const xx=x+dt*K*b[0],yy=y+dt*K*b[1],zz=z+dt*K*b[2];
-            if(!ok||speed<5||xx>FIELD_BOX.x1-.06||S.age[i]>30||inside(xx,yy,zz)||(opts.slab&&Math.abs(zz+opts.eta*state.geom.span)>1.5*opts.thick)){spawn(i);continue;}
+            if(!ok||speed<5||xx>FIELD_BOX.x1-.06||S.age[i]>30||inside(xx,yy,zz)){spawn(i);continue;}
             S.p.set([xx,yy,zz],i*3);S.d.set(b.map(v=>v/speed),i*3);S.v[i]=speed;S.age[i]+=dt;
         }
     }
@@ -149,15 +149,15 @@ export default function createScene(engine,canvas) {
         const free=state.data?.manifest.freestream_velocity_m_s||286;
         if(opts.band==='fast')return v>=free*1.05;
         if(opts.band==='slow')return v<=free*.95;
-        return v>=opts.vmin&&v<=opts.vmax;
+        return true;
     }
     function writeParticles(){
-        let shown=0;const mirror=opts.mirror&&!opts.slab;
+        let shown=0;
         for(let i=0;i<N;i++){
-            if(!opts.anim||S.v[i]<=0||!filter(S.v[i])){hide(matrix,i);hide(matrix,i+N);continue;}
-            shown+=mirror?2:1;
+            if(S.v[i]<=0||!filter(S.v[i])){hide(matrix,i);hide(matrix,i+N);continue;}
+            shown+=2;
             const p=Array.from(S.p.subarray(i*3,i*3+3)),d=Array.from(S.d.subarray(i*3,i*3+3)),L=.012+.04*S.v[i]/286;
-            write(matrix,i,...p,...d,L,.0042);if(mirror)write(matrix,i+N,...p,...d,L,.0042,true);else hide(matrix,i+N);
+            write(matrix,i,...p,...d,L,.0042);write(matrix,i+N,...p,...d,L,.0042,true);
             const c=turboAt((S.v[i]-FLOW_LO)/(FLOW_HI-FLOW_LO));
             for(const j of [i,i+N])colors.set([.15+.85*c[0],.15+.85*c[1],.15+.85*c[2],1],j*4);
         }
@@ -166,48 +166,28 @@ export default function createScene(engine,canvas) {
     }
     function writePressureArrows(){
         const a=state.data?.surface.arrows;if(!a)return;
-        const mirror=opts.mirror&&!opts.slab,qref=.5*1.4*101325*.8395**2;
+        const qref=.5*1.4*101325*.8395**2;
         for(let i=0;i<450;i++){
             const p=a.centers.slice(i*3,i*3+3),n=a.normals.slice(i*3,i*3+3),dp=a.delta_pressure_Pa[i],L=.015+.12*Math.min(Math.abs(dp)/qref,1.2);
             const d=n.map(v=>v*(dp>0?-1:1)),head=p.map((v,k)=>v+n[k]*(.006+(dp>0?0:L)));
-            write(arrowMatrix,i,...head,...d,L,.0035);if(mirror)write(arrowMatrix,i+450,...head,...d,L,.0035,true);else hide(arrowMatrix,i+450);
+            write(arrowMatrix,i,...head,...d,L,.0035);write(arrowMatrix,i+450,...head,...d,L,.0035,true);
             const c=cpColor(a.cp[i]);for(const j of [i,i+450])arrowColors.set([c.r,c.g,c.b,1],j*4);
         }
         arrows.thinInstanceBufferUpdated('matrix');arrows.thinInstanceBufferUpdated('color');
     }
     function reseed(){if(!state.field)return;for(let i=0;i<N;i++)spawn(i,true);for(let k=0;k<3;k++)step(1/60);writeParticles();}
     function sync(){
-        state.wing.forEach((m,i)=>{m.setEnabled(opts.surface!=='hidden'&&(i===0||opts.mirror));m.material=opts.surface==='pressure'?pressure:opts.surface==='mach'?machMaterial:metal;m.useVertexColors=opts.surface==='pressure';});
-        if(opts.slab){const z=-opts.eta*state.geom.span;scene.clipPlane=new BABYLON.Plane(0,0,1,-(z+opts.thick));scene.clipPlane2=new BABYLON.Plane(0,0,-1,z-opts.thick);}
-        else{scene.clipPlane=scene.clipPlane2=null;}
-        particles.setEnabled(opts.anim);arrows.setEnabled(opts.forces);
-        for(const id of ['eta','thickness','sectionView'])byId(id).disabled=!state.ready||!opts.slab;
-        for(const id of ['pause','animSpeed','reseed','fast','slow','all','vmin','vmax'])byId(id).disabled=!state.ready||!opts.anim;
-        byId('mirror').disabled=!state.ready||opts.slab;
-        byId('surface').disabled=!state.ready||!byId('wingVisible').checked;
+        state.wing.forEach(m=>{m.setEnabled(true);m.material=opts.surface==='pressure'?pressure:opts.surface==='mach'?machMaterial:metal;m.useVertexColors=opts.surface==='pressure';});
+        particles.setEnabled(true);arrows.setEnabled(opts.forces);
+        for(const id of ['pause','animSpeed','reseed','fast','slow','all','surface'])byId(id).disabled=!state.ready;
         byId('pause').textContent=opts.paused?'再生':'一時停止';
         byId('cpLegend').hidden=opts.surface!=='pressure'&&!opts.forces;
         byId('cpLegendTitle').textContent=opts.surface==='pressure'?'圧力係数 Cp':'圧力差の矢印 · Cp';
         byId('machLegend').hidden=opts.surface!=='mach';
-        byId('flowLegend').hidden=!opts.anim;
-        byId('etaLabel').textContent=Math.round(opts.eta*100)+'%（根元→翼端）';
-        byId('thickLabel').textContent='±'+(opts.thick*100).toFixed(1)+' cm';
         byId('animSpeedLabel').textContent=opts.animSpeed.toFixed(2)+'×（スロー再生）';
-        byId('filterLabel').textContent=opts.band==='all'?'すべて表示':opts.band==='fast'?'自由流速より5%以上速い':opts.band==='slow'?'自由流速より5%以上遅い':opts.vmin+'–'+opts.vmax+' m/s';
+        byId('filterLabel').textContent=opts.band==='fast'?'自由流速より5%以上速い':opts.band==='slow'?'自由流速より5%以上遅い':'すべて表示';
         writePressureArrows();writeParticles();
     }
-    function sectionView(){const g=state.geom,z=-opts.eta*g.span;let lo=Infinity,hi=-Infinity;
-        for(let i=0;i<g.count;i++)if(Math.abs(g.positions[i*3+2]-z)<=Math.max(opts.thick,.015)){lo=Math.min(lo,g.positions[i*3]);hi=Math.max(hi,g.positions[i*3]);}
-        if(!Number.isFinite(lo)){lo=.6;hi=1.1;}const chord=hi-lo;
-        setView({target:new BABYLON.Vector3((lo+hi)/2+.1*chord,.02,z),alpha:Math.PI/2,beta:Math.PI/2,radius:Math.max(.5,2.4*chord)});
-    }
-    function toggleSection(on){if(!state.ready)return;
-        if(on&&!opts.slab)beforeSection={target:camera.target.clone(),alpha:camera.alpha,beta:camera.beta,radius:camera.radius};
-        opts.slab=on;byId('section').checked=on;
-        if(on)sectionView();else if(beforeSection){setView(beforeSection);beforeSection=null;}
-        sync();reseed();
-    }
-    function setBand(lo,hi){opts.band='custom';opts.vmin=lo;opts.vmax=hi;byId('vmin').value=lo;byId('vmax').value=hi;sync();}
     function setRelativeBand(mode){opts.band=mode;sync();}
     function status(message,error=false){byId('status').textContent=message;byId('status').classList.toggle('error-text',error);}
     async function json(url){const r=await fetch(BASE+url,{cache:'no-store'});if(!r.ok)throw Error(url+': HTTP '+r.status);return r.json();}
@@ -267,22 +247,14 @@ export default function createScene(engine,canvas) {
     function speedLabel(i){const t=Math.round(state.cases[i].velocity_m_s)+' m/s';byId('speedLabel').textContent=t;byId('speed').setAttribute('aria-valuetext',t);}
     byId('speed').addEventListener('input',()=>{clearTimeout(speedTimer);++serial;const i=Number(byId('speed').value);speedLabel(i);speedTimer=setTimeout(()=>selectSpeed(i),180);});
     byId('speed').addEventListener('change',()=>{clearTimeout(speedTimer);selectSpeed(Number(byId('speed').value));});
-    for(const [id,key] of [['particles','anim'],['forces','forces'],['mirror','mirror']])byId(id).addEventListener('change',()=>{opts[key]=byId(id).checked;sync();});
-    byId('surface').addEventListener('change',()=>{opts.surface=byId('wingVisible').checked?byId('surface').value:'hidden';sync();});
-    byId('wingVisible').addEventListener('change',()=>{opts.surface=byId('wingVisible').checked?byId('surface').value:'hidden';sync();});
-    byId('section').addEventListener('change',()=>toggleSection(byId('section').checked));
-    byId('eta').addEventListener('input',()=>{opts.eta=Number(byId('eta').value)/100;sectionView();sync();reseed();});
-    byId('thickness').addEventListener('input',()=>{opts.thick=Number(byId('thickness').value)/100;sync();reseed();});
+    byId('forces').addEventListener('change',()=>{opts.forces=byId('forces').checked;sync();});
+    byId('surface').addEventListener('change',()=>{opts.surface=byId('surface').value;sync();});
     byId('pause').addEventListener('click',()=>{opts.paused=!opts.paused;sync();});
     byId('animSpeed').addEventListener('input',()=>{opts.animSpeed=Number(byId('animSpeed').value);sync();});
     byId('reseed').addEventListener('click',reseed);
     byId('fast').addEventListener('click',()=>setRelativeBand('fast'));
     byId('slow').addEventListener('click',()=>setRelativeBand('slow'));
     byId('all').addEventListener('click',()=>setRelativeBand('all'));
-    for(const id of ['vmin','vmax'])byId(id).addEventListener('input',()=>{
-        let lo=Number(byId('vmin').value),hi=Number(byId('vmax').value);if(lo>hi){if(id==='vmin')hi=lo;else lo=hi;}setBand(lo,hi);
-    });
-    byId('sectionView').addEventListener('click',sectionView);
     byId('home').addEventListener('click',()=>setView(HOME));
     byId('top').addEventListener('click',()=>setView({target:new BABYLON.Vector3(.9,0,0),alpha:-Math.PI/2,beta:.02,radius:4.4}));
     async function recordGif(){
@@ -312,7 +284,7 @@ export default function createScene(engine,canvas) {
         finally{recording=false;byId('gif').disabled=false;byId('gif').textContent='GIFを保存（3秒）';}
     }
     byId('gif').addEventListener('click',recordGif);
-    scene.onBeforeRenderObservable.add(()=>{if(!state.ready||!opts.anim||opts.paused)return;step(Math.min(engine.getDeltaTime()/1000,1/30)*opts.animSpeed);writeParticles();});
+    scene.onBeforeRenderObservable.add(()=>{if(!state.ready||opts.paused)return;step(Math.min(engine.getDeltaTime()/1000,1/30)*opts.animSpeed);writeParticles();});
     scene.onDisposeObservable.add(()=>{clearTimeout(speedTimer);++serial;});
     (async()=>{try{
         const [registry,geometry]=await Promise.all([json('assets/speeds.json'),json('assets/wing.json')]);
@@ -333,12 +305,10 @@ export default function createScene(engine,canvas) {
             v.normals=[];BABYLON.VertexData.ComputeNormals(v.positions,v.indices,v.normals,{useRightHandedSystem:true});
             v.colors=new Array(count*4).fill(1);v.uvs=new Array(count*2).fill(.5);v.applyToMesh(mesh,true);state.wing.push(mesh);
         }
-        const max=Math.ceil(Math.max(...registry.cases.map(c=>c.speed_range_m_s[1]))/10)*10;
-        opts.vmax=max;for(const id of ['vmin','vmax'])byId(id).max=max;byId('vmax').value=max;
         byId('speed').max=registry.cases.length-1;byId('speed').value=registry.default_index;speedLabel(registry.default_index);
         await selectSpeed(registry.default_index);state.ready=true;
         document.querySelectorAll('[data-ready]').forEach(e=>e.disabled=false);sync();
     }catch(error){state.errors.push(String(error));status('起動できませんでした。通信環境を確認して再読み込みしてください。',true);}})();
-    scene.metadata={flow:{state,opts,S,selectSpeed,sync,setBand,setRelativeBand,toggleSection,reseed,recordGif,filter}};
+    scene.metadata={flow:{state,opts,S,selectSpeed,sync,setRelativeBand,reseed,recordGif,filter}};
     return scene;
 }

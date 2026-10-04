@@ -15,7 +15,7 @@ try{
   const engine=new BABYLON.Engine(canvas,true,{preserveDrawingBuffer:true,stencil:true});diagnostics.engine=engine;
   if(engine.webGLVersion<2)throw Error('WebGL 2が必要です。');
   engine.setHardwareScalingLevel(Math.max(1,devicePixelRatio/1.5));
-  const {default:createScene}=await import('./demo.js?v=particles-20261004b');
+  const {default:createScene}=await import('./demo.js?v=particles-20261004c');
   const scene=createScene(engine,canvas);diagnostics.scene=scene;diagnostics.demo=scene.metadata.flow;
   function resize(){engine.resize();scene.activeCamera.viewport=innerWidth<=850?new BABYLON.Viewport(0,.2,1,.8):new BABYLON.Viewport(0,0,1,1);}
   window.addEventListener('resize',resize);resize();engine.runRenderLoop(()=>{if(!scene.isDisposed)scene.render();});

@@ -48,27 +48,18 @@
     <input id="speed" type="range" min="0" max="4" step="1" value="3" disabled data-ready aria-describedby="speedNote">
     <div class="ticks" aria-hidden="true"><span>204</span><span>238</span><span>272</span><span>286</span><span>306</span></div>
     <p class="note" id="speedNote">5段階の計算済み結果を切替。迎角3.06°は固定。ブラウザーで再計算はしません。</p>
-    <div class="row"><label for="particles">気流の粒子を表示</label><input id="particles" type="checkbox" checked disabled data-ready></div>
     <div class="row"><label for="pause">粒子の動き</label><button id="pause" disabled data-ready>一時停止</button></div>
     <label class="block" for="surface">翼の色</label>
     <select id="surface" disabled data-ready><option value="pressure">圧力分布（Cp）</option><option value="mach">マッハ数（計算値）</option><option value="solid">単色</option></select>
-    <div class="row"><label for="section">断面だけを見る</label><input id="section" type="checkbox" disabled data-ready></div>
-    <div class="row"><label for="eta">断面位置</label><output id="etaLabel" for="eta">44%</output></div><input id="eta" type="range" min="5" max="98" step="1" value="44" disabled>
-    <div class="row"><label for="thickness">断面の厚さ</label><output id="thickLabel" for="thickness">±3.0 cm</output></div><input id="thickness" type="range" min="1" max="8" step=".5" value="3" disabled>
-    <div class="buttons"><button id="sectionView" disabled>断面を横から</button><button id="home" disabled data-ready>初期視点</button><button id="top" disabled data-ready>上から</button></div>
+    <div class="buttons"><button id="home" disabled data-ready>初期視点</button><button id="top" disabled data-ready>上から</button></div>
     <details id="advanced"><summary>詳細設定</summary>
-      <div class="row"><label for="animSpeed">粒子の再生速度</label><output id="animSpeedLabel" for="animSpeed">1.00×</output></div><input id="animSpeed" type="range" min=".1" max="3" step=".05" value="1" disabled>
-      <button id="reseed" disabled>粒子をリセット</button>
-      <div class="row"><label for="mirror">全翼を表示（対称反映）</label><input id="mirror" type="checkbox" checked disabled data-ready></div>
-      <p class="note">断面表示中は半翼のみを表示します。</p>
-      <div class="row"><label for="wingVisible">翼を表示</label><input id="wingVisible" type="checkbox" checked disabled data-ready></div>
+      <div class="row"><label for="animSpeed">粒子の再生速度</label><output id="animSpeedLabel" for="animSpeed">1.00×</output></div><input id="animSpeed" type="range" min=".1" max="3" step=".05" value="1" disabled data-ready>
+      <button id="reseed" disabled data-ready>粒子をリセット</button>
       <div class="row"><label for="forces">周囲との差圧の向き</label><input id="forces" type="checkbox" disabled data-ready></div>
       <p class="note">矢印は面積当たりの圧力作用。長さは共通の表示尺度で、上下限があります。</p>
       <label class="block">粒子の速度フィルター</label><p class="note" id="filterLabel">すべて表示</p>
       <div class="buttons"><button id="fast" disabled data-ready>5%以上速い</button><button id="slow" disabled data-ready>5%以上遅い</button><button id="all" disabled data-ready>全表示</button></div>
       <p class="note">速い・遅いは現在の自由流速との比較です。</p>
-      <label class="block" for="vmin">下限（m/s）</label><input id="vmin" type="range" min="0" max="500" step="1" value="0" disabled data-ready>
-      <label class="block" for="vmax">上限（m/s）</label><input id="vmax" type="range" min="0" max="500" step="1" value="500" disabled data-ready>
     </details>
     <details><summary>解析情報</summary><div class="info">
       <p id="conditionInfo">読込中…</p><p id="clcd">—</p>
@@ -90,6 +81,6 @@
   </div>
   <div id="status" class="status" role="status" aria-live="polite">翼と速度場を読み込んでいます…</div>
   <div id="fatal" class="fatal" role="alert" hidden><h2>デモを起動できませんでした</h2><p id="fatalMessage"></p><button id="retry">再読み込み</button></div>
-  <script type="module" src="main.js?v=particles-20261004b"></script>
+  <script type="module" src="main.js?v=particles-20261004c"></script>
 </body>
 </html>
