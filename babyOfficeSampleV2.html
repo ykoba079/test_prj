@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Office Map V2 — オフィスのトラブルを見える化</title>
+<style>
+:root{--ink:#18302f;--muted:#617575;--green:#087f75;--red:#dc4b42;--amber:#b9750d;--line:#dce5e3;--bg:#f3f6f4}*{box-sizing:border-box}body{margin:0;font:14px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);background:white;border-radius:9px;padding:8px 13px;color:var(--ink)}button:hover{border-color:var(--green)}button:focus-visible,input:focus-visible{outline:3px solid #60c4b8;outline-offset:3px}button.active{background:var(--ink);color:white;border-color:var(--ink)}header{padding:20px 28px;background:white;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px}h1{font-size:22px;margin:0;letter-spacing:-.5px}h2{font-size:17px;margin:0 0 12px}h3{font-size:15px;margin:16px 0 8px}p{margin:6px 0}.eyebrow{color:var(--green);font-size:11px;font-weight:800;letter-spacing:2px}.muted,small{color:var(--muted)}.badge{display:inline-block;border-radius:5px;background:#edf5f3;color:var(--green);padding:3px 8px;font-size:12px}.danger{background:#fff0ed;color:#b63830}.shell{max-width:1600px;margin:auto;padding:22px 28px}.incident{background:#fff4f0;border:1px solid #efc2b9;border-left:5px solid var(--red);padding:16px 20px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:16px}.incident.ok{background:#edf8f3;border-color:#b2d7c8;border-left-color:var(--green)}.incident strong{font-size:19px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.stat{background:white;border:1px solid var(--line);border-radius:12px;padding:13px 18px}.stat strong{font-size:27px;display:block}.stat span{font-size:12px;color:var(--muted)}.layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:16px}.panel{background:white;border:1px solid var(--line);border-radius:14px;overflow:hidden}.toolbar{padding:16px;border-bottom:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}.maphead{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.maphead input{width:240px;max-width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px}.views{display:flex;gap:6px}.views button{font-size:12px;padding:6px 10px}#map{display:block;width:100%;height:620px;touch-action:none;min-height:320px;background:radial-gradient(ellipse at center,#fafcfb,#eef3f0)}.mapnote{padding:10px 18px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}.legend{display:flex;flex-wrap:wrap;gap:14px;padding:12px 18px;font-size:12px}.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px}.side{padding:20px}.side dl{display:grid;grid-template-columns:83px 1fr;gap:8px;margin:15px 0}.side dt{color:var(--muted);font-size:12px}.side dd{margin:0;font-size:13px;overflow-wrap:anywhere}.route{padding:12px;background:#f0f5f3;border-radius:8px;font-size:12px}.list{margin-top:16px}.listhead{padding:16px 20px;display:flex;justify-content:space-between;align-items:center}.tablewrap{overflow-x:auto;max-height:290px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:10px 18px;border-top:1px solid var(--line);white-space:nowrap}th{color:var(--muted);font-size:12px;background:#f8faf9;position:sticky;top:0}td button{padding:3px 9px;font-size:12px}footer{padding:16px 0;font-size:12px;color:var(--muted)}.device{cursor:pointer}.device:focus{outline:none}.device:focus .body{stroke:#123c36;stroke-width:4}.device:hover .body{stroke:#123c36;stroke-width:3}.device text{user-select:none}.checks{padding-left:20px;font-size:13px}.checks li{margin:6px 0}.full{width:100%;margin-top:12px}@media(max-width:1000px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}header{align-items:flex-start}.shell{padding:14px}header{padding:16px}.side{padding:16px}.incident{align-items:flex-start;flex-direction:column}}@media(prefers-reduced-motion:no-preference){.fault-ring{animation:pulse 2s ease-in-out infinite}@keyframes pulse{50%{opacity:.35}}}
+
+/* Prioritize the office view and equipment information. */
+.shell{max-width:none;padding:12px 16px}.incident{padding:10px 14px;gap:12px}.incident strong{font-size:16px}.incident p{margin:2px 0;font-size:12px}.stats{gap:8px;margin:8px 0}.stat{padding:7px 12px;display:flex;gap:12px;align-items:center}.stat strong{font-size:22px;white-space:nowrap}.stat span{font-size:12px}.layout{grid-template-columns:minmax(0,1fr) 380px;gap:12px}.toolbar{padding:8px 12px;gap:6px}.maphead{padding:8px 12px}.side{padding:16px;max-height:calc(100dvh - 150px);overflow:auto;align-self:start;position:sticky;top:12px}#map{height:clamp(460px,calc(100dvh - 290px),900px)}.mapnote{padding:6px 12px}.legend{padding:8px 12px}.list{margin-top:12px}.listhead{padding:10px 14px}.tablewrap{max-height:260px}footer{padding:8px 0}
+@media(max-width:1100px){.layout{grid-template-columns:minmax(0,1fr) 320px}.stat{display:block}.stat strong{font-size:20px}}
+@media(max-width:800px){.shell{padding:8px}.layout{grid-template-columns:1fr}.side{max-height:none;position:static}.stats{grid-template-columns:repeat(2,1fr)}.incident{flex-direction:column;align-items:flex-start}.maphead input{width:100%}.views{flex-wrap:wrap}#map{height:480px}.stat{display:flex}}
+
+.stats{grid-template-columns:repeat(3,1fr)}.views{flex-wrap:wrap;align-items:center}#layers{display:contents}.mapstage{position:relative}.mapstage .legend{position:absolute;left:12px;top:12px;max-width:calc(100% - 24px);padding:8px 12px;gap:8px 14px;border:1px solid #dce5e3;border-radius:9px;background:rgba(255,255,255,.94);pointer-events:none;box-shadow:0 2px 8px #18302f0a}.patch{background:#fff4cd;color:#805600}.side h2{margin-top:0}.maphead{align-items:flex-start}#map{height:clamp(480px,calc(100dvh - 235px),900px)}
+@media(max-width:800px){.stats{grid-template-columns:repeat(3,1fr)}.stat{display:block}.stat span{font-size:10px}.mapstage .legend{font-size:11px;gap:4px 10px}#map{height:480px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/babylonjs@8.45.3/babylon.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/babylonjs-loaders@8.45.3/babylonjs.loaders.min.js"></script>
+<script src="office-v2-layout.js"></script>
+<script src="office-v2-scene.js"></script>
+</head>
+<body>
+<main class="shell">
+<section class="incident" id="incident" aria-live="polite"></section>
+<section class="stats" aria-label="オフィスの状況" id="stats"></section>
+<div class="layout"><section class="panel" aria-label="オフィスマップ">
+<div class="maphead"><div class="views"><button id="iso" class="active">立体表示</button><button id="plan">平面表示</button><button id="floor" class="active" aria-pressed="true">床透過 ON</button><button id="under">床下のみ</button><span id="layers" aria-label="配線表示"></span></div><input id="search" type="search" aria-label="機器・利用者検索" placeholder="端末名・利用者・設備を検索"></div>
+<div class="mapstage"><canvas id="map" aria-label="オフィスの端末・ハブ・配線を表示する3Dマップ"></canvas><div class="legend" id="legend" aria-label="色と線の凡例"></div></div><div class="mapnote" id="mapnote"></div>
+</section><aside class="panel side" id="detail" aria-live="polite"></aside></div>
+<section class="panel list"><div class="listhead"><h2 id="listtitle" style="margin:0"></h2><span id="listcount" class="badge"></span></div><div class="tablewrap"><table><thead><tr><th>機器</th><th>利用者・設置場所</th><th>接続先</th><th id="statushead">状態</th><th>場所を確認</th></tr></thead><tbody id="rows"></tbody></table></div></section>
+<footer>すべて架空のデモデータです。配線は説明用の想定経路、Wi-Fiは登録時点の接続先を表示します。実機の障害・パッチ状態を自動検知する画面ではありません。</footer>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const equipment=[
+ {id:'CORE',name:'上流スイッチ',kind:'core',x:145,y:12,h:1.4,place:'東側機器ラック R-01',up:null,power:'UPS',info:'元版の東側通路に配置したデモ用ラック'},
+ {id:'HUB-A',name:'故障デモ ハブ',kind:'hub',x:124,y:8,h:-.45,panel:'F-12',place:'床下パネル F-12 / 東側席列',up:'CORE',power:'UPS',info:'8ポート / 有線PC6台・AP-A・プリンター'},
+ {id:'HUB-B',name:'中央席 ハブ',kind:'hub',x:100,y:8,h:-.45,panel:'F-24',place:'床下パネル F-24',up:'CORE',power:'UPS',info:'中央席の有線接続・AP-B / 48ポート'},
+ {id:'HUB-C',name:'西側席 ハブ',kind:'hub',x:65,y:8,h:-.45,panel:'F-36',place:'床下パネル F-36',up:'CORE',power:'UPS',info:'西側席の有線接続 / 96ポート'},
+ {id:'HUB-D',name:'東側席 ハブ',kind:'hub',x:132,y:31,h:-.45,panel:'F-08',place:'床下パネル F-08',up:'CORE',power:'UPS',info:'故障デモ対象以外の東側席 / 48ポート'},
+ {id:'AP-A',name:'東側 Wi-Fi',kind:'ap',x:127,y:17,h:3.8,place:'東側席列の天井',up:'HUB-A',power:'HUB-A',poe:true,info:'PoE給電 / 無線PC2台もHUB-A故障の影響'},
+ {id:'AP-B',name:'中央 Wi-Fi',kind:'ap',x:96,y:25,h:3.8,place:'中央席の天井',up:'HUB-B',power:'HUB-B',poe:true,info:'PoE給電 / 天井経路を表示'},
+ {id:'PRN-01',name:'共用プリンター',kind:'printer',x:143,y:28,h:.7,place:'東側通路の共用棚',up:'HUB-A',power:'PWR-A',info:'ネットワーク接続の複合機'},
+ {id:'UPS',name:'ラック UPS',kind:'ups',x:149,y:12,h:.7,place:'東側機器ラック R-01',power:'PWR-B',info:'CORE・床下ハブへ給電'},
+ {id:'PWR-A',name:'床コンセント A',kind:'outlet',x:125,y:30,h:-1.4,place:'東側席 床下',power:'CIR-A',info:'東側席・プリンターへの電源'},
+ {id:'PWR-B',name:'床コンセント B',kind:'outlet',x:80,y:30,h:-1.4,place:'中央・西側席 床下',power:'CIR-B',info:'中央・西側席・ラックへの電源'},
+ {id:'CIR-A',name:'分電盤 回路A',kind:'circuit',x:145,y:39,h:1.2,place:'東側壁 分電盤',info:'東側席の電源回路'},
+ {id:'CIR-B',name:'分電盤 回路B',kind:'circuit',x:149,y:39,h:1.2,place:'東側壁 分電盤',info:'中央・西側席の電源回路'}
+];
+OFFICE_LAYOUT.pc.forEach((p,i)=>{
+ const wifi=[6,7,51,68,85,102,119,136,153,165].includes(i),hub=i<8?'HUB-A':p.x>119?'HUB-D':p.x>=88?'HUB-B':'HUB-C';
+ const desk=OFFICE_LAYOUT.desk.find(d=>Math.abs(d.x-p.x)<.01&&Math.abs(d.z-p.z)<.01);
+ equipment.push({id:'PC-'+String(i+1).padStart(3,'0'),sid:p.SID,name:p.type==='1'?'ノートPC':'デスクトップPC',kind:'pc',modelType:p.type==='1'?'1':'2',modelY:p.y+(p.type==='1'?-.01:-.28),x:p.x,y:p.z,h:p.y+.22,rotation:p.rt,place:'座席 '+(desk?.id||i+1),user:p.user,up:wifi?(i<8?'AP-A':'AP-B'):hub,wifi,power:p.x>115?'PWR-A':'PWR-B',patch:i%23===1?'missing':i%53===19?'unknown':'ok',info:'Windows 11 / 資産番号 '+p.SID});
+});
+const byId=Object.fromEntries(equipment.map(d=>[d.id,d]));
+
+const state={iso:true,floor:true,failed:true,selected:'HUB-A',search:'',underOnly:false,layers:{lan:true,power:false,ceiling:true,wifi:true}};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function chain(id,field='up'){const a=[];let d=byId[id];while(d&&!a.includes(d.id)){a.push(d.id);d=byId[d[field]];}return a;}
+function affected(d){return state.failed&&chain(d.id).includes('HUB-A');}
+function visible(d){return state.layers.power||!['outlet','circuit','ups'].includes(d.kind);}
+function matches(d){return (d.id+' '+(d.sid||'')+' '+d.name+' '+(d.user||'')+' '+d.place).toLowerCase().includes(state.search.toLowerCase());}
+function color(d){if(d.kind==='pc'&&d.patch==='missing')return '#edb321';return affected(d)?(d.id==='HUB-A'?'#d94037':'#e07652'):'#0b887d';}
+function status(d){const network=affected(d)?(d.id==='HUB-A'?'故障':'通信影響あり'):'通信正常';return network+(d.kind==='pc'&&d.patch==='missing'?' / Windows更新が必要':'');}
+let viewer;
+function renderDetail(){
+ const d=byId[state.selected],descendants=equipment.filter(x=>x.id!==d.id&&chain(x.id).includes(d.id));
+ const powerDevice=['outlet','circuit','ups'].includes(d.kind),field=powerDevice?'power':'up';
+ const patch=d.kind==='pc'?(d.patch==='missing'?'更新が必要':d.patch==='unknown'?'適用状況は未確認':'適用済み'):null;
+ const info=[['設置場所',d.place],['利用者',d.user||'共用設備'],['接続',d.wifi?'Wi-Fi → '+d.up:d.up?'有線 → '+d.up:'—'],['電源',d.poe?'PoE / '+d.power:d.power||'分電盤']];
+ if(patch)info.push(['Windows更新',patch]);
+ $('detail').innerHTML='<h2>'+d.id+'</h2><p>'+esc(d.name)+'</p><span class="badge '+(affected(d)?'danger':'')+'">'+esc(affected(d)?d.id==='HUB-A'?'故障':'通信影響あり':'通信正常')+'</span>'+(d.patch==='missing'?' <span class="badge patch">Windows更新が必要</span>':'')+'<dl>'+info.map(([a,b])=>'<dt>'+a+'</dt><dd>'+esc(b)+'</dd>').join('')+'</dl><p class="muted">'+esc(d.info)+'</p><h3>'+(powerDevice?'電源の接続先':'ネットワークの接続先')+'</h3><div class="route">'+chain(d.id,field).reverse().map(esc).join(' → ')+'</div>'+(state.layers.power&&!powerDevice?'<h3>電源の接続先</h3><div class="route">'+chain(d.id,'power').reverse().map(esc).join(' → ')+'</div>':'')+(['hub','ap'].includes(d.kind)?'<h3>つながっている機器</h3><p>'+descendants.length+'台 / 通信影響 '+descendants.filter(affected).length+'台</p>':'')+(affected(d)?'<h3>確認する場所</h3><p>HUB-A：床下パネル F-12<br>電源：ラックUPS<br>上流の接続先：CORE</p>':'')+'<button class="full" id="follow">接続先の場所を見る</button>';
+ $('follow').disabled=!d[field];$('follow').onclick=()=>{state.selected=d[field];render();viewer?.focus(state.selected);};
+}
+function render(){
+ const pcs=equipment.filter(d=>d.kind==='pc'),bad=equipment.filter(affected),badPcs=pcs.filter(affected),missing=pcs.filter(d=>d.patch==='missing');
+ $('incident').classList.toggle('ok',!state.failed);
+ $('incident').innerHTML='<div><strong>'+(state.failed?'HUB-A故障：東側のPC・Wi-Fi・プリンターに通信影響':'HUB-A交換後：通信が復旧')+'</strong><p>'+(state.failed?'PC '+badPcs.length+'台（有線'+badPcs.filter(d=>!d.wifi).length+'・Wi-Fi '+badPcs.filter(d=>d.wifi).length+'）と、AP・プリンターに影響。赤いハブを選ぶと接続先を確認できます。':'Windows更新が必要なPCは、復旧後も黄色で表示します。')+'</p></div><button id="recover">'+(state.failed?'交換後を見る':'故障状態に戻す')+'</button>';
+ $('recover').onclick=()=>{state.failed=!state.failed;render();};
+ $('stats').innerHTML=[[badPcs.length+' / '+pcs.length,'通信影響のあるPC'],[missing.length+'台','Windows更新が必要（黄色）'],[pcs.filter(d=>d.wifi).length+'台','Wi-Fi接続のPC']].map(([n,t])=>'<div class="stat"><strong>'+n+'</strong><span>'+t+'</span></div>').join('');
+ for(const [id,value] of [['iso',state.iso],['plan',!state.iso],['floor',state.floor],['under',state.underOnly]]){$(id).classList.toggle('active',value);$(id).setAttribute('aria-pressed',value);}
+ $('floor').textContent='床透過 '+(state.floor?'ON':'OFF');
+ $('layers').innerHTML=Object.entries({lan:'LAN',power:'電源',ceiling:'天井配線',wifi:'Wi-Fi接続'}).map(([k,v])=>'<button data-layer="'+k+'" class="'+(state.layers[k]?'active':'')+'" aria-pressed="'+state.layers[k]+'">'+v+'</button>').join('');
+ $('legend').innerHTML=[['#d94037','故障ハブ'],['#e07652','通信影響あり'],['#0b887d','通信正常'],['#9485be','Wi-Fi（点線）'],['#edb321','Windows更新が必要']].map(([c,t])=>'<span><i class="dot" style="background:'+c+'"></i>'+t+'</span>').join('');
+ viewer?.update();renderDetail();
+ const rows=equipment.filter(d=>affected(d)||d.patch==='missing').filter(matches);
+ $('listtitle').textContent='対応が必要な機器';$('listcount').textContent=rows.length+'件';
+ $('rows').innerHTML=rows.length?rows.map(d=>'<tr><td><strong>'+d.id+'</strong><br><small>'+esc(d.name)+'</small></td><td>'+esc(d.user||d.place)+'</td><td>'+esc(d.up||'—')+(d.wifi?'（Wi-Fi）':'')+'</td><td>'+esc(status(d))+'</td><td><button data-select="'+d.id+'">マップで確認</button></td></tr>').join(''):'<tr><td colspan="5">該当する機器はありません。</td></tr>';
+}
+$('rows').onclick=e=>{const b=e.target.closest('[data-select]');if(b){state.selected=b.dataset.select;render();viewer?.focus(state.selected);}};
+$('iso').onclick=()=>{state.iso=true;viewer?.home();render();};$('plan').onclick=()=>{state.iso=false;viewer?.home();render();};
+$('floor').onclick=()=>{state.floor=!state.floor;render();};$('search').oninput=e=>{state.search=e.target.value;render();};
+$('under').onclick=()=>{state.underOnly=!state.underOnly;if(state.underOnly)state.floor=true;render();};
+$('layers').onclick=e=>{const b=e.target.closest('[data-layer]');if(b){state.layers[b.dataset.layer]=!state.layers[b.dataset.layer];render();}};
+viewer=OfficeV2Scene({state,equipment,byId,chain,affected,color,matches,visible,render});
+window.officeV2={state,equipment,viewer,render};render();
+</script>
+</body>
+</html>
