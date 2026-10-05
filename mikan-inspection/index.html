@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MIKAN LAB v0.1 — 画像検査とロボット選別</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+<body>
+<header><div><span class="logo">●</span> MIKAN LAB <small>v0.1 / VISION × ROBOTICS</small></div><a href="../index.html">サンプル一覧 ↗</a></header>
+<main><section class="intro"><div><p class="eyebrow">SMART FACTORY / KNOWLEDGE SHARING</p><h1>画像から見つけて、<br>3D空間で取り除く。</h1><p>ミカンの搬送 → 画像検査 → 座標変換 → ロボット選別</p></div><div class="status"><i></i><span id="status">画像解析デモ 稼働中</span><small>ブラウザー内で処理</small></div></section>
+<section class="workspace"><div class="scene-panel"><div class="panel-head"><span>01 / DIGITAL TWIN</span><span>ドラッグで回転・ホイールで拡大</span></div><canvas id="scene"></canvas><div class="scene-foot"><span>→ 搬送方向</span><span><b class="green">●</b> 良品 <b class="red">●</b> 排除対象</span></div></div>
+<aside><div class="panel-head"><span>02 / INSPECTION CAMERA</span><span id="latency">— ms</span></div><div class="camera"><canvas id="inspection" width="640" height="320"></canvas><canvas id="overlay" width="640" height="320"></canvas></div><p class="caption">真上からの実際のレンダー画像を解析。枠は検出結果です。</p><div class="metrics"><div><strong id="total">0</strong><span>検査済み</span></div><div><strong id="good">0</strong><span>良品通過</span></div><div><strong id="reject">0</strong><span>排除済み</span></div></div><div class="controls"><button id="pause">一時停止</button><button id="reset">リセット</button><label>搬送速度 <output id="speedValue">1.0×</output><input id="speed" type="range" min="0.4" max="2" step="0.1" value="1"></label><label>不良品の投入率 <output id="rateValue">35%</output><input id="rate" type="range" min="0" max="100" value="35"></label><label>検出方式<select id="mode"><option value="color">画像解析デモ（色・連結領域）</option><option value="yolo" disabled>YOLO / ONNX（モデル未読込）</option></select></label><label class="upload">YOLOモデルを読み込む<input id="model" type="file" accept=".onnx"></label><p id="modelNote">YOLOv8/11、640×640、3クラス、NMSなしの検出モデルに対応。クラス順：good / mold / damage。</p></div></aside></section>
+<section class="bottom"><div><p class="eyebrow">03 / PIPELINE</p><div class="pipeline"><span>3D搬送<small>BabylonJS</small></span><b>→</b><span>検査画像<small>640 × 320 px</small></span><b>→</b><span>不良検出<small>画像解析 / YOLO</small></span><b>→</b><span>アーム排除<small>画像 → ワールド座標</small></span></div><p class="note">初期モードはYOLOではありません。生成したミカンの色を解析する教材用デモです。実物の品質判定には、実画像で学習・検証した専用モデルが必要です。</p></div><div><p class="eyebrow">04 / EVENT LOG</p><ol id="log" aria-live="polite"><li>検査ラインを起動しました</li></ol></div></section></main>
+<script type="module" src="app.js"></script></body></html>
