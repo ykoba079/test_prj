@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">ONERA M6 静止SPZ版</title><desc id="desc">翼面の圧力分布と気流のスプラットを図案化したイメージ</desc>
+  <defs><linearGradient id="cp"><stop stop-color="#e96857"/><stop offset=".35" stop-color="#f6c0a7"/><stop offset=".55" stop-color="#dce0ef"/><stop offset="1" stop-color="#4c64d3"/></linearGradient><pattern id="splats" width="29" height="25" patternTransform="rotate(-12)" patternUnits="userSpaceOnUse"><path d="M1 8H12" stroke="#6edfab" stroke-width="3" stroke-linecap="round" opacity=".35"/><ellipse cx="15" cy="8" rx="3" ry="2" fill="#b9ec6d"/><path d="M15 21H25" stroke="#61dcd4" stroke-width="2" stroke-linecap="round" opacity=".5"/></pattern></defs>
+  <rect width="640" height="360" fill="#080f18"/>
+  <text x="30" y="38" fill="#75d8e7" font-family="system-ui,sans-serif" font-size="14" letter-spacing="3">ONERA M6 · STATIC SPZ</text>
+  <path d="M50 134L443 64 592 227 205 323Z" fill="url(#splats)"/>
+  <path d="M155 166L286 84 354 94 322 180 489 246 435 277Z" fill="url(#cp)" stroke="#cbd9f7" stroke-width="2"/>
+  <path d="M155 166L322 180 435 277" fill="none" stroke="#ffd6bc" stroke-width="3" opacity=".6"/>
+  <text x="30" y="335" fill="#e9f0fa" font-family="system-ui,sans-serif" font-size="21" font-weight="600">静止スプラットで気流を可視化</text>
+  <rect x="463" y="30" width="146" height="27" rx="13" fill="#19303d"/><text x="536" y="49" text-anchor="middle" fill="#a9dfeb" font-family="system-ui,sans-serif" font-size="13">150,000 splats</text>
+</svg>

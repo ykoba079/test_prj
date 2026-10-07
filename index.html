@@ -218,6 +218,10 @@
             gap: 14px;
         }
 
+        .smartphone-grid {
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        }
+
         .item {
             display: block;
             min-height: 138px;
@@ -333,10 +337,11 @@
 
         <section aria-labelledby="smartphone-heading">
             <h2 id="smartphone-heading">スマホ × JavaScript</h2>
-            <div class="grid">
+            <div class="grid smartphone-grid">
                 <a class="item" href="./smartphone-js/01-device-orientation/">
+                    <img class="item-thumbnail" src="./img/device-orientation-preview.svg" alt="スマートフォンの傾きで迷路のボールを動かすデモのイメージ">
                     <strong>#01 ブラウザから端末の傾きを取得してみる</strong>
-                    <span>スマートフォンの姿勢をJavaScriptで取得し、簡易水準器と3Dボールで体験するデモ</span>
+                    <span>端末の傾き・加速度をJavaScriptで取得。スマホを傾けて3D迷路のボールを操作するデモ</span>
                 </a>
             </div>
         </section>
@@ -349,10 +354,15 @@
                     <strong>MIKAN LAB V0.2 — 回転・多視点検査</strong>
                     <span>ミカンを回転させて裏面の不良も観察。二方向の検査画像と個体別の履歴を統合し、良品・不良・未判定を選別するデモ</span>
                 </a>
-                <a class="item" href="./mikan-inspection/">
-                    <img class="item-thumbnail" src="./mikan-inspection/preview.png" alt="ミカンの画像検査と3Dロボット選別のプレビュー">
-                    <strong>MIKAN LAB — ミカンの画像検査・選別</strong>
-                    <span>BabylonJSのベルトコンベアーでミカンを搬送。画像からカビ・傷を検出し、3Dアームで排除。専用YOLOモデルの読込にも対応</span>
+                <a class="item" href="./onera-m6/">
+                    <img class="item-thumbnail" src="./img/onera-m6-spz-preview.svg" alt="ONERA M6翼の圧力分布と静止した気流スプラットのイメージ">
+                    <strong>ONERA M6 — 静止SPZ版</strong>
+                    <span>計算済みの翼まわりの気流を15万スプラットで表示。翼面の圧力分布と圧力作用を観察するデモ</span>
+                </a>
+                <a class="item" href="./onera-m6-flow/">
+                    <img class="item-thumbnail" src="./img/onera-m6-flow-preview.svg" alt="ONERA M6翼のまわりを粒子が流れる表示のイメージ">
+                    <strong>ONERA M6 — 動く粒子版</strong>
+                    <span>計算済みの速度場に沿って粒子が移動。自由流速の切替、圧力分布、速い・遅い流れを観察するデモ</span>
                 </a>
                 <a class="item" href="./fluid-lab/">
                     <img class="item-thumbnail" src="./fluid-lab/thumbnail.jpg" alt="透明な水槽で水の動きを観察するFluid Labのプレビュー">
@@ -379,6 +389,11 @@
                     <img class="item-thumbnail" src="./img/office_view.jpg" alt="オフィスサンプルのプレビュー">
                     <strong>情シス向けオフィスPC管理ビューア</strong>
                     <span>ソフトウェアの更新状況などを、オフィスレイアウト上で確認できたら、というデモ</span>
+                </a>
+                <a class="item" href="./babyOfficeSampleV2.html">
+                    <img class="item-thumbnail" src="./img/office-v2-preview.svg" alt="オフィスのPC・ネットワーク配線・故障箇所を可視化するV2のイメージ">
+                    <strong>情シス向けオフィス管理ビューア V2</strong>
+                    <span>PC・ハブ・配線を3Dマップで確認。ネットワーク故障の影響範囲やWindows更新が必要なPCを見える化</span>
                 </a>
                 <a class="item" href="./minecraft-babylon/">
                     <img class="item-thumbnail" src="./img/areppoi.jpg" alt="Babylon Block Worldのプレビュー">

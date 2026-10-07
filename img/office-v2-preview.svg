@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">オフィス管理ビューア V2</title><desc id="desc">机とPC、ハブにつながる配線、故障の影響範囲を図案化したイメージ</desc>
+  <defs><g id="desk"><rect width="55" height="29" rx="3" fill="#fff" stroke="#9db9b2" stroke-width="2"/><rect x="17" y="5" width="22" height="14" rx="2" fill="#148b7f"/><path d="M23 22H33" stroke="#526b68" stroke-width="3"/></g><g id="bad"><rect width="55" height="29" rx="3" fill="#fff" stroke="#dbb6ab" stroke-width="2"/><rect x="17" y="5" width="22" height="14" rx="2" fill="#e37755"/><path d="M23 22H33" stroke="#526b68" stroke-width="3"/></g></defs>
+  <rect width="640" height="360" fill="#edf3f0"/>
+  <text x="30" y="38" fill="#087f75" font-family="system-ui,sans-serif" font-size="14" letter-spacing="3">OFFICE MAP · VERSION 2</text>
+  <g transform="translate(105 77)">
+    <path d="M0 33L333 0 451 152 86 209Z" fill="#d5e6df" stroke="#9bb5ac" stroke-width="2"/>
+    <path d="M0 33V12L333-21V0M333-21L451 131V152" fill="none" stroke="#b7cfc7" stroke-width="8"/>
+    <g fill="none" stroke-width="3"><path d="M60 92H180V49H221M180 92V132H282M60 92V160H125" stroke="#138d81"/><path d="M300 95H363V49M363 95V144H416M300 95V160H341" stroke="#dc6350"/></g>
+    <use href="#desk" x="39" y="43"/><use href="#desk" x="114" y="35"/><use href="#desk" x="188" y="27"/>
+    <use href="#desk" x="75" y="100"/><use href="#desk" x="149" y="92"/><use href="#desk" x="223" y="84"/>
+    <use href="#desk" x="112" y="158"/><use href="#desk" x="187" y="150"/><use href="#desk" x="262" y="142"/>
+    <use href="#bad" x="297" y="35"/><use href="#bad" x="332" y="93"/><use href="#bad" x="367" y="151"/>
+    <rect x="272" y="108" width="58" height="24" rx="5" fill="#dc4b42"/><text x="301" y="125" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="11" font-weight="700">HUB-A</text>
+    <circle cx="301" cy="120" r="38" fill="none" stroke="#dc4b42" stroke-width="2" stroke-dasharray="4 5"/>
+  </g>
+  <text x="30" y="335" fill="#18302f" font-family="system-ui,sans-serif" font-size="21" font-weight="600">配線・故障・PCの状態を見える化</text>
+</svg>

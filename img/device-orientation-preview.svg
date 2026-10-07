@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">端末の傾きと3D迷路</title><desc id="desc">傾いたスマートフォンと、ボールが転がる迷路を描いたイメージ図</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#061315"/><stop offset="1" stop-color="#174744"/></linearGradient>
+    <radialGradient id="ball" cx=".3" cy=".25"><stop stop-color="#fff6be"/><stop offset=".45" stop-color="#ffce67"/><stop offset="1" stop-color="#df7d31"/></radialGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg)"/>
+  <text x="30" y="38" fill="#8eddd1" font-family="system-ui,sans-serif" font-size="14" letter-spacing="3">SMARTPHONE × JAVASCRIPT</text>
+  <g transform="translate(160 195) rotate(-14)">
+    <rect x="-66" y="-123" width="132" height="246" rx="22" fill="#13282e" stroke="#a6e5db" stroke-width="4"/>
+    <rect x="-54" y="-105" width="108" height="207" rx="12" fill="#244b4b"/>
+    <rect x="-23" y="-113" width="46" height="7" rx="3" fill="#a6e5db"/>
+    <path d="M-37 -53H37M0 -90V55" stroke="#77b9ad" stroke-width="2" stroke-dasharray="5 5"/>
+    <circle cx="16" cy="-25" r="20" fill="url(#ball)"/><path d="M-30 80H30" stroke="#9cdfd2" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <path d="M53 136Q37 197 65 247M64 247L42 239M64 247L65 225M260 165H301M301 165L289 155M301 165L289 175" fill="none" stroke="#8eddd1" stroke-width="4" stroke-linecap="round"/>
+  <g transform="translate(454 189) rotate(-9)">
+    <rect x="-126" y="-100" width="252" height="204" rx="12" fill="#122a2f" stroke="#538c87" stroke-width="3"/>
+    <path d="M-102 -76H102V76H-102Z M-102 -26H20V26H-54V76 M-54 -76V-26 M65 -76V26H102 M20 26V76" fill="none" stroke="#98d7ca" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M-77 -51H40V50H76" fill="none" stroke="#4caaa1" stroke-width="3" stroke-dasharray="6 7"/>
+    <circle cx="40" cy="-6" r="15" fill="url(#ball)"/><circle cx="76" cy="50" r="12" fill="none" stroke="#f9d176" stroke-width="3"/>
+  </g>
+  <text x="32" y="335" fill="#d5f0e9" font-family="system-ui,sans-serif" font-size="21" font-weight="600">傾けて、ボールを転がす</text>
+</svg>

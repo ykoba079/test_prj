@@ -1,6 +1,6 @@
 // Particle-only viewer: direct numerical CFD input, no Gaussian/SPZ rendering.
 const BASE = new URL('./', import.meta.url).href;
-const GAMMA = 1.4, FLOW_LO = 180, FLOW_HI = 420, MACH_LO = 0.4, MACH_HI = 1.8;
+const FLOW_LO = 180, FLOW_HI = 420, MACH_LO = 0.4, MACH_HI = 1.8;
 const CP_STOPS = ['#3b4cc0','#8db0fe','#dddcdc','#f4987a','#b40426'];
 const FIELD_BOX = {x0:-.27,x1:2.64,y0:-.33,y1:.486,z0:-1.65,z1:0,hx:.03,hy:.012,hz:.03};
 const TURBO_HEX = '30123b32154333184a341b51351e5836215f37246638276d392a733a2d793b2f803c32863d358b3e38913f3b973f3e9c4040a24143a74146ac4249b1424bb5434eba4451bf4454c34456c74559cb455ccf455ed34661d64664da4666dd4669e0466be3476ee64771e94773eb4776ee4778f0477bf2467df44680f64682f84685fa4687fb458afc458cfd448ffe4391fe4294ff4196ff4099ff3e9bfe3d9efe3ba0fd3aa3fc38a5fb37a8fa35abf833adf731aff52fb2f42eb4f22cb7f02ab9ee28bceb27bee925c0e723c3e422c5e220c7df1fc9dd1ecbda1ccdd81bd0d51ad2d21ad4d019d5cd18d7ca18d9c818dbc518ddc218dec018e0bd19e2bb19e3b91ae4b61ce6b41de7b21fe9af20eaac22ebaa25eca727eea42aefa12cf09e2ff19b32f29835f39438f4913cf58e3ff68a43f78746f8844af8804ef97d52fa7a55fa7659fb735dfc6f61fc6c65fd6969fd666dfe6271fe5f75fe5c79fe597dff5680ff5384ff5188ff4e8bff4b8fff4992ff4796fe4499fe429cfe409ffd3fa1fd3da4fc3ca7fc3aa9fb39acfb38affa37b1f936b4f836b7f735b9f635bcf534bef434c1f334c3f134c6f034c8ef34cbed34cdec34d0ea34d2e935d4e735d7e535d9e436dbe236dde037dfdf37e1dd37e3db38e5d938e7d739e9d539ebd339ecd13aeecf3aefcd3af1cb3af2c93af4c73af5c53af6c33af7c13af8be39f9bc39faba39fbb838fbb637fcb336fcb136fdae35fdac34fea933fea732fea431fea130fe9e2ffe9b2dfe992cfe962bfe932afe9029fd8d27fd8a26fc8725fc8423fb8122fb7e21fa7b1ff9781ef9751df8721cf76f1af66c19f56918f46617f36315f26014f15d13f05b12ef5811ed5510ec530feb500eea4e0de84b0ce7490ce5470be4450ae2430ae14109df3f08dd3d08dc3b07da3907d83706d63506d43305d23105d02f05ce2d04cc2b04ca2a04c82803c52603c32503c12302be2102bc2002b91e02b71d02b41b01b21a01af1801ac1701a91601a71401a41301a112019e10019b0f01980e01950d01920b018e0a018b09028808028507028106027e05027a0403';
@@ -109,7 +109,7 @@ export default function createScene(engine,canvas) {
     const state={ready:false,errors:[],wing:[],cases:[],activeCaseIndex:null,data:null,field:null,H:null,geom:null,loading:false,shownParticles:0};
     const opts={surface:'pressure',paused:false,animSpeed:1,forces:false,band:'all'};
     const N=8000,K=.35/286,S={p:new Float32Array(N*3),d:new Float32Array(N*3),v:new Float32Array(N),age:new Float32Array(N)};
-    const cache=new Map();let serial=0,speedTimer,recording=false;
+    const cache=new Map();let serial=0,speedTimer;
     const matrix=new Float32Array(N*2*16),colors=new Float32Array(N*2*4);
     const arrowMatrix=new Float32Array(900*16),arrowColors=new Float32Array(900*4);
     function arrowMesh(name,m,c){
@@ -162,7 +162,7 @@ export default function createScene(engine,canvas) {
             for(const j of [i,i+N])colors.set([.15+.85*c[0],.15+.85*c[1],.15+.85*c[2],1],j*4);
         }
         particles.thinInstanceBufferUpdated('matrix');particles.thinInstanceBufferUpdated('color');
-        if(shown!==state.shownParticles){state.shownParticles=shown;byId('particleCount').textContent=shown.toLocaleString('ja-JP');}
+        state.shownParticles=shown;
     }
     function writePressureArrows(){
         const a=state.data?.surface.arrows;if(!a)return;
@@ -218,23 +218,6 @@ export default function createScene(engine,canvas) {
             state.data=data;state.field=data.field;state.activeCaseIndex=index;
             const half=data.surface.colors.length/2;
             state.wing.forEach((m,i)=>{m.updateVerticesData(BABYLON.VertexBuffer.ColorKind,data.surface.colors.slice(i*half,(i+1)*half));m.updateVerticesData(BABYLON.VertexBuffer.UVKind,data.uvs);});
-            const m=data.manifest;
-            byId('conditionInfo').textContent='Mach '+m.mach.toFixed(4)+' · '+Math.round(m.freestream_velocity_m_s)+' m/s · 迎角3.06°';
-            byId('clcd').textContent='CL '+m.convergence.CL.toFixed(3)+' / CD '+m.convergence.CD.toFixed(4)+'（非粘性）';
-            byId('machMax').textContent=Math.max(...data.surface.mach).toFixed(2);
-            const cpStar=2/(GAMMA*m.mach*m.mach)*(Math.pow((2+(GAMMA-1)*m.mach*m.mach)/(GAMMA+1),GAMMA/(GAMMA-1))-1);
-            byId('criticalCp').textContent=cpStar.toFixed(3);
-            let supersonicArea=0;
-            for(let t=0;t<state.geom.area.length;t++){
-                const values=state.geom.tris.slice(t*3,t*3+3).map(i=>data.surface.mach[i]);
-                const above=values.filter(v=>v>1),below=values.filter(v=>v<=1);let fraction=0;
-                if(above.length===3)fraction=1;
-                else if(above.length===1)fraction=(above[0]-1)**2/((above[0]-below[0])*(above[0]-below[1]));
-                else if(above.length===2)fraction=1-(1-below[0])**2/((above[0]-below[0])*(above[1]-below[0]));
-                supersonicArea+=state.geom.area[t]*fraction;
-            }
-            byId('supersonicArea').textContent=(supersonicArea/state.geom.totalArea*100).toFixed(1)+'%';
-            byId('recordLink').href=entryUrl(index)+'/manifest.json';
             reseed();sync();await scene.whenReadyAsync();if(token!==serial)return;
             status('定常解析の速度場を補間 · 粒子はスロー再生');
         }catch(error){if(token!==serial)return;
@@ -243,7 +226,6 @@ export default function createScene(engine,canvas) {
             status('読み込めませんでした。直前の条件を表示しています。選び直して再試行できます。',true);
         }finally{if(token===serial)state.loading=false;}
     }
-    function entryUrl(i){return state.cases[i].base_url;}
     function speedLabel(i){const t=Math.round(state.cases[i].velocity_m_s)+' m/s';byId('speedLabel').textContent=t;byId('speed').setAttribute('aria-valuetext',t);}
     byId('speed').addEventListener('input',()=>{clearTimeout(speedTimer);++serial;const i=Number(byId('speed').value);speedLabel(i);speedTimer=setTimeout(()=>selectSpeed(i),180);});
     byId('speed').addEventListener('change',()=>{clearTimeout(speedTimer);selectSpeed(Number(byId('speed').value));});
@@ -257,46 +239,13 @@ export default function createScene(engine,canvas) {
     byId('all').addEventListener('click',()=>setRelativeBand('all'));
     byId('home').addEventListener('click',()=>setView(HOME));
     byId('top').addEventListener('click',()=>setView({target:new BABYLON.Vector3(.9,0,0),alpha:-Math.PI/2,beta:.02,radius:4.4}));
-    async function recordGif(){
-        if(recording||!state.ready)return;recording=true;byId('gif').disabled=true;byId('gif').textContent='GIF保存中…';
-        try{const lib=await import('https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm');
-            const c=document.createElement('canvas');c.width=640;c.height=480;const g=c.getContext('2d',{willReadFrequently:true}),frames=[];
-            const start=performance.now();await new Promise(resolve=>{
-                const observer=scene.onAfterRenderObservable.add(()=>{
-                    const now=performance.now();if(now-start>=frames.length*100){
-                        const src=engine.getRenderingCanvas();let w=src.width,h=w*.75;if(h>src.height){h=src.height;w=h/.75;}
-                        g.drawImage(src,(src.width-w)/2,(src.height-h)/2,w,h,0,0,640,480);
-                        g.fillStyle='#080f18cc';g.fillRect(10,446,460,24);g.font='14px sans-serif';g.fillStyle='#eef4fc';g.fillText('ONERA M6 · M '+state.data.manifest.mach+' · 定常速度場のスロー表示',18,463);
-                        frames.push(g.getImageData(0,0,640,480).data);
-                    }
-                    if(now-start>=3000){scene.onAfterRenderObservable.remove(observer);resolve();}
-                });
-            });
-            let bytes;
-            for(const [stride,n] of [[1,128],[2,64],[3,32]]){
-                const enc=lib.GIFEncoder();
-                for(let i=0;i<frames.length;i+=stride){const palette=lib.quantize(frames[i],n);enc.writeFrame(lib.applyPalette(frames[i],palette),640,480,{palette,delay:100*stride});await new Promise(r=>setTimeout(r,0));}
-                enc.finish();bytes=enc.bytes();if(bytes.length<5*1024*1024)break;
-            }
-            const url=URL.createObjectURL(new Blob([bytes],{type:'image/gif'})),a=document.createElement('a');a.href=url;a.download='onera-m6-flow-'+Math.round(state.data.manifest.freestream_velocity_m_s)+'ms.gif';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);
-            status('GIFを保存しました（640×480・3秒）');
-        }catch(error){status('GIFを保存できませんでした。通信環境を確認して再試行してください。',true);}
-        finally{recording=false;byId('gif').disabled=false;byId('gif').textContent='GIFを保存（3秒）';}
-    }
-    byId('gif').addEventListener('click',recordGif);
     scene.onBeforeRenderObservable.add(()=>{if(!state.ready||opts.paused)return;step(Math.min(engine.getDeltaTime()/1000,1/30)*opts.animSpeed);writeParticles();});
     scene.onDisposeObservable.add(()=>{clearTimeout(speedTimer);++serial;});
     (async()=>{try{
         const [registry,geometry]=await Promise.all([json('assets/speeds.json'),json('assets/wing.json')]);
         state.cases=registry.cases;const count=geometry.positions.length/6,indices=geometry.indices.slice(0,geometry.indices.length/2);
-        let span=0;for(let i=0;i<count;i++)span=Math.max(span,-geometry.positions[i*3+2]);
-        const positions=geometry.positions.slice(0,count*3),area=new Float32Array(indices.length/3);let totalArea=0;
-        for(let t=0;t<area.length;t++){
-            const a=indices[t*3]*3,b=indices[t*3+1]*3,c=indices[t*3+2]*3;
-            const u=[0,1,2].map(k=>positions[b+k]-positions[a+k]),v=[0,1,2].map(k=>positions[c+k]-positions[a+k]);
-            area[t]=.5*Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]);totalArea+=area[t];
-        }
-        state.geom={count,positions,tris:indices,span,area,totalArea};
+        const positions=geometry.positions.slice(0,count*3);
+        state.geom={count,positions};
         state.H=buildWingHeight(state.geom.positions,indices);
         for(let half=0;half<2;half++){
             const mesh=new BABYLON.Mesh('wing-'+half,scene),v=new BABYLON.VertexData();
@@ -309,6 +258,6 @@ export default function createScene(engine,canvas) {
         await selectSpeed(registry.default_index);state.ready=true;
         document.querySelectorAll('[data-ready]').forEach(e=>e.disabled=false);sync();
     }catch(error){state.errors.push(String(error));status('起動できませんでした。通信環境を確認して再読み込みしてください。',true);}})();
-    scene.metadata={flow:{state,opts,S,selectSpeed,sync,setRelativeBand,reseed,recordGif,filter}};
+    scene.metadata={flow:{state,opts,S,selectSpeed,sync,setRelativeBand,reseed,filter}};
     return scene;
 }

@@ -19,8 +19,7 @@
     select {width:100%} button:disabled,input:disabled,select:disabled {opacity:.45;cursor:default}
     .buttons {display:flex;gap:5px}.buttons button {flex:1;font-size:11px;padding:8px 5px}
     .note {font-size:10px;line-height:1.7;color:#91a5bb;margin:8px 0}.ticks {display:flex;justify-content:space-between;color:#91a5bb;font-size:9px}
-    details {border-top:1px solid #283b4d;margin-top:16px;padding-top:12px;font-size:12px} summary {cursor:pointer;color:#b6c5d7}
-    .info {font-size:11px;color:#a8bdcf;line-height:1.8;margin-top:12px}.info p {margin:6px 0} a {color:#79d2e0}
+    .advanced {border-top:1px solid #283b4d;margin-top:16px;padding-top:12px;font-size:12px}
     .legends {position:fixed;left:24px;bottom:65px;display:flex;gap:8px;pointer-events:none}.legend {width:205px;padding:10px 12px;border:1px solid #263849;border-radius:10px;background:#0e1926e8;font-size:10px}
     .gradient {height:7px;border-radius:3px;margin-top:8px}.range {display:flex;justify-content:space-between;color:#a7bad0;margin-top:6px;font-size:9px}
     #cpLegend .gradient {background:linear-gradient(90deg,#3b4cc0,#8db0fe,#dddcdc,#f4987a,#b40426)}
@@ -52,7 +51,7 @@
     <label class="block" for="surface">翼の色</label>
     <select id="surface" disabled data-ready><option value="pressure">圧力分布（Cp）</option><option value="mach">マッハ数（計算値）</option><option value="solid">単色</option></select>
     <div class="buttons"><button id="home" disabled data-ready>初期視点</button><button id="top" disabled data-ready>上から</button></div>
-    <details id="advanced"><summary>詳細設定</summary>
+    <section class="advanced" id="advanced" aria-labelledby="advancedTitle"><h2 id="advancedTitle">詳細設定</h2>
       <div class="row"><label for="animSpeed">粒子の再生速度</label><output id="animSpeedLabel" for="animSpeed">1.00×</output></div><input id="animSpeed" type="range" min=".1" max="3" step=".05" value="1" disabled data-ready>
       <button id="reseed" disabled data-ready>粒子をリセット</button>
       <div class="row"><label for="forces">周囲との差圧の向き</label><input id="forces" type="checkbox" disabled data-ready></div>
@@ -60,19 +59,7 @@
       <label class="block">粒子の速度フィルター</label><p class="note" id="filterLabel">すべて表示</p>
       <div class="buttons"><button id="fast" disabled data-ready>5%以上速い</button><button id="slow" disabled data-ready>5%以上遅い</button><button id="all" disabled data-ready>全表示</button></div>
       <p class="note">速い・遅いは現在の自由流速との比較です。</p>
-    </details>
-    <details><summary>解析情報</summary><div class="info">
-      <p id="conditionInfo">読込中…</p><p id="clcd">—</p>
-      <p>翼面の最大マッハ数：<span id="machMax">—</span></p>
-      <p>翼表面の超音速面積率：<span id="supersonicArea">—</span>（補間による概算）</p>
-      <p>臨界Cp*：<span id="criticalCp">—</span>（等エントロピーの参考値）</p>
-      <p>表示中の粒子（左右合計）：<span id="particleCount">0</span></p>
-      <p>マッハ数は計算の速度・密度・圧力から算出。暗い等値線は0.05刻み、白線はM＝1です。粒子は定常CFD速度場を格子補間した表示で、非定常シミュレーションではありません。</p>
-      <p>非粘性Euler解析。粘性・摩擦・剥離・失速を扱わず、実験検証や格子収束確認は未実施です。</p>
-      <p>流速の色は180–420 m/sで飽和しますが、フィルターは数値速度を使います。</p>
-      <p><a id="recordLink" href="assets/cases/m08395/manifest.json" target="_blank" rel="noopener">現在の計算記録</a> · <a href="README.md">説明</a></p>
-    </div></details>
-    <details id="sharing"><summary>保存・共有</summary><p class="note">現在の視点を640×480・3秒のGIFで保存します。メニューは画像に入りません。</p><button id="gif" disabled data-ready>GIFを保存（3秒）</button></details>
+    </section>
   </aside>
   <div class="legends">
     <div class="legend" id="cpLegend"><span id="cpLegendTitle">圧力係数 Cp</span><div class="gradient"></div><div class="range"><span>≤ −1.2</span><span>≥ +0.6</span></div></div>
@@ -81,6 +68,6 @@
   </div>
   <div id="status" class="status" role="status" aria-live="polite">翼と速度場を読み込んでいます…</div>
   <div id="fatal" class="fatal" role="alert" hidden><h2>デモを起動できませんでした</h2><p id="fatalMessage"></p><button id="retry">再読み込み</button></div>
-  <script type="module" src="main.js?v=particles-20261004c"></script>
+  <script type="module" src="main.js?v=particles-20261004d"></script>
 </body>
 </html>
