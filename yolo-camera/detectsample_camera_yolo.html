@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>YOLO物体検出</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui,sans-serif; background:#101820; color:#eef5f8; --title-size:clamp(15.4px,2.8vw,22.4px); }
+    body { max-width:960px; margin:auto; padding:24px 16px; }
+    h1 { font-size:var(--title-size); margin:0 0 8px; }
+    p { line-height:1.7; color:#b7c9d4; }
+    .source-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:18px 0; }
+    .source-button { width:100%; min-height:58px; font-weight:600; font-size:var(--title-size); }
+    .source-button .icon { margin-right:6px; font-size:inherit; }
+    .source-button[aria-pressed="true"] { background:#29513f; border-color:#68e1aa; }
+    .facing { display:flex; justify-content:center; gap:8px; padding:0; border:0; margin:8px 0 0; min-width:0; }
+    .facing label { position:relative; cursor:pointer; flex:1 1 0; max-width:180px; min-width:0; text-align:center; }
+    .facing input { position:absolute; opacity:0; width:1px; height:1px; }
+    .facing span { display:flex; align-items:center; justify-content:center; box-sizing:border-box; min-height:44px; padding:7px 4px; border:1px solid #486071; border-radius:7px; font-size:14px; }
+    .facing input:checked + span { background:#29513f; color:#a3f7ce; border-color:#68e1aa; }
+    .facing input:focus-visible + span { outline:2px solid #8ed1ff; outline-offset:3px; }
+    .facing:disabled { opacity:.45; }
+    .settings { display:flex; flex-wrap:wrap; gap:10px 24px; align-items:center; margin:16px 0; }
+    .confidence { display:flex; align-items:center; gap:10px; white-space:nowrap; }
+    #threshold { width:clamp(90px,20vw,180px); min-width:0; }
+    #thresholdValue { min-width:3ch; font-variant-numeric:tabular-nums; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+    button,select,input { font:inherit; } button,select { padding:10px 14px; border:1px solid #486071; border-radius:8px; background:#203342; color:white; }
+    button:disabled { opacity:.45; } button { cursor:pointer; } input { accent-color:#68e1aa; }
+    canvas { width:100%; display:block; background:#192833; border-radius:12px; }
+    video { display:none; } #status { color:#8fe6bd; min-height:1.6em; font-size:14px; overflow-wrap:anywhere; flex:1 1 180px; } #metrics { font-variant-numeric:tabular-nums; }
+    a { color:#8ed1ff; } small { line-height:1.8; }
+    footer { margin-top:20px; font-size:12px; color:#b7c9d4; }
+  </style>
+  <script defer src="vendor/ort.min.js"></script>
+  <script defer src="detection.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <h1>YOLO物体検出</h1>
+  <div class="source-controls">
+    <div>
+      <button id="start" class="source-button" aria-pressed="false" disabled><span class="icon" aria-hidden="true">📷</span><span id="cameraLabel">カメラで試す</span></button>
+      <fieldset id="facing" class="facing">
+        <legend class="sr-only">カメラの向き</legend>
+        <label><input type="radio" name="facing" value="environment" checked><span>背面</span></label>
+        <label><input type="radio" name="facing" value="user"><span>前面</span></label>
+      </fieldset>
+    </div>
+    <div>
+      <button id="chooseImage" class="source-button" disabled><span class="icon" aria-hidden="true">🖼</span>画像で試す</button>
+      <input id="image" type="file" accept="image/*" hidden disabled>
+    </div>
+  </div>
+  <div class="settings">
+    <label class="confidence">信頼度 <input id="threshold" type="range" min="10" max="90" value="40"><output id="thresholdValue" for="threshold">40%</output></label>
+    <div id="status" role="status" aria-live="polite">モデルを読み込み中…</div>
+  </div>
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas" width="960" height="540" aria-label="物体検出結果"></canvas>
+  <p id="metrics"></p>
+  <footer>
+  <small>
+    <a href="models/YOLOv9-LICENSE.txt">モデルのMITライセンス</a> ·
+    <a href="vendor/ONNXRUNTIME-LICENSE.txt">推論エンジンのライセンス</a> ·
+    <a href="../detectsample_camera.html">COCO-SSD版</a>
+  </small>
+  </footer>
+</body>
+</html>
