@@ -9,6 +9,9 @@
     body { max-width:960px; margin:auto; padding:24px 16px; }
     h1 { font-size:var(--title-size); margin:0 0 8px; }
     p { line-height:1.7; color:#b7c9d4; }
+    .model-controls { display:flex; gap:12px; margin:18px 0; }
+    .model-controls button { flex:1; min-height:44px; padding:10px 8px; }
+    .model-controls button[aria-pressed="true"] { background:#29513f; color:#a3f7ce; border-color:#68e1aa; }
     .source-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:18px 0; }
     .source-button { width:100%; min-height:58px; font-weight:600; font-size:var(--title-size); }
     .source-button .icon { margin-right:6px; font-size:inherit; }
@@ -34,10 +37,14 @@
   </style>
   <script defer src="vendor/ort.min.js"></script>
   <script defer src="detection.js"></script>
-  <script defer src="app.js"></script>
+  <script defer src="app.js?v=20261021-models"></script>
 </head>
 <body>
   <h1>YOLO物体検出</h1>
+  <div class="model-controls" role="group" aria-label="検出モデル">
+    <button id="generalModel" aria-pressed="true" disabled>汎用モデル</button>
+    <button id="mikanModel" aria-pressed="false" disabled>ミカン検出モデル</button>
+  </div>
   <div class="source-controls">
     <div>
       <button id="start" class="source-button" aria-pressed="false" disabled><span class="icon" aria-hidden="true">📷</span><span id="cameraLabel">カメラで試す</span></button>

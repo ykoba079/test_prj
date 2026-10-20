@@ -1,0 +1,9 @@
+{
+  "name": "YOLOv9-T / mikan v2",
+  "url": "./mikan.onnx",
+  "inputSize": 320,
+  "classes": [
+    "mikan"
+  ],
+  "boxFormat": "xyxy"
+}

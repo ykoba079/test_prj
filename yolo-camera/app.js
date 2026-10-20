@@ -2,14 +2,20 @@
 const $=id=>document.getElementById(id);
 const video=$('video'),canvas=$('canvas'),ctx=canvas.getContext('2d');
 const inputCanvas=document.createElement('canvas'),inputCtx=inputCanvas.getContext('2d',{willReadFrequently:true});
-let session,config,stream,running=false,busy=false,generation=0,lastImage=null;
+let session,config,stream,running=false,busy=false,generation=0,lastImage=null,loading=false;
+const modelPaths={generalModel:'model.json',mikanModel:'models/mikan-v2-demo/model.json'};
+let selectedModel=new URLSearchParams(location.search).get('model')||modelPaths.generalModel;
 const status=text=>$('status').textContent=text;
 function controls(){
-  $('start').disabled=!session||(!running&&busy);
+  $('start').disabled=loading||!session||(!running&&busy);
   $('start').setAttribute('aria-pressed',String(running));
   $('cameraLabel').textContent=running?'■ 停止':'カメラで試す';
-  $('chooseImage').disabled=$('image').disabled=!session||running||busy;
-  $('facing').disabled=running||busy;
+  $('chooseImage').disabled=$('image').disabled=loading||!session||running||busy;
+  $('facing').disabled=loading||running||busy;
+  for(const [id,path] of Object.entries(modelPaths)){
+    $(id).disabled=loading||(busy&&!running);
+    $(id).setAttribute('aria-pressed',String(new URL(path,location.href).href===new URL(selectedModel,location.href).href));
+  }
 }
 function stop(){running=false;generation++;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;controls();}
 function prepare(source){
@@ -62,7 +68,7 @@ $('start').onclick=async()=>{
 };
 $('chooseImage').onclick=()=>$('image').click();
 $('threshold').oninput=()=>{$('thresholdValue').value=$('threshold').value+'%';};
-$('threshold').onchange=async()=>{if(lastImage&&!running&&!busy)try{await infer(lastImage,generation);}catch(e){status(e.message);}};
+$('threshold').onchange=async()=>{if(lastImage&&!loading&&!running&&!busy)try{await infer(lastImage,generation);}catch(e){status(e.message);}};
 $('image').onchange=async event=>{
   const file=event.target.files[0];if(!file)return;
   const url=URL.createObjectURL(file);busy=true;controls();
@@ -78,13 +84,20 @@ async function fetchResource(url,label){
   if(!response.ok)throw Error(`${label}を取得できません（HTTP ${response.status}）: ${url}`);
   return response;
 }
-(async()=>{
+async function loadModel(path){
+  if(loading)return;
+  loading=true;stop();controls();
+  while(busy)await new Promise(resolve=>setTimeout(resolve,20));
   let stage='起動';
   try{
     if(location.protocol==='file:')throw Error('HTMLのダブルクリックではモデルを読み込めません。python yolo-camera/serve.py を実行し、http://127.0.0.1:8002/yolo-camera/detectsample_camera_yolo.html で開いてください。');
     if(!globalThis.ort)throw Error('推論エンジンを読み込めません。');
-    stage='設定ファイル';
-    const configUrl=new URL('model.json',location.href);
+    if(session){await session.release();session=null;}
+    $('metrics').textContent='';ctx.clearRect(0,0,canvas.width,canvas.height);
+    selectedModel=path;controls();
+    stage='設定ファイル';status('モデル設定を読み込み中…');
+    const configUrl=new URL(path,location.href);
+    if(configUrl.origin!==location.origin)throw Error('モデル設定は同じサイト内のJSONを指定してください。');
     const response=await fetchResource(configUrl.href,'設定ファイル');config=await response.json();
     if(!Number.isInteger(config.inputSize)||config.inputSize<=0||!Array.isArray(config.classes)||!config.classes.length)throw Error('モデル設定が不正です。');
     if(!['xyxy','cxcywh'].includes(config.boxFormat))throw Error('boxFormatはxyxyまたはcxcywhを指定してください。');
@@ -95,9 +108,18 @@ async function fetchResource(url,label){
     const modelBytes=await modelResponse.arrayBuffer();
     stage='WASM推論エンジン';status('推論エンジンを準備中…');
     session=await ort.InferenceSession.create(modelBytes,{executionProviders:['wasm']});
-    status('● 準備完了');controls();
+    status('● 準備完了');
   }catch(e){
     const hint=stage==='WASM推論エンジン'?' vendor内の .mjs と .wasm が配信されていることを確認してください。':'';
     status(`モデルの読み込みに失敗しました［${stage}］: ${e.message}${hint}`);console.error(e);
+  }finally{loading=false;controls();}
+  if(session&&lastImage){
+    try{await infer(lastImage,++generation);status('画像の検出が完了しました');}
+    catch(e){status('画像の検出に失敗しました: '+e.message);}
   }
-})();
+}
+for(const [id,path] of Object.entries(modelPaths))$(id).onclick=async()=>{
+  if(session&&new URL(path,location.href).href===new URL(selectedModel,location.href).href)return;
+  await loadModel(path);
+};
+loadModel(selectedModel);
