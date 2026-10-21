@@ -6,13 +6,19 @@
   <title>YOLO物体検出</title>
   <style>
     :root { color-scheme: dark; font-family: system-ui,sans-serif; background:#101820; color:#eef5f8; --title-size:clamp(15.4px,2.8vw,22.4px); }
-    body { max-width:960px; margin:auto; padding:24px 16px; }
-    h1 { font-size:var(--title-size); margin:0 0 8px; }
+    body { max-width:960px; margin:auto; padding:12px 16px 24px; }
+    .title-bar { padding:2px; margin-bottom:16px; background:linear-gradient(115deg,#8e9bff,#62e8eb 35%,#234657 70%,#8e9bff); clip-path:polygon(16px 0,calc(100% - 16px) 0,100% 16px,100% calc(100% - 16px),calc(100% - 16px) 100%,16px 100%,0 calc(100% - 16px),0 16px); }
+    h1 { position:relative; font-size:var(--title-size); text-align:center; letter-spacing:.08em; margin:0; padding:14px 24px; color:#a1faff; background:linear-gradient(105deg,#172b42,#173c48 50%,#172b42); clip-path:inherit; text-shadow:0 0 12px #49dce980; }
+    h1::before,h1::after { content:""; position:absolute; top:50%; width:5px; height:5px; border-radius:50%; background:#84f9ff; box-shadow:0 0 9px #62e8eb; }
+    h1::before { left:16px; } h1::after { right:16px; }
     p { line-height:1.7; color:#b7c9d4; }
-    .model-controls { display:flex; gap:12px; margin:18px 0; }
-    .model-controls button { flex:1; min-height:44px; padding:10px 8px; }
+    .control-group { min-width:0; margin:14px 0; padding:10px 12px 12px; border:1px solid #426276; border-radius:10px; background:#13212c; }
+    .control-group > legend { padding:0 8px; color:#b0d7e6; font-size:13px; letter-spacing:.06em; }
+    .model-controls { display:flex; gap:12px; }
+    .model-controls button { flex:1; min-width:0; min-height:44px; padding:10px 8px; font-size:clamp(13px,3.6vw,16px); }
     .model-controls button[aria-pressed="true"] { background:#29513f; color:#a3f7ce; border-color:#68e1aa; }
-    .source-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:18px 0; }
+    .source-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:start; }
+    .source-card { min-width:0; padding:8px; border:1px solid #344f60; border-radius:8px; background:#101b24; }
     .source-button { width:100%; min-height:58px; font-weight:600; font-size:var(--title-size); }
     .source-button .icon { margin-right:6px; font-size:inherit; }
     .source-button[aria-pressed="true"] { background:#29513f; border-color:#68e1aa; }
@@ -28,25 +34,33 @@
     #threshold { width:clamp(90px,20vw,180px); min-width:0; }
     #thresholdValue { min-width:3ch; font-variant-numeric:tabular-nums; }
     .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-    button,select,input { font:inherit; } button,select { padding:10px 14px; border:1px solid #486071; border-radius:8px; background:#203342; color:white; }
-    button:disabled { opacity:.45; } button { cursor:pointer; } input { accent-color:#68e1aa; }
-    canvas { width:100%; display:block; background:#192833; border-radius:12px; }
+    button,select,input { font:inherit; } button,select { padding:10px 14px; border:1px solid #7394a8; border-radius:8px; background:#203342; color:white; }
+    .source-button { padding:10px 4px; }
+    button:disabled { opacity:.4; cursor:default; } button { cursor:pointer; } input { accent-color:#68e1aa; }
+    button:focus-visible { outline:2px solid #8ed1ff; outline-offset:3px; }
+    canvas { box-sizing:border-box; width:100%; display:block; background:#161b20; border:1px solid #3a4c59; border-radius:12px; }
     video { display:none; } #status { color:#8fe6bd; min-height:1.6em; font-size:14px; overflow-wrap:anywhere; flex:1 1 180px; } #metrics { font-variant-numeric:tabular-nums; }
     a { color:#8ed1ff; } small { line-height:1.8; }
     footer { margin-top:20px; font-size:12px; color:#b7c9d4; }
+    @media (max-width:360px) { .control-group { padding:8px; } .source-controls,.model-controls { gap:8px; } .source-card { padding:5px; } .source-button .icon { margin-right:3px; } }
   </style>
   <script defer src="vendor/ort.min.js"></script>
   <script defer src="detection.js"></script>
   <script defer src="app.js?v=20261021-models"></script>
 </head>
 <body>
-  <h1>YOLO物体検出</h1>
-  <div class="model-controls" role="group" aria-label="検出モデル">
+  <header class="title-bar"><h1>YOLO物体検出</h1></header>
+  <fieldset class="control-group">
+    <legend>AIモデル</legend>
+    <div class="model-controls">
     <button id="generalModel" aria-pressed="true" disabled>汎用モデル</button>
     <button id="mikanModel" aria-pressed="false" disabled>ミカン検出モデル</button>
-  </div>
-  <div class="source-controls">
-    <div>
+    </div>
+  </fieldset>
+  <fieldset class="control-group">
+    <legend>入力</legend>
+    <div class="source-controls">
+    <div class="source-card" role="group" aria-label="カメラでの入力">
       <button id="start" class="source-button" aria-pressed="false" disabled><span class="icon" aria-hidden="true">📷</span><span id="cameraLabel">カメラで試す</span></button>
       <fieldset id="facing" class="facing">
         <legend class="sr-only">カメラの向き</legend>
@@ -54,11 +68,12 @@
         <label><input type="radio" name="facing" value="user"><span>前面</span></label>
       </fieldset>
     </div>
-    <div>
+    <div class="source-card" role="group" aria-label="画像ファイルでの入力">
       <button id="chooseImage" class="source-button" disabled><span class="icon" aria-hidden="true">🖼</span>画像で試す</button>
       <input id="image" type="file" accept="image/*" hidden disabled>
     </div>
-  </div>
+    </div>
+  </fieldset>
   <div class="settings">
     <label class="confidence">信頼度 <input id="threshold" type="range" min="10" max="90" value="40"><output id="thresholdValue" for="threshold">40%</output></label>
     <div id="status" role="status" aria-live="polite">モデルを読み込み中…</div>
