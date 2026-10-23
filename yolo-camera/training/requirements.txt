@@ -1,0 +1,19 @@
+# Install a matched torch/torchvision pair for your CPU or CUDA first.
+# Tested locally: Python 3.10, torch 2.1.2+cpu, torchvision 0.16.2+cpu.
+numpy==1.26.3
+Pillow==10.2.0
+einops==0.8.1
+hydra-core==1.3.2
+omegaconf==2.3.0
+rich==13.9.4
+loguru==0.7.3
+lightning==2.2.5
+pytorch-lightning==2.2.5
+torchmetrics==1.3.2
+faster-coco-eval==1.6.5
+pycocotools==2.0.8
+onnx==1.16.2
+onnxruntime==1.20.1
+wandb==0.17.9
+matplotlib==3.10.9
+typing-extensions==4.9.0
