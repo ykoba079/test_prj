@@ -2,7 +2,16 @@ const B=globalThis.BABYLON;
 
 export async function createMechanics(scene,rollers){
   if(typeof globalThis.HavokPhysics!=='function')throw new Error('Havokのスクリプトを取得できませんでした');
-  const havok=await globalThis.HavokPhysics({locateFile:file=>new URL(file,'https://cdn.babylonjs.com/havok/').href});
+  const wasmUrl=new URL('./vendor/HavokPhysics.wasm?v=20261025-bluegreen-mold',import.meta.url);
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
+  let havok;
+  try{
+    const response=await fetch(wasmUrl,{signal:controller.signal});
+    if(!response.ok)throw new Error('Havok WASMを取得できません（HTTP '+response.status+'）');
+    const wasmBinary=await response.arrayBuffer();
+    havok=await globalThis.HavokPhysics({wasmBinary,locateFile:file=>new URL('./vendor/'+file,import.meta.url).href});
+  }catch(error){throw new Error(error.name==='AbortError'?'Havokの読込がタイムアウトしました。ページを再読み込みしてください。':error.message);}
+  finally{clearTimeout(timeout);}
   const plugin=new B.HavokPlugin(true,havok);
   scene.enablePhysics(new B.Vector3(0,-9.81,0),plugin);
   scene.getPhysicsEngine().setSubTimeStep(1000/120);

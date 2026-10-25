@@ -13,7 +13,9 @@ export function detectColor(image) {
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       if(((x-cx)/rx)**2+((y-cy)/ry)**2>.86)continue;
       const p=(y*w+x)*4,r=data[p],g=data[p+1],b=data[p+2];
-      if(g>r*1.2&&g>b*1.12&&g>38)mold++;
+      const greenMold=g>r*1.2&&g>b*1.12&&g>38;
+      const blueGreenMold=g>r*1.22&&b>r*1.15&&g>55&&b>50&&b<g*1.35;
+      if(greenMold||blueGreenMold)mold++;
       if(r>g*1.3&&r<130&&g<85&&b<70)damage++;
     }
     const defects=[];if(mold>26)defects.push('mold');if(damage>26)defects.push('damage');

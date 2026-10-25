@@ -1,0 +1,2 @@
+# Keep upstream runtime files byte-for-byte, including their CRLF line endings.
+vendor/* -text whitespace=cr-at-eol,-blank-at-eol

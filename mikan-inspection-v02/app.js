@@ -1,7 +1,8 @@
-import {colorDetector} from './vision.js';
-import {createFruitFactory,random} from './fruit.js';
-import {createMechanics} from './physics.js';
+import {colorDetector} from './vision.js?v=20261025-bluegreen-mold';
+import {createFruitFactory,random} from './fruit.js?v=20261025-bluegreen-mold';
+import {createMechanics} from './physics.js?v=20261025-bluegreen-mold';
 const B=globalThis.BABYLON,$=id=>document.getElementById(id),names={mold:'カビ',damage:'傷'},stateNames={observing:'観測中',good:'良品通過',reject:'不良排除',unknown:'未判定隔離',sorting:'アーム移動中',missed:'搬送異常'};
+if(!B?.Engine.IsSupported)throw new Error('このブラウザーでWebGLを利用できません。ブラウザーの3D描画設定を確認してください。');
 const engine=new B.Engine($('scene'),true),scene=new B.Scene(engine);scene.clearColor=B.Color4.FromHexString('#1b2925ff');
 const orbit=new B.ArcRotateCamera('orbit',-Math.PI/2.6,Math.PI/3.2,17,new B.Vector3(-.5,.1,0),scene);orbit.attachControl($('scene'),true);orbit.lowerRadiusLimit=8;orbit.upperRadiusLimit=26;orbit.layerMask=1;
 const sky=new B.HemisphericLight('sky',new B.Vector3(0,1,.2),scene);sky.intensity=1.25;sky.groundColor=new B.Color3(.48,.46,.4);
@@ -30,9 +31,24 @@ const views=['A','B'].map(id=>{
   return {id,camera,rt,ctx:$('inspection'+id).getContext('2d'),overlay:$('overlay'+id).getContext('2d')};
 });
 const directions=Array.from({length:12},(_,i)=>{const y=1-2*(i+.5)/12,a=i*Math.PI*(3-Math.sqrt(5)),r=Math.sqrt(1-y*y);return new B.Vector3(Math.cos(a)*r,y,Math.sin(a)*r);});
+// Draw fruit and equipment immediately; WASM loading must never gate the first frame.
+const createFruit=createFruitFactory(scene);
+const previewFruits=[0,1,2].map((type,i)=>{const f=createFruit({id:-i-1,type,hidden:i===1,seed:717*(i+1)});f.root.position.set(-5.6+i*1.75,.58,0);for(const v of views)v.rt.renderList.push(...f.meshes);return f;});
+scene.activeCamera=orbit;
+function loadingRender(){scene.render();}
+engine.runRenderLoop(loadingRender);
+globalThis.mikanPreview={scene,fruits:previewFruits};
+$('loadMessage').textContent='装置とミカンを表示しています。物理演算を準備中…';
+for(const element of document.querySelectorAll('button,input,select'))element.disabled=true;
+window.addEventListener('resize',()=>engine.resize());
 let mechanics;
-try{mechanics=await createMechanics(scene,rollers);}catch(error){$('status').textContent='Havok初期化失敗';$('physicsInfo').textContent=error.message;throw error;}
-const createFruit=createFruitFactory(scene),rng=random(20261005),stats={total:0,good:0,reject:0,unknown:0,lost:0};
+try{mechanics=await createMechanics(scene,rollers);}catch(error){$('status').textContent='Havok初期化失敗 · 静止表示';$('physicsInfo').textContent=error.message;globalThis.mikanShowError?.(error);throw error;}
+engine.stopRenderLoop(loadingRender);
+for(const f of previewFruits){for(const v of views)v.rt.renderList=v.rt.renderList.filter(m=>!f.meshes.includes(m));f.root.dispose();for(const m of f.ownedMaterials)m.dispose(false,true);}
+delete globalThis.mikanPreview;
+for(const element of document.querySelectorAll('button,input,select'))element.disabled=false;
+$('loadMessage').hidden=true;
+const rng=random(20261005),stats={total:0,good:0,reject:0,unknown:0,lost:0};
 let fruits=[],records=[],nextId=1,paused=false,motorEnabled=true,busy=false,epoch=0,tick=0,scanClock=0,spawnClock=0,activeJob=null,dirty=true,uiClock=0;
 function log(message){const li=document.createElement('li');li.textContent=new Date().toLocaleTimeString('ja-JP')+'  '+message;$('log').prepend(li);while($('log').children.length>8)$('log').lastChild.remove();}
 function event(f,text){f.events.push(text);if(f.events.length>8)f.events.shift();dirty=true;}
