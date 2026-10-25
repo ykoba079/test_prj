@@ -1,10 +1,10 @@
 import {colorDetector} from './vision.js?v=20261025-bluegreen-mold';
 import {createFruitFactory,random} from './fruit.js?v=20261025-bluegreen-mold';
-import {createMechanics} from './physics.js?v=20261026-fixed-arm';
-import {createYoloDetector} from './yolo-detector.js?v=20261026-fixed-arm';
-import {createImageTracker,fuseViews,PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261026-fixed-arm';
-import {createRobotArm} from './robot-arm.js?v=20261026-fixed-arm';
-import {ARM,ARM_REST,DROP_POINTS} from './arm-kinematics.js?v=20261026-fixed-arm';
+import {createMechanics} from './physics.js?v=20261026-fixed-arm-2';
+import {createYoloDetector} from './yolo-detector.js?v=20261026-fixed-arm-2';
+import {createImageTracker,fuseViews,PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261026-fixed-arm-2';
+import {createRobotArm} from './robot-arm.js?v=20261026-fixed-arm-2';
+import {ARM,ARM_REST,DROP_POINTS} from './arm-kinematics.js?v=20261026-fixed-arm-2';
 const B=globalThis.BABYLON,$=id=>document.getElementById(id),names={mold:'カビ',damage:'傷'},stateNames={observing:'観測中',good:'良品通過',reject:'不良排除',unknown:'未判定隔離',sorting:'アーム移動中',escaping:'取り逃がし・搬送中',escaped:'取り逃がし通過',missed:'搬送異常'};
 if(!B?.Engine.IsSupported)throw new Error('このブラウザーでWebGLを利用できません。ブラウザーの3D描画設定を確認してください。');
 const engine=new B.Engine($('scene'),true),scene=new B.Scene(engine);scene.clearColor=B.Color4.FromHexString('#1b2925ff');
@@ -145,7 +145,7 @@ function advanceArm(dt,now){const j=activeJob;targetMarker.setEnabled(!!j&&preCo
     const safe=new B.Vector3(j.drop.x,1.6,j.drop.z);if(commandArm(j,safe)&&arm.near(safe,.1)){j.phase='return';j.t=0;}
   }else{robot(rest);if(arm.near(rest,.08)){activeJob=null;updateStatus();}}
 }
-function followHeldFruit(){const j=activeJob;if(j?.fruit){const rotation=B.Quaternion.RotationAxis(B.Axis.Y,arm.servo.joints[0]-j.holdYaw);j.fruit.root.position.copyFrom(j.holdOffset.rotateByQuaternionToRef(rotation,new B.Vector3()).add(claw.position));j.fruit.root.rotationQuaternion=rotation.multiply(j.holdQuaternion);}}
+function followHeldFruit(){const j=activeJob;if(j?.fruit){const rotation=B.Quaternion.RotationAxis(B.Axis.Y,j.holdYaw-arm.servo.joints[0]);j.fruit.root.position.copyFrom(j.holdOffset.rotateByQuaternionToRef(rotation,new B.Vector3()).add(claw.position));j.fruit.root.rotationQuaternion=rotation.multiply(j.holdQuaternion);}}
 
 function update(dt){if(paused||switching)return;const now=performance.now()/1000,speed=+$('speed').value;mechanics.setDrive(motorEnabled?speed:0);mechanics.setFriction(+$('friction').value);spawnClock+=motorEnabled?dt:0;scanClock+=dt;uiClock+=dt;
   if($('autoSpawn').checked&&speed>0&&spawnClock>=3){spawn();spawnClock=0;}
