@@ -1,4 +1,3 @@
-import '../yolo-camera/detection.js?v=20261025-line-yolo';
 
 const intersection=(a,b)=>Math.max(0,Math.min(a.x2,b.x2)-Math.max(a.x1,b.x1))*Math.max(0,Math.min(a.y2,b.y2)-Math.max(a.y1,b.y1));
 
@@ -17,30 +16,30 @@ export function associateDetections(boxes){
 }
 
 export async function createYoloDetector(onProgress=()=>{}){
-  if(!globalThis.ort)throw new Error('ONNX Runtimeを読み込めませんでした');
-  const configUrl=new URL('./models/quality-640/model.json?v=20261025-line-yolo',import.meta.url);
-  async function fetchChecked(url){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);try{const response=await fetch(url,{signal:controller.signal});if(!response.ok)throw new Error('HTTP '+response.status+'：'+new URL(url).pathname);return await response.arrayBuffer();}finally{clearTimeout(timer);}}
-  onProgress('YOLOv9モデル設定を読み込み中…');
-  const config=JSON.parse(new TextDecoder().decode(await fetchChecked(configUrl)));
-  if(config.inputSize!==640||config.boxFormat!=='xyxy'||config.classes.join(',')!=='mikan,mold,damage')throw new Error('YOLOモデルの入出力設定が想定と異なります');
-  ort.env.wasm.wasmPaths=new URL('../yolo-camera/vendor/',import.meta.url).href;ort.env.wasm.numThreads=1;
-  onProgress('YOLOv9モデルと推論エンジンを準備中…');
-  const bytes=await fetchChecked(new URL(config.url,configUrl));
-  const session=await ort.InferenceSession.create(bytes,{executionProviders:['wasm']});
-  const canvas=document.createElement('canvas');canvas.width=canvas.height=config.inputSize;const ctx=canvas.getContext('2d',{willReadFrequently:true}),source=document.createElement('canvas'),sourceCtx=source.getContext('2d');
-  let lastRaw=[],lastOrphans=[],runs=0;
+  const worker=new Worker(new URL('./yolo-worker.js?v=20261025-continuous',import.meta.url));
+  let sequence=0,failure=null,runs=0,lastRaw=[],lastOrphans=[];
+  const pending=new Map();
+  function fail(error){failure=error;worker.terminate();for(const request of pending.values()){clearTimeout(request.timer);request.reject(error);}pending.clear();}
+  worker.onerror=event=>{event.preventDefault();fail(new Error(event.message||'YOLO worker failed'));};
+  worker.onmessageerror=()=>fail(new Error('YOLO worker message failed'));
+  worker.onmessage=({data})=>{
+    if(data.type==='progress'){onProgress(data.message);return;}
+    const request=pending.get(data.id);if(!request)return;pending.delete(data.id);clearTimeout(request.timer);
+    if(data.error)request.reject(new Error(data.error));else request.resolve(data);
+  };
+  function call(type,payload={},transfer=[]){
+    if(failure)return Promise.reject(failure);
+    return new Promise((resolve,reject)=>{const id=++sequence,timer=setTimeout(()=>fail(new Error('YOLO worker timeout')),type==='init'?60000:30000);pending.set(id,{resolve,reject,timer});try{worker.postMessage({id,type,...payload},transfer);}catch(error){fail(error);}});
+  }
+  let config;try{({config}=await call('init'));}catch(error){fail(error);throw error;}
   return {
-    name:'yolov9-quality-640',label:'YOLOv9-T · 改善モデル640',config,
+    name:'yolov9-quality-640',label:'YOLOv9-T / 640 / Worker',execution:'worker',config,
     get runs(){return runs;},get lastRaw(){return lastRaw;},get lastOrphans(){return lastOrphans;},
     async detect(image,threshold=.25){
-      const size=config.inputSize,scale=Math.min(size/image.width,size/image.height),w=Math.round(image.width*scale),h=Math.round(image.height*scale),padX=Math.floor((size-w)/2),padY=Math.floor((size-h)/2);
-      source.width=image.width;source.height=image.height;sourceCtx.putImageData(image,0,0);ctx.fillStyle='rgb(114,114,114)';ctx.fillRect(0,0,size,size);ctx.drawImage(source,padX,padY,w,h);
-      const data=ctx.getImageData(0,0,size,size).data,plane=size*size,input=new Float32Array(plane*3);for(let i=0;i<plane;i++)for(let c=0;c<3;c++)input[c*plane+i]=data[i*4+c]/255;
-      let tensor,result;
-      try{tensor=new ort.Tensor('float32',input,[1,3,size,size]);result=await session.run({[session.inputNames[0]]:tensor});const output=result[session.outputNames[0]];
-        lastRaw=globalThis.YoloDetection.decode(output.data,output.dims,config.classes,threshold,{width:image.width,height:image.height,padX,padY,scaleX:w/image.width,scaleY:h/image.height},config.boxFormat);runs++;
-        const associated=associateDetections(lastRaw);lastOrphans=associated.unassigned;return associated.fruits;
-      }finally{tensor?.dispose();if(result)for(const value of Object.values(result))value.dispose();}
+      // Keep the original frame for the inspection preview; transfer a copy only.
+      const pixels=image.data.slice().buffer;
+      const result=await call('detect',{pixels,width:image.width,height:image.height,threshold},[pixels]);
+      lastRaw=result.raw;runs++;const associated=associateDetections(lastRaw);lastOrphans=associated.unassigned;return associated.fruits;
     },
   };
 }
