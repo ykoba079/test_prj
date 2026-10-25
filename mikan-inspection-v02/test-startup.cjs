@@ -1,9 +1,9 @@
 const {chromium}=require('C:/Users/ddydd/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const root=__dirname,server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}fs.readFile(file,(e,data)=>{if(e){res.writeHead(404).end();return;}res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.wasm')?'application/wasm':file.endsWith('.css')?'text/css':'text/html');res.end(data);});});
+const root=__dirname,siteRoot=path.resolve(root,'..'),server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(siteRoot+path.sep)){res.writeHead(403).end();return;}fs.readFile(file,(e,data)=>{if(e){res.writeHead(404).end();return;}res.setHeader('Content-Type',(file.endsWith('.js')||file.endsWith('.mjs'))?'text/javascript':file.endsWith('.wasm')?'application/wasm':file.endsWith('.css')?'text/css':'text/html');res.end(data);});});
 (async()=>{let browser;try{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-  const url=process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/index.html`,page=await browser.newPage({viewport:{width:1366,height:1000}}),requests=[],errors=[];
+  const url=process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html?detector=color`,page=await browser.newPage({viewport:{width:1366,height:1000}}),requests=[],errors=[];
   fs.mkdirSync(path.join(root,'qa'),{recursive:true});page.on('request',r=>requests.push(r.url()));page.on('pageerror',e=>{errors.push(e.message);console.log('PAGEERROR',e.message);});page.on('console',m=>{if(m.type()==='error')console.log('CONSOLE',m.text());});
   await page.route('https://cdn.babylonjs.com/**',r=>r.abort());
   let release;const gate=new Promise(r=>release=r);await page.route('**/vendor/HavokPhysics.wasm*',async r=>{await gate;await r.continue();});

@@ -1,0 +1,11 @@
+{
+  "name": "YOLOv9-T / quality improvement 640",
+  "url": "./mikan.onnx",
+  "inputSize": 640,
+  "classes": [
+    "mikan",
+    "mold",
+    "damage"
+  ],
+  "boxFormat": "xyxy"
+}

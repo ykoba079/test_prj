@@ -1,0 +1,38 @@
+{
+  "checkpoint_sha256": "2ce70696161609b78c6f08f03a934dd4aeaf009ef6cc9a0dc6f6da342683e6b5",
+  "onnx_sha256": "d180c7b40753da933bfb740d6ad0f909b91779aad7065a9f27783d606a8dfed2",
+  "source_revision": "c4cb5f6f56102eceeaa7d75e23e1125cd0373eaf",
+  "epoch": 17,
+  "validation_map": 0.9056105613708496,
+  "checks": [
+    {
+      "input": "zeros",
+      "shape": [
+        1,
+        7,
+        8400
+      ],
+      "max_abs_difference": 0.0207672119140625
+    },
+    {
+      "input": "random",
+      "shape": [
+        1,
+        7,
+        8400
+      ],
+      "max_abs_difference": 0.00872802734375
+    },
+    {
+      "input": "image",
+      "shape": [
+        1,
+        7,
+        8400
+      ],
+      "max_abs_difference": 0.005828857421875
+    }
+  ],
+  "rtol": 0.001,
+  "atol": 0.01
+}
