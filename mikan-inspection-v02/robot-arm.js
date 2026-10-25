@@ -1,4 +1,4 @@
-import {ARM,ARM_REST,createArmServo,inverse} from './arm-kinematics.js?v=20261026-fixed-arm-2';
+import {ARM,ARM_REST,createArmServo,inverse} from './arm-kinematics.js?v=20261026-reliable-pick';
 export function createRobotArm(B,scene,metal,accent){
   const servo=createArmServo(),meshes=[];
   function cylinder(name,height,diameter,material){const m=B.MeshBuilder.CreateCylinder(name,{height,diameter,tessellation:24},scene);m.material=material;m.layerMask=3;meshes.push(m);return m;}
@@ -21,6 +21,6 @@ export function createRobotArm(B,scene,metal,accent){
   render();
   return {meshes,links,claw,servo,canReach:target=>inverse(target).reachable,
     command:target=>servo.command(target),grip:closed=>servo.grip(closed),near:(target,tolerance)=>servo.near(target,tolerance),estimate:target=>servo.estimate(target),
-    step(dt){servo.step(dt);render();},reset(){servo.reset(ARM_REST);render();},
+    step(dt){for(let left=dt;left>1e-6;left-=.02)servo.step(Math.min(left,.02));render();},reset(){servo.reset(ARM_REST);render();},
   };
 }

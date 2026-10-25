@@ -18,7 +18,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
   await page.locator('#autoSpawn').uncheck();await page.locator('#pause').click();await page.waitForFunction(()=>!mikanDebug.busy);
   for(const [type,kind] of [[2,'damage'],[1,'mold']]){
     await page.locator('#reset').click();
-    const detected=await page.evaluate(async type=>{const f=mikanDebug.spawn(type,true,new BABYLON.Vector3(0,.35,0));f.visual.rotationQuaternion=BABYLON.Quaternion.RotationAxis(BABYLON.Axis.X,Math.PI);const v=mikanDebug.views[0];v.rt.resetRefreshCounter();mikanDebug.scene.render();const raw=await v.rt.readPixels(),image=new ImageData(640,320);for(let y=0;y<320;y++)image.data.set(raw.subarray((319-y)*2560,(320-y)*2560),y*2560);return await mikanDebug.detector.detect(image,.25);},type);
+    const detected=await page.evaluate(async type=>{const f=mikanDebug.spawn(type,true,new BABYLON.Vector3(0,.35,0));f.visual.rotationQuaternion=BABYLON.Quaternion.RotationAxis(BABYLON.Axis.X,Math.PI);const v=mikanDebug.views[0];v.rt.resetRefreshCounter();mikanDebug.scene.render();const raw=await v.rt.readPixels(),size=v.rt.getSize(),stride=size.width*4,image=new ImageData(size.width,size.height);for(let y=0;y<size.height;y++)image.data.set(raw.subarray((size.height-1-y)*stride,(size.height-y)*stride),y*stride);return await mikanDebug.detector.detect(image,.25);},type);
     assert.ok(detected.some(d=>d.defects.includes(kind)),JSON.stringify(detected));console.log('PASS actual camera image detects '+kind);
   }
   // Actual tracking, contact, empty grasps and provenance are in test-image-control.cjs.

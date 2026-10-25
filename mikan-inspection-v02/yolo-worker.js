@@ -10,6 +10,9 @@ async function createYoloDetector(onProgress=()=>{}){
   onProgress('YOLOv9モデルと推論エンジンを準備中…');
   const bytes=await fetchChecked(new URL(config.url,configUrl));
   const session=await ort.InferenceSession.create(bytes,{executionProviders:['wasm']});
+  onProgress('YOLOv9の初回実行を準備中…');
+  const warmup=new ort.Tensor('float32',new Float32Array(3*640*640),[1,3,640,640]);let warmResult;
+  try{warmResult=await session.run({[session.inputNames[0]]:warmup});}finally{warmup.dispose();if(warmResult)for(const value of Object.values(warmResult))value.dispose();}
   const canvas=new OffscreenCanvas(config.inputSize,config.inputSize);const ctx=canvas.getContext('2d',{willReadFrequently:true}),source=new OffscreenCanvas(1,1),sourceCtx=source.getContext('2d');
   let lastRaw=[],lastOrphans=[],runs=0;
   return {

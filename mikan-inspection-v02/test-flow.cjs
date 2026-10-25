@@ -1,0 +1,16 @@
+// Controlled visibility test: the defect initially faces up. A hidden underside is a separate limitation.
+const {chromium}=require('C:/Users/ddydd/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..');
+const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}fs.readFile(file,(e,d)=>{if(e){res.writeHead(404).end();return;}res.setHeader('Content-Type',({'.js':'text/javascript','.mjs':'text/javascript','.wasm':'application/wasm','.json':'application/json','.css':'text/css','.html':'text/html'})[path.extname(file)]||'application/octet-stream');res.end(d);});});
+(async()=>{let browser;try{
+  await new Promise(r=>server.listen(0,'127.0.0.1',r));browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});const page=await browser.newPage({viewport:{width:1280,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html`);await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});await page.locator('#autoSpawn').uncheck();await page.evaluate(()=>{globalThis.flowContact=null;mikanDebug.scene.onBeforeRenderObservable.add(()=>{const attempt=mikanDebug.attempts.find(a=>a.contactAt);if(attempt&&!flowContact)flowContact={fruit:globalThis.flowFruit?.root.position.asArray(),tool:attempt.actualTool,at:attempt.contactAt};});});
+  for(const type of (process.argv.includes('--damage-only')?[2]:[1,2])){
+    await page.locator('#reset').click();await page.evaluate(type=>{const f=mikanDebug.spawn(type,true,new BABYLON.Vector3(-2.7,.58,0));f.visual.rotationQuaternion=BABYLON.Quaternion.RotationAxis(BABYLON.Axis.X,Math.PI);globalThis.flowFruit=f;globalThis.flowContact=null;},type);
+    try{await page.waitForFunction(()=>mikanDebug.stats.reject===1||mikanDebug.stats.passed>0,null,{timeout:50000});}catch(error){console.log(await page.evaluate(()=>({stats:mikanDebug.stats,attempts:mikanDebug.attempts})));throw error;}
+    const result=await page.evaluate(()=>({contact:globalThis.flowContact,stats:{...mikanDebug.stats},attempts:mikanDebug.attempts.map(a=>({...a})),records:mikanDebug.records.map(t=>({id:t.id,defects:[...t.defects],reason:t.reason}))}));assert.equal(result.stats.reject,1,JSON.stringify(result));assert.equal(result.stats.pickFailed,0);assert.equal(result.attempts.filter(a=>a.result==='success').length,1);assert.ok(result.attempts[0].contactError<.3);assert.ok(result.records.some(t=>t.defects.includes(type===1?'mold':'damage')));console.log('PASS moving '+(type===1?'mold':'damage')+' image detection, tracking, following grasp and bin release; contact error '+result.attempts[0].contactError.toFixed(3));
+    await page.waitForFunction(()=>!mikanDebug.activeJob,null,{timeout:20000});
+  }
+  assert.deepEqual(errors,[]);
+}finally{await browser?.close();server.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
