@@ -1,8 +1,8 @@
 import {colorDetector} from './vision.js?v=20261025-bluegreen-mold';
 import {createFruitFactory,random} from './fruit.js?v=20261025-bluegreen-mold';
 import {createMechanics} from './physics.js?v=20261025-bluegreen-mold';
-import {createYoloDetector} from './yolo-detector.js?v=20261026-image-control';
-import {createImageTracker,fuseViews,PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261026-image-control';
+import {createYoloDetector} from './yolo-detector.js?v=20261026-image-control-2';
+import {createImageTracker,fuseViews,PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261026-image-control-2';
 const B=globalThis.BABYLON,$=id=>document.getElementById(id),names={mold:'カビ',damage:'傷'},stateNames={observing:'観測中',good:'良品通過',reject:'不良排除',unknown:'未判定隔離',sorting:'アーム移動中',escaping:'取り逃がし・搬送中',escaped:'取り逃がし通過',missed:'搬送異常'};
 if(!B?.Engine.IsSupported)throw new Error('このブラウザーでWebGLを利用できません。ブラウザーの3D描画設定を確認してください。');
 const engine=new B.Engine($('scene'),true),scene=new B.Scene(engine);scene.clearColor=B.Color4.FromHexString('#1b2925ff');
@@ -74,10 +74,11 @@ async function scan(){if(busy||paused||switching)return;busy=true;const detector
       if(token!==epoch||paused)return;const view=captures[i],raw=pixels[i];if(!raw)continue;
       const image=new ImageData(640,320);for(let y=0;y<320;y++)image.data.set(raw.subarray((319-y)*2560,(320-y)*2560),y*2560);
       const detections=await detector.detect(image,threshold);if(token!==epoch||paused)return;view.ctx.putImageData(image,0,0);view.overlay.clearRect(0,0,640,320);const calibrated=[];
+      const heldPixel=heldAtCapture?B.Vector3.Project(heldAtCapture.add(new B.Vector3(0,-.32,0)),B.Matrix.Identity(),view.viewMatrix.multiply(view.projectionMatrix),new B.Viewport(0,0,640,320)):null;
       for(const patch of detector.lastOrphans||[])drawBox(view.overlay,patch,'#c6a9f4',names[patch.kind]+' · 所属未確定');
       for(const d of detections){const world=worldAt(d,view);if(!world||world.x< -3.55||world.x>3.55||Math.abs(world.z)>1.35)continue;
         // Ignore fruit held at the robot's known gripper pose, not a simulator fruit ID.
-        if(heldAtCapture&&Math.hypot(world.x-heldAtCapture.x,world.z-heldAtCapture.z)<.75)continue;
+        if(heldPixel&&Math.hypot((d.x0+d.x1)/2-heldPixel.x,(d.y0+d.y1)/2-heldPixel.y)<55)continue;
         const scores={};if(Number.isFinite(d.score))scores.mikan=d.score;for(const patch of d.defectBoxes||[])scores[patch.kind]=Math.max(scores[patch.kind]||0,patch.score);
         calibrated.push({x:world.x,z:world.z,defects:d.defects,scores});drawBox(view.overlay,d,d.defects.length?'#ff967e':'#c6e49d',d.defects.map(k=>names[k]).join('・')||'不良未検出');
         for(const patch of d.defectBoxes||[])drawBox(view.overlay,patch,patch.kind==='mold'?'#39d9e5':'#ffc385',names[patch.kind]+' '+Math.round(patch.score*100)+'%');
