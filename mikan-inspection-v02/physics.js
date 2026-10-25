@@ -28,7 +28,7 @@ export async function createMechanics(scene,rollers){
   const fruitShape=new B.PhysicsShapeConvexHull(hullMesh,scene);hullMesh.dispose();
   fruitShape.material={friction:.7,restitution:.02};
   const staticBodies=[];
-  for(const mesh of scene.meshes.filter(m=>m.name==='floor'||m.name==='rail')){
+  for(const mesh of scene.meshes.filter(m=>m.name==='floor'||m.name==='rail'||/^(良品|不良|未判定)-(bottom|wall)$/.test(m.name))){
     const aggregate=new B.PhysicsAggregate(mesh,B.PhysicsShapeType.BOX,{mass:0,friction:.5,restitution:0},scene);staticBodies.push(aggregate);
   }
   let friction=.7;

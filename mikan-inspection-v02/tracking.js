@@ -1,6 +1,6 @@
 // This module accepts calibrated image measurements only. No meshes or simulator IDs.
 export const PICK_ZONE={minX:1.55,maxX:3.25,maxZ:1.3};
-export const TRACK_RULE={maxAge:1.8,expireAge:5,minFrames:12,approachSeconds:.5};
+export const TRACK_RULE={maxAge:3,expireAge:5,minFrames:12,defaultLeadSeconds:.5};
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function fuseViews(views){
   const observations=[];
@@ -51,7 +51,7 @@ export function createImageTracker(){
   }
   function eligible(t,now){return !t.closed&&t.state==='observing'&&!t.ambiguous&&t.frames>=2&&now-t.lastSeen<=TRACK_RULE.maxAge;}
   function outcome(t){return t.defects.size?'reject':t.frames>=TRACK_RULE.minFrames&&!Object.values(t.evidence).some(Boolean)?'good':'unknown';}
-  function target(t,now,lead=TRACK_RULE.approachSeconds){if(!eligible(t,now))return null;const p=predict(t,now+lead);return p.x>=PICK_ZONE.minX&&p.x<=PICK_ZONE.maxX&&Math.abs(p.z)<=PICK_ZONE.maxZ?{...p,y:.35}:null;}
+  function target(t,now,lead=TRACK_RULE.defaultLeadSeconds){if(!eligible(t,now))return null;const p=predict(t,now+lead);return p.x>=PICK_ZONE.minX&&p.x<=PICK_ZONE.maxX&&Math.abs(p.z)<=PICK_ZONE.maxZ?{...p,y:.35}:null;}
   return {get tracks(){return tracks;},get records(){return records;},predict,update,note,close,eligible,outcome,target,
     drainEvents(){return events.splice(0);},
     reset(){tracks=[];records=[];events.length=0;nextId=1;},
