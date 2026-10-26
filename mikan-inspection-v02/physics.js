@@ -31,18 +31,18 @@ export async function createMechanics(scene,rollers){
   for(const mesh of scene.meshes.filter(m=>m.name==='floor'||m.name==='rail'||/^(良品|不良|未判定)-(bottom|wall)$/.test(m.name))){
     const aggregate=new B.PhysicsAggregate(mesh,B.PhysicsShapeType.BOX,{mass:0,friction:.5,restitution:0},scene);staticBodies.push(aggregate);
   }
-  let friction=.7;
+  let friction=.7;const fruitBodies=new Map();
   return {
-    plugin,rollers,fruitShape,
+    plugin,rollers,fruitShape,fruitForBody:body=>fruitBodies.get(body)||null,
     setDrive(speed){for(const r of rollers)r.body.setAngularVelocity(new B.Vector3(0,0,-speed));},
     setFriction(value){if(value===friction)return;friction=value;fruitShape.material={friction:value,restitution:.02};rollerShape.material={friction:value===0?0:.9,restitution:0};},
     addFruit(f){
       const body=new B.PhysicsBody(f.root,B.PhysicsMotionType.DYNAMIC,false,scene);
       body.shape=fruitShape;body.setMassProperties({mass:.18});body.setLinearDamping(.04);body.setAngularDamping(.12);
-      f.body=body;f.contacts=0;body.setCollisionCallbackEnabled(true);
+      f.body=body;fruitBodies.set(body,f);f.contacts=0;body.setCollisionCallbackEnabled(true);
       body.getCollisionObservable().add(e=>{if(rollers.some(r=>r.body===e.collider||r.body===e.collidedAgainst))f.contacts++;});
     },
-    detachFruit(f){if(f.body){f.body.dispose();f.body=null;}},
+    detachFruit(f){if(f.body){fruitBodies.delete(f.body);f.body.dispose();f.body=null;}},
     pause(value){scene.physicsEnabled=!value;},
   };
 }

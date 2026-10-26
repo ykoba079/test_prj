@@ -1,4 +1,4 @@
-import {PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261026-reliable-pick';
+import {PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261027-havok-grip';
 export const PICK_RULE={stationX:2.3,hoverY:1.42,closeSeconds:.25,maxFinalLead:1.5,minFinalX:1.2,maxFinalX:3.1,followLeadSeconds:.4};
 // estimate() is derived from robot joints. tracker data is calibrated image data only.
 export function chooseIntercept(tracker,track,now,estimate,onReject=()=>{}){
