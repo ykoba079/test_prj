@@ -21,12 +21,11 @@ export function inverse(target){
 }
 export function createArmServo(initial=ARM_REST){
   const start=inverse(initial);if(!start.reachable)throw new Error('Invalid robot rest pose');
-  let joints=[...start.joints],goal=[...joints],velocity=[0,0,0],jaw=1.60,jawGoal=1.60;
-  return {get joints(){return [...joints];},get velocity(){return [...velocity];},get jaw(){return jaw;},get pose(){return forward(joints);},
+  let joints=[...start.joints],goal=[...joints],velocity=[0,0,0],valveOn=false;
+  return {get joints(){return [...joints];},get velocity(){return [...velocity];},get valveOn(){return valveOn;},get pose(){return forward(joints);},
     command(target){const result=inverse(target);if(result.reachable)goal=[...result.joints];return result;},
-    grip(closed){jawGoal=closed?.76:1.60;},
-    get gripReady(){return Math.abs(jaw-jawGoal)<.005;},
-    reset(target=initial){const result=inverse(target);if(!result.reachable)throw new Error('Invalid robot reset pose');joints=[...result.joints];goal=[...joints];velocity=[0,0,0];jaw=jawGoal=1.60;},
+    grip(on){valveOn=!!on;},
+    reset(target=initial){const result=inverse(target);if(!result.reachable)throw new Error('Invalid robot reset pose');joints=[...result.joints];goal=[...joints];velocity=[0,0,0];valveOn=false;},
     near(target,tolerance=.07){const p=forward(joints).tcp;return Math.hypot(p.x-target.x,p.y-target.y,p.z-target.z)<tolerance&&Math.max(...velocity.map(Math.abs))<.35;},
     estimate(target){
       const result=inverse(target);if(!result.reachable)return Infinity;
@@ -46,7 +45,6 @@ export function createArmServo(initial=ARM_REST){
         velocity[i]+=clamp(wanted-velocity[i],-acc*dt,acc*dt);
         joints[i]=clamp(joints[i]+velocity[i]*dt,...ARM.limits[i]);
       }
-      jaw+=clamp(jawGoal-jaw,-1.3*dt,1.3*dt);
       return forward(joints);
     },
   };

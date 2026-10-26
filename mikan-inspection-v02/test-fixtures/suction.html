@@ -2,12 +2,14 @@
 import {createMechanics} from '../physics.js';
 import {createRobotArm} from '../robot-arm.js';
 import {createFruitFactory} from '../fruit.js';
-import {createPhysicalGripper} from '../gripper-physics.js';
+import {createVacuumGripper} from '../vacuum-physics.js';
 const B=BABYLON,engine=new B.Engine(document.getElementById('view'),true),scene=new B.Scene(engine);scene.clearColor=new B.Color4(.12,.17,.16,1);
 const camera=new B.ArcRotateCamera('camera',-Math.PI/2.5,Math.PI/3,5,new B.Vector3(2.2,.6,0),scene);camera.attachControl();new B.HemisphericLight('light',new B.Vector3(0,1,0),scene);
 const floor=B.MeshBuilder.CreateBox('floor',{width:28,height:.08,depth:20},scene);floor.position.y=-.04;
+const wall=B.MeshBuilder.CreateBox('rail',{width:4,height:.35,depth:.10},scene);wall.position.set(2.2,.175,.50);
 const mechanics=await createMechanics(scene,[]),metal=new B.StandardMaterial('metal',scene),shell=new B.StandardMaterial('shell',scene);metal.diffuseColor=new B.Color3(.35,.4,.45);shell.diffuseColor=new B.Color3(.8,.85,.8);
-const arm=createRobotArm(B,scene,metal,shell);arm.reset({x:2.2,y:.67,z:0});const gripper=createPhysicalGripper(B,scene,arm,mechanics),create=createFruitFactory(scene);
+wall.material=metal;
+const arm=createRobotArm(B,scene,metal,shell);arm.reset({x:2.2,y:.77,z:0});const vacuum=createVacuumGripper(B,scene,arm,mechanics),create=createFruitFactory(scene);
 let fruit=create({id:1,type:0});fruit.root.position.set(2.2,.38,0);mechanics.addFruit(fruit);
-let last=performance.now();engine.runRenderLoop(()=>{const now=performance.now(),dt=Math.min((now-last)/1000,.1);last=now;arm.step(dt);gripper.update(dt);scene.render();});globalThis.fixture={scene,arm,gripper,mechanics,fruit};
+let last=performance.now();engine.runRenderLoop(()=>{const now=performance.now(),dt=Math.min((now-last)/1000,.1);last=now;arm.step(dt);vacuum.update(dt);scene.render();});globalThis.fixture={scene,arm,vacuum,mechanics,fruit};
 </script>
