@@ -60,6 +60,12 @@ export async function createMechanics(scene,rollers){
   });
   return {
     plugin,rollers,get fruitShape(){return fruitShape();},fruitForBody:body=>fruitBodies.get(body)||null,
+    syncLayout(){
+      // A setting change resets fruit first; teleport equipment once, then resume velocity drive.
+      const bodies=[...rollers.map(r=>r.body),...staticBodies.map(a=>a.body)];
+      for(const body of bodies)body.setPrestepType(B.PhysicsPrestepType.TELEPORT);
+      scene.onAfterPhysicsObservable.addOnce(()=>{for(const body of bodies)body.setPrestepType(B.PhysicsPrestepType.DISABLED);});
+    },
     setRollingPreset(name){if(!ROLLING_PRESETS[name])throw new Error('Unknown rolling preset');preset=name;friction=rule().friction;applyMaterials();},
     readRolling(){return {preset,...rule(),friction,fruitMaterial:fruitShape().material,rollerMaterial:rollerShape.material};},
     rollingStatus(f){const recent=[...(f.rollerContacts?.values()||[])].filter(c=>clock-c.time<.035);return {contacts:recent.length,slip:recent.length?recent.reduce((sum,c)=>sum+c.slip,0)/recent.length:null,angularSpeed:f.body?.getAngularVelocity().length()||0};},

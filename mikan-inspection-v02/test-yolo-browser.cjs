@@ -21,6 +21,12 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
     const detected=await page.evaluate(async type=>{const f=mikanDebug.spawn(type,true,new BABYLON.Vector3(0,.35,0));f.visual.rotationQuaternion=BABYLON.Quaternion.RotationAxis(BABYLON.Axis.X,Math.PI);const v=mikanDebug.views[0];v.rt.resetRefreshCounter();mikanDebug.scene.render();const raw=await v.rt.readPixels(),size=v.rt.getSize(),stride=size.width*4,image=new ImageData(size.width,size.height);for(let y=0;y<size.height;y++)image.data.set(raw.subarray((size.height-1-y)*stride,(size.height-y)*stride),y*stride);return await mikanDebug.detector.detect(image,.25);},type);
     assert.ok(detected.some(d=>d.defects.includes(kind)),JSON.stringify(detected));console.log('PASS actual camera image detects '+kind);
   }
+  await page.locator('#slopeAngle').selectOption('5');await page.locator('#reset').click();
+  const tilted=await page.evaluate(async()=>{
+    const d=mikanDebug,f=d.spawn(1,true,new BABYLON.Vector3(0,d.line.heightAt(0),0));f.visual.rotationQuaternion=BABYLON.Quaternion.RotationAxis(BABYLON.Axis.X,Math.PI);const results=[];
+    for(const v of d.views){v.rt.resetRefreshCounter();d.scene.render();const raw=await v.rt.readPixels(),image=new ImageData(640,480);for(let y=0;y<480;y++)image.data.set(raw.subarray((479-y)*2560,(480-y)*2560),y*2560);results.push({camera:v.id,fruits:await d.detector.detect(image,.25)});}return results;
+  });console.log('MEASURE actual YOLO images at 5 degrees (misses are retained):',JSON.stringify(tilted));
+  await page.locator('#slopeAngle').selectOption('0');
   // Actual tracking, contact, empty grasps and provenance are in test-image-control.cjs.
   await page.locator('#detector').selectOption('color');await page.waitForFunction(()=>!mikanDebug.switching&&mikanDebug.detector.name==='color-demo');assert.equal(await page.locator('#confidence').isDisabled(),true);
   await page.locator('#detector').selectOption('yolo');await page.waitForFunction(()=>!mikanDebug.switching&&mikanDebug.detector.name==='yolov9-quality-640');assert.equal(await page.locator('#confidence').isDisabled(),false);
