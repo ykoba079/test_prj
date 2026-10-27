@@ -1,4 +1,5 @@
 const B=globalThis.BABYLON;
+export const ROLLER_TRIAL={minX:-1.2,maxX:1.2,defaultDifference:.10};
 
 export async function createMechanics(scene,rollers){
   if(typeof globalThis.HavokPhysics!=='function')throw new Error('Havokのスクリプトを取得できませんでした');
@@ -34,7 +35,16 @@ export async function createMechanics(scene,rollers){
   let friction=.7;const fruitBodies=new Map();
   return {
     plugin,rollers,fruitShape,fruitForBody:body=>fruitBodies.get(body)||null,
-    setDrive(speed){for(const r of rollers)r.body.setAngularVelocity(new B.Vector3(0,0,-speed));},
+    setDrive(speed,difference=0){
+      const delta=Math.max(0,Math.min(.25,difference));
+      let zoneIndex=0;
+      for(const r of rollers){
+        const inZone=r.position.x>=ROLLER_TRIAL.minX&&r.position.x<=ROLLER_TRIAL.maxX;
+        const factor=inZone?1+(zoneIndex++%2===0?-delta:delta):1;
+        r.driveSpeed=speed*factor;
+        r.body.setAngularVelocity(new B.Vector3(0,0,-r.driveSpeed));
+      }
+    },
     setFriction(value){if(value===friction)return;friction=value;fruitShape.material={friction:value,restitution:.02};rollerShape.material={friction:value===0?0:.9,restitution:0};},
     addFruit(f){
       const body=new B.PhysicsBody(f.root,B.PhysicsMotionType.DYNAMIC,false,scene);
