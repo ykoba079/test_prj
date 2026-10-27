@@ -35,7 +35,14 @@ function robot(target){return arm.command(target);}
 // Each camera's schematic housing sits in its own optical path, so omit only itself.
 const inspectionEquipment=[...scene.meshes];
 const views=['A','B'].map(id=>{
-  const camera=new B.FreeCamera('inspection-'+id,new B.Vector3(1.2,9,id==='A'?0:8.65),scene);camera.upVector=new B.Vector3(0,0,1);camera.setTarget(new B.Vector3(1.2,.35,0));camera.mode=B.Camera.ORTHOGRAPHIC_CAMERA;camera.orthoLeft=-2.4;camera.orthoRight=2.4;camera.orthoTop=1.8;camera.orthoBottom=-1.8;camera.layerMask=3;
+  const camera=new B.FreeCamera('inspection-'+id,id==='A'?new B.Vector3(1.2,9,0):camHousing.position.clone(),scene);camera.upVector=new B.Vector3(0,0,1);camera.setTarget(new B.Vector3(1.2,.35,0));camera.layerMask=3;
+  if(id==='A'){
+    camera.mode=B.Camera.ORTHOGRAPHIC_CAMERA;camera.orthoLeft=-2.4;camera.orthoRight=2.4;camera.orthoTop=1.8;camera.orthoBottom=-1.8;
+  }else{
+    camera.mode=B.Camera.PERSPECTIVE_CAMERA;camera.fov=65*Math.PI/180;camera.minZ=.05;camera.maxZ=100;
+    // Keep image calibration at the 640x480 sensor aspect, independent of the UI canvas.
+    camera.freezeProjectionMatrix(B.Matrix.PerspectiveFovLH(camera.fov,FRAME.width/FRAME.height,camera.minZ,camera.maxZ));
+  }
   const rt=new B.RenderTargetTexture('frame-'+id,FRAME,scene,false,true,B.Engine.TEXTURETYPE_UNSIGNED_BYTE);rt.refreshRate=0;rt.activeCamera=camera;rt.renderList=inspectionEquipment.filter(mesh=>mesh!==(id==='A'?topHousing:camHousing));rt.clearColor=new B.Color4(.08,.1,.09,1);scene.customRenderTargets.push(rt);
   return {id,camera,rt,ctx:$('inspection'+id).getContext('2d'),overlay:$('overlay'+id).getContext('2d')};
 });
@@ -71,6 +78,12 @@ function flushEvents(){for(const e of tracker.drainEvents()){if(e.message==='画
 function spawn(type=null,hidden=false,position=null){if(fruits.filter(f=>!f.sorted).length>=14||(!position&&fruits.some(f=>!f.picked&&f.root.position.x< -5.2)))return null;const f=createFruit({id:nextId++,type:type??(rng()*100<+$('rate').value?(rng()<.5?1:2):0),hidden});f.root.position.copyFrom(position??new B.Vector3(-6.4,.58,0));mechanics.addFruit(f);fruits.push(f);for(const v of views)v.rt.renderList.push(...f.meshes);return f;}
 function remove(f){for(const v of views)v.rt.renderList=v.rt.renderList.filter(m=>!f.meshes.includes(m));mechanics.detachFruit(f);f.root.dispose();for(const m of f.ownedMaterials)m.dispose(false,true);fruits=fruits.filter(a=>a!==f);}
 function worldAt(d,view){const ray=B.Ray.CreateNew((d.x0+d.x1)/2,(d.y0+d.y1)/2,FRAME.width,FRAME.height,B.Matrix.Identity(),view.viewMatrix,view.projectionMatrix);const t=ray.intersectsPlane(new B.Plane(0,1,0,-.35));return t===null?null:ray.origin.add(ray.direction.scale(t));}
+function projectedFruitDiameter(d,view){
+  const center=worldAt(d,view);if(!center)return NaN;
+  const transform=view.viewMatrix.multiply(view.projectionMatrix),viewport=new B.Viewport(0,0,FRAME.width,FRAME.height);
+  const left=B.Vector3.Project(center.add(new B.Vector3(-.39,0,0)),B.Matrix.Identity(),transform,viewport),right=B.Vector3.Project(center.add(new B.Vector3(.39,0,0)),B.Matrix.Identity(),transform,viewport);
+  return Math.hypot(right.x-left.x,right.y-left.y);
+}
 function drawBox(ctx,b,color,text){ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);ctx.fillStyle=color;ctx.font='12px sans-serif';ctx.fillText(text,b.x0,Math.max(13,b.y0-4));}
 async function scan(){if(busy||paused||switching)return;busy=true;const detector=activeDetector,threshold=+$('confidence').value/100,token=epoch,frame=++tick,capturedAt=performance.now()/1000,t0=performance.now();
   const heldAtCapture=activeJob?.fruit?claw.position.clone():null;
@@ -88,7 +101,7 @@ async function scan(){if(busy||paused||switching)return;busy=true;const detector
       if(token!==epoch||paused)return;if(!result)continue;const {view,image,detections,orphans}=result;view.ctx.putImageData(image,0,0);view.overlay.clearRect(0,0,FRAME.width,FRAME.height);const calibrated=[];
       const heldPixel=heldAtCapture?B.Vector3.Project(heldAtCapture.add(new B.Vector3(0,-.32,0)),B.Matrix.Identity(),view.viewMatrix.multiply(view.projectionMatrix),new B.Viewport(0,0,FRAME.width,FRAME.height)):null;
       for(const patch of orphans)drawBox(view.overlay,patch,'#c6a9f4',names[patch.kind]+' · 所属未確定');
-      for(const d of detections){const support=checkFruitObservation(image,d,FRAME.width*.78/(view.camera.orthoRight-view.camera.orthoLeft));if(!support.valid||view.id==='A'&&!support.complete){stats.observationRejected++;continue;}const center=view.id==='A'&&support.center;const world=worldAt(center?{x0:center.x-.5,x1:center.x+.5,y0:center.y-.5,y1:center.y+.5}:d,view);if(!world||world.x< -3.55||world.x>3.55||Math.abs(world.z)>1.35)continue;
+      for(const d of detections){const expectedDiameter=projectedFruitDiameter(d,view);if(!Number.isFinite(expectedDiameter)||expectedDiameter<=0){stats.observationRejected++;continue;}const support=checkFruitObservation(image,d,expectedDiameter);if(!support.valid||view.id==='A'&&!support.complete){stats.observationRejected++;continue;}const center=view.id==='A'&&support.center;const world=worldAt(center?{x0:center.x-.5,x1:center.x+.5,y0:center.y-.5,y1:center.y+.5}:d,view);if(!world||world.x< -3.55||world.x>3.55||Math.abs(world.z)>1.35)continue;
         // Ignore fruit held at the robot's known gripper pose, not a simulator fruit ID.
         if(heldPixel&&Math.hypot((d.x0+d.x1)/2-heldPixel.x,(d.y0+d.y1)/2-heldPixel.y)<55)continue;
         const scores={};if(Number.isFinite(d.score))scores.mikan=d.score;for(const patch of d.defectBoxes||[])scores[patch.kind]=Math.max(scores[patch.kind]||0,patch.score);
