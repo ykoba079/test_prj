@@ -9,7 +9,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
  await page.goto(process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html?detector=color`);await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});await page.locator('#autoSpawn').uncheck();
  const reports=[];
  for(const degrees of [0,2,5]){
-  await page.locator('#slopeAngle').selectOption(String(degrees));await page.locator('#reset').click();await page.waitForTimeout(150);
+  await page.locator('#slopeAngle').selectOption(String(degrees));await page.evaluate(()=>mikanDebug.reset(false));await page.waitForTimeout(150);
   const calibration=await page.evaluate(async degrees=>{
    const B=BABYLON,d=mikanDebug,g=d.line,vp=new B.Viewport(0,0,640,480),points=[];
    for(const v of d.views)for(const x of [-.5,1.55,2.3,3.1])for(const z of [-.8,.8]){

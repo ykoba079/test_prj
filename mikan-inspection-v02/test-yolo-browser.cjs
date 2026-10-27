@@ -12,16 +12,16 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
   assert.deepEqual(associations.fruits.map(f=>f.defects),[['mold'],['damage']]);assert.equal(associations.unassigned.length,1);
   console.log('PASS actual YOLO startup and image-space defect association');
   assert.equal(await page.evaluate(()=>mikanDebug.detector.execution),'worker');
-  await page.locator('#pause').click();await page.waitForFunction(()=>!mikanDebug.busy);
+  await page.evaluate(()=>mikanDebug.setPaused(!mikanDebug.paused));await page.waitForFunction(()=>!mikanDebug.busy);
   const responsiveness=await page.evaluate(async()=>{const start=mikanDebug.scene.getFrameId(),t0=performance.now();let ticks=0;const timer=setInterval(()=>ticks++,10);try{await mikanDebug.detector.detect(new ImageData(640,320),.25);return {ticks,frames:mikanDebug.scene.getFrameId()-start,elapsed:performance.now()-t0};}finally{clearInterval(timer);}});
-  assert.ok(responsiveness.ticks>=3&&responsiveness.frames>=2,JSON.stringify(responsiveness));console.log('PASS main-thread heartbeat and 3D frames continue during actual worker inference',responsiveness);await page.locator('#pause').click();
-  await page.locator('#autoSpawn').uncheck();await page.locator('#pause').click();await page.waitForFunction(()=>!mikanDebug.busy);
+  assert.ok(responsiveness.ticks>=3&&responsiveness.frames>=2,JSON.stringify(responsiveness));console.log('PASS main-thread heartbeat and 3D frames continue during actual worker inference',responsiveness);await page.evaluate(()=>mikanDebug.setPaused(!mikanDebug.paused));
+  await page.locator('#autoSpawn').uncheck();await page.evaluate(()=>mikanDebug.setPaused(!mikanDebug.paused));await page.waitForFunction(()=>!mikanDebug.busy);
   for(const [type,kind] of [[2,'damage'],[1,'mold']]){
-    await page.locator('#reset').click();
+    await page.evaluate(()=>mikanDebug.reset(false));
     const detected=await page.evaluate(async type=>{const f=mikanDebug.spawn(type,true,new BABYLON.Vector3(0,.35,0));f.visual.rotationQuaternion=BABYLON.Quaternion.RotationAxis(BABYLON.Axis.X,Math.PI);const v=mikanDebug.views[0];v.rt.resetRefreshCounter();mikanDebug.scene.render();const raw=await v.rt.readPixels(),size=v.rt.getSize(),stride=size.width*4,image=new ImageData(size.width,size.height);for(let y=0;y<size.height;y++)image.data.set(raw.subarray((size.height-1-y)*stride,(size.height-y)*stride),y*stride);return await mikanDebug.detector.detect(image,.25);},type);
     assert.ok(detected.some(d=>d.defects.includes(kind)),JSON.stringify(detected));console.log('PASS actual camera image detects '+kind);
   }
-  await page.locator('#slopeAngle').selectOption('5');await page.locator('#reset').click();
+  await page.locator('#slopeAngle').selectOption('5');await page.evaluate(()=>mikanDebug.reset(false));
   const tilted=await page.evaluate(async()=>{
     const d=mikanDebug,f=d.spawn(1,true,new BABYLON.Vector3(0,d.line.heightAt(0),0));f.visual.rotationQuaternion=BABYLON.Quaternion.RotationAxis(BABYLON.Axis.X,Math.PI);const results=[];
     for(const v of d.views){v.rt.resetRefreshCounter();d.scene.render();const raw=await v.rt.readPixels(),image=new ImageData(640,480);for(let y=0;y<480;y++)image.data.set(raw.subarray((479-y)*2560,(480-y)*2560),y*2560);results.push({camera:v.id,fruits:await d.detector.detect(image,.25)});}return results;

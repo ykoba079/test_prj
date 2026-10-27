@@ -6,3 +6,19 @@
 /* B display is mirrored vertically; overlays remap y in app.js to keep labels upright. */
 #inspectionB{transform:scaleY(-1)}
 .aux-views{display:grid;grid-template-columns:1fr;gap:0}.aux-views .camera{margin:0 7px}.aux-views .view-label{font-size:10px}
+
+/* Keep the moving scene visible while the independent settings column scrolls. */
+header{padding-top:14px;padding-bottom:14px}main{padding-top:18px}.intro{margin-bottom:14px}
+.inspection-views{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.inspection-views .view-label{padding:0 8px 6px;font-size:9px;letter-spacing:0}
+.inspection-views .camera{margin:0 6px 10px}
+aside .controls{padding:12px;gap:8px}.metrics{padding:10px 0}.metrics strong{font-size:21px}
+aside input[type=range]{margin-top:4px}aside select{padding:6px 8px;margin-top:3px}
+.inspection-footer{border-top:1px solid #32443b;padding:14px 18px;margin-top:16px}
+.inspection-footer .caption{padding:0;margin:0;line-height:1.8}
+@media(min-width:1001px){
+  .scene-panel{position:sticky;top:12px}
+  #scene{height:clamp(300px,calc(100dvh - 360px),600px)}
+  aside{position:sticky;top:12px;max-height:calc(100dvh - 24px);overflow-y:auto;scrollbar-gutter:stable}
+  .scene-controls{padding:10px;gap:6px}
+}

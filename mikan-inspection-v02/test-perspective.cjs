@@ -7,7 +7,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
  await new Promise(r=>server.listen(0,'127.0.0.1',r));browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const page=await browser.newPage({viewport:{width:1440,height:1150}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html`);await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});
- await page.locator('#autoSpawn').uncheck();await page.locator('#pause').click();await page.waitForFunction(()=>!mikanDebug.busy);await page.locator('#reset').click();
+ await page.locator('#autoSpawn').uncheck();await page.evaluate(()=>mikanDebug.setPaused(!mikanDebug.paused));await page.waitForFunction(()=>!mikanDebug.busy);await page.evaluate(()=>mikanDebug.reset(false));
  const measured=await page.evaluate(async()=>{
   const B=BABYLON,d=mikanDebug,vp=new B.Viewport(0,0,640,480);
   const project=(view,p)=>B.Vector3.Project(p,B.Matrix.Identity(),view.camera.getViewMatrix().multiply(view.camera.getProjectionMatrix()),vp);
@@ -26,9 +26,9 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
   globalThis.testOverlayRects=[];globalThis.restorePerspectiveDetector=mikanDebug.detector.detectFrame;globalThis.restorePerspectiveStroke=v.overlay.strokeRect;
   v.overlay.strokeRect=function(...args){testOverlayRects.push(args);return restorePerspectiveStroke.apply(this,args);};mikanDebug.detector.detectFrame=async(image,threshold,index)=>({fruits:index===1?[box]:[],orphans:[]});return {x:box.x0,y:480-box.y1,width:102,height:92};
  });
- await page.locator('#pause').click();await page.evaluate(()=>mikanDebug.mechanics.pause(true));await page.waitForFunction(()=>testOverlayRects.length>0,null,{timeout:5000});
+ await page.evaluate(()=>mikanDebug.setPaused(!mikanDebug.paused));await page.evaluate(()=>mikanDebug.mechanics.pause(true));await page.waitForFunction(()=>testOverlayRects.length>0,null,{timeout:5000});
  const overlayRect=await page.evaluate(()=>testOverlayRects[0]);assert.ok(Math.abs(overlayRect[0]-expectedOverlay.x)<1e-5&&Math.abs(overlayRect[1]-expectedOverlay.y)<1e-5);assert.equal(overlayRect[2],expectedOverlay.width);assert.equal(overlayRect[3],expectedOverlay.height);
- await page.locator('#pause').click();await page.waitForFunction(()=>!mikanDebug.busy);await page.evaluate(()=>{mikanDebug.detector.detectFrame=restorePerspectiveDetector;mikanDebug.views[1].overlay.strokeRect=restorePerspectiveStroke;});console.log('PASS actual scan draws B detection boxes at vertically mirrored coordinates');
+ await page.evaluate(()=>mikanDebug.setPaused(!mikanDebug.paused));await page.waitForFunction(()=>!mikanDebug.busy);await page.evaluate(()=>{mikanDebug.detector.detectFrame=restorePerspectiveDetector;mikanDebug.views[1].overlay.strokeRect=restorePerspectiveStroke;});console.log('PASS actual scan draws B detection boxes at vertically mirrored coordinates');
  const display=await page.evaluate(()=>({image:getComputedStyle(document.getElementById('inspectionB')).transform,overlay:getComputedStyle(document.getElementById('overlayB')).transform}));assert.equal(display.image,'matrix(1, 0, 0, -1, 0, 0)');assert.equal(display.overlay,'none');
  fs.mkdirSync(path.join(root,'qa'),{recursive:true});await page.locator('#inspectionB').screenshot({path:path.join(root,'qa/perspective-b-display.png')});console.log('PASS B display flips vertically while labels remain upright');
  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(150);const mobileProjection=await page.evaluate(()=>mikanDebug.views[1].camera.getProjectionMatrix().asArray());assert.deepEqual(mobileProjection,measured.bProjection);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);

@@ -1,0 +1,11 @@
+{
+  "name": "YOLOv9-T / same quality weights / 320",
+  "url": "./mikan.onnx",
+  "inputSize": 320,
+  "classes": [
+    "mikan",
+    "mold",
+    "damage"
+  ],
+  "boxFormat": "xyxy"
+}

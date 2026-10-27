@@ -25,9 +25,12 @@ export async function createMechanics(scene,rollers){
   scene.enablePhysics(new B.Vector3(0,-9.81,0),plugin);
   scene.getPhysicsEngine().setSubTimeStep(1000/120);
   const rollerShape=new B.PhysicsShapeCylinder(new B.Vector3(0,-1.325,0),new B.Vector3(0,1.325,0),.15,scene);
+  const slowRollerShape=new B.PhysicsShapeCylinder(new B.Vector3(0,-1.325,0),new B.Vector3(0,1.325,0),.15,scene);
+  const slowCollisionMask=slowRollerShape.filterCollideMask;let zoneIndex=0;
   for(const roller of rollers){
+    roller.driveRole=roller.position.x>=ROLLER_TRIAL.minX&&roller.position.x<=ROLLER_TRIAL.maxX?(zoneIndex++%2===0?'slow':'fast'):'normal';
     const body=new B.PhysicsBody(roller,B.PhysicsMotionType.ANIMATED,false,scene);
-    body.shape=rollerShape;body.setMassProperties({mass:10});
+    body.shape=roller.driveRole==='slow'?slowRollerShape:rollerShape;body.setMassProperties({mass:10});
     roller.body=body;
   }
   // Bake the same ellipsoid proportions as the visible fruit into the collision hull.
@@ -40,7 +43,7 @@ export async function createMechanics(scene,rollers){
   for(const mesh of scene.meshes.filter(m=>m.name==='floor'||m.name==='rail'||/^(良品|不良|未判定)-(bottom|wall)$/.test(m.name))){
     const aggregate=new B.PhysicsAggregate(mesh,B.PhysicsShapeType.BOX,{mass:0,friction:.5,restitution:0},scene);staticBodies.push(aggregate);
   }
-  let preset='combined',friction=1,clock=0;const fruitBodies=new Map();
+  let preset='combined',friction=1,clock=0,slowRollersRemoved=false;const fruitBodies=new Map();
   const rule=()=>ROLLING_PRESETS[preset],fruitShape=()=>fruitShapes.get(rule().segments);
   function applyMaterials(){
     const combine=B.PhysicsMaterialCombineMode.MINIMUM,staticFriction=friction*rule().staticRatio;
@@ -48,6 +51,7 @@ export async function createMechanics(scene,rollers){
     // Preserve the historical roller coefficient in isolated legacy comparisons.
     const rollerFriction=rule().staticRatio>1?friction:friction===0?0:.9;
     rollerShape.material={friction:rollerFriction,staticFriction:rollerFriction*rule().staticRatio,restitution:0,frictionCombine:combine};
+    slowRollerShape.material={...rollerShape.material};
   }
   applyMaterials();
   scene.onBeforePhysicsObservable.add(()=>{
@@ -67,15 +71,20 @@ export async function createMechanics(scene,rollers){
       scene.onAfterPhysicsObservable.addOnce(()=>{for(const body of bodies)body.setPrestepType(B.PhysicsPrestepType.DISABLED);});
     },
     setRollingPreset(name){if(!ROLLING_PRESETS[name])throw new Error('Unknown rolling preset');preset=name;friction=rule().friction;applyMaterials();},
-    readRolling(){return {preset,...rule(),friction,fruitMaterial:fruitShape().material,rollerMaterial:rollerShape.material};},
+    readRolling(){return {preset,...rule(),friction,slowRollersRemoved,fruitMaterial:fruitShape().material,rollerMaterial:rollerShape.material,slowRollerMaterial:slowRollerShape.material};},
+    setSlowRollersRemoved(value){
+      if(slowRollersRemoved===value)return;slowRollersRemoved=value;
+      slowRollerShape.filterCollideMask=value?0:slowCollisionMask;
+      for(const r of rollers)if(r.driveRole==='slow')r.setEnabled(!value);
+      // Exclude contacts from the previous substep immediately after switching.
+      for(const f of fruitBodies.values())for(const r of f.rollerContacts.keys())if(r.driveRole==='slow')f.rollerContacts.delete(r);
+    },
     rollingStatus(f){const recent=[...(f.rollerContacts?.values()||[])].filter(c=>clock-c.time<.035);return {contacts:recent.length,slip:recent.length?recent.reduce((sum,c)=>sum+c.slip,0)/recent.length:null,angularSpeed:f.body?.getAngularVelocity().length()||0};},
     setDrive(speed,difference=0,slowdown=difference){
       const delta=Math.max(0,Math.min(1,difference));
-      const reduction=Math.max(0,Math.min(1,slowdown));
-      let zoneIndex=0;
+      const reduction=Math.max(-1,Math.min(1,slowdown));
       for(const r of rollers){
-        const inZone=r.position.x>=ROLLER_TRIAL.minX&&r.position.x<=ROLLER_TRIAL.maxX;
-        const factor=inZone?1+(zoneIndex++%2===0?-reduction:delta):1;
+        const factor=r.driveRole==='slow'?1-reduction:r.driveRole==='fast'?1+delta:1;
         r.targetDriveSpeed=speed*factor;
       }
     },

@@ -6,11 +6,11 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
 (async()=>{let browser;try{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const page=await browser.newPage({viewport:{width:1440,height:1150}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto(process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html?detector=color`);await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});await page.locator('#autoSpawn').uncheck();await page.locator('#reset').click();
+ await page.goto(process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html?detector=color`);await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});await page.locator('#autoSpawn').uncheck();await page.evaluate(()=>mikanDebug.reset(false));
  assert.equal(await page.locator('#speed').inputValue(),'8');assert.equal(await page.locator('#rollingPreset').inputValue(),'combined');
  const reports=[];
  for(const preset of ['legacy','friction','shape','ramp','damping','combined']){
-  await page.locator('#rollingPreset').selectOption(preset);await page.locator('#reset').click();
+  await page.locator('#rollingPreset').selectOption(preset);await page.evaluate(()=>mikanDebug.reset(false));
   await page.waitForFunction(()=>mikanDebug.mechanics.rollers.every(r=>Math.abs(r.driveSpeed-r.targetDriveSpeed)<1e-4));
   const settings=await page.evaluate(()=>mikanDebug.mechanics.readRolling());assert.equal(settings.preset,preset);assert.ok(Math.abs(settings.fruitMaterial.friction-settings.friction)<1e-6);assert.ok(Math.abs(settings.fruitMaterial.staticFriction-settings.friction*settings.staticRatio)<1e-6);assert.equal(settings.fruitMaterial.frictionCombine,1);assert.equal(settings.rollerMaterial.frictionCombine,1);
   const report=await page.evaluate(async settings=>{
@@ -24,9 +24,9 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
   assert.ok(Math.abs(report.actualDamping-settings.angularDamping)<1e-6);assert.ok(Number.isFinite(report.dx)&&Number.isFinite(report.angularPath));reports.push(report);fs.mkdirSync(path.join(root,'qa'),{recursive:true});fs.writeFileSync(path.join(root,'qa/rolling-comparison.json'),JSON.stringify({reports},null,2));console.log('MEASURE',JSON.stringify(report));
  }
  // At 100% the targets are still 0/16, while physical velocities approach them gradually.
- await page.locator('#reset').click();await page.locator('#motor').click();await page.waitForFunction(()=>mikanDebug.mechanics.rollers.every(r=>Math.abs(r.driveSpeed)<1e-4));
+ await page.evaluate(()=>mikanDebug.reset(false));await page.evaluate(()=>mikanDebug.setMotorEnabled(!mikanDebug.motorEnabled));await page.waitForFunction(()=>mikanDebug.mechanics.rollers.every(r=>Math.abs(r.driveSpeed)<1e-4));
  await page.locator('#rollerDifference').fill('100');await page.locator('#rollerSlowdown').fill('100');
- await page.evaluate(()=>{globalThis.driveSamples=[];const d=mikanDebug;globalThis.driveObserver=d.scene.onAfterPhysicsObservable.add(()=>driveSamples.push(d.mechanics.rollers.map(r=>r.driveSpeed)));});await page.locator('#motor').click();await page.waitForFunction(()=>mikanDebug.mechanics.rollers.some(r=>r.targetDriveSpeed===16)&&mikanDebug.mechanics.rollers.every(r=>Math.abs(r.driveSpeed-r.targetDriveSpeed)<1e-4));
+ await page.evaluate(()=>{globalThis.driveSamples=[];const d=mikanDebug;globalThis.driveObserver=d.scene.onAfterPhysicsObservable.add(()=>driveSamples.push(d.mechanics.rollers.map(r=>r.driveSpeed)));});await page.evaluate(()=>mikanDebug.setMotorEnabled(!mikanDebug.motorEnabled));await page.waitForFunction(()=>mikanDebug.mechanics.rollers.some(r=>r.targetDriveSpeed===16)&&mikanDebug.mechanics.rollers.every(r=>Math.abs(r.driveSpeed-r.targetDriveSpeed)<1e-4));
  const ramp=await page.evaluate(()=>{mikanDebug.scene.onAfterPhysicsObservable.remove(driveObserver);let maxDelta=0;for(let i=1;i<driveSamples.length;i++)for(let j=0;j<driveSamples[i].length;j++)maxDelta=Math.max(maxDelta,Math.abs(driveSamples[i][j]-driveSamples[i-1][j]));return {steps:driveSamples.length,maxDelta,targets:mikanDebug.mechanics.rollers.filter(r=>r.position.x>=-2&&r.position.x<=2.2).map(r=>r.driveSpeed)};});
  assert.ok(ramp.maxDelta<=6/120+1e-6,JSON.stringify(ramp));assert.equal(ramp.targets.length,14);ramp.targets.forEach((v,i)=>assert.ok(Math.abs(v-(i%2?16:0))<1e-4));console.log('PASS acceleration bound and 100% targets',JSON.stringify(ramp));
  await page.locator('#friction').fill('0');await page.waitForTimeout(100);const zero=await page.evaluate(()=>mikanDebug.mechanics.readRolling());assert.equal(zero.fruitMaterial.friction,0);assert.equal(zero.fruitMaterial.staticFriction,0);assert.equal(zero.rollerMaterial.friction,0);assert.equal(zero.rollerMaterial.staticFriction,0);

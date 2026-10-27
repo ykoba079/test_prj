@@ -1,0 +1,32 @@
+{
+  "checkpoint_sha256": "2ce70696161609b78c6f08f03a934dd4aeaf009ef6cc9a0dc6f6da342683e6b5",
+  "onnx_sha256": "e373e74f83764943adabda6af9a91d1dfc521875f631581c99a714ebc06ce839",
+  "source_revision": "c4cb5f6f56102eceeaa7d75e23e1125cd0373eaf",
+  "epoch": 17,
+  "checks": [
+    {
+      "input": "zeros",
+      "shape": [
+        1,
+        7,
+        2100
+      ],
+      "max_abs_difference": 0.002960205078125
+    },
+    {
+      "input": "random",
+      "shape": [
+        1,
+        7,
+        2100
+      ],
+      "max_abs_difference": 0.0034027099609375
+    }
+  ],
+  "rtol": 0.001,
+  "atol": 0.01,
+  "source_training_input_size": 640,
+  "export_input_size": 320,
+  "source_training_validation_map": 0.9056105613708496,
+  "note": "Same weights as quality-640; source validation mAP is not a 320-resolution evaluation."
+}

@@ -7,7 +7,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
  await new Promise(r=>server.listen(0,'127.0.0.1',r));browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const page=await browser.newPage({viewport:{width:1440,height:1150}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html`);await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});
- await page.locator('#autoSpawn').uncheck();await page.locator('#pause').click();await page.waitForFunction(()=>!mikanDebug.busy);await page.locator('#reset').click();
+ await page.locator('#autoSpawn').uncheck();await page.evaluate(()=>mikanDebug.setPaused(!mikanDebug.paused));await page.waitForFunction(()=>!mikanDebug.busy);await page.evaluate(()=>mikanDebug.reset(false));
  const result=await page.evaluate(async()=>{
   const B=BABYLON,d=mikanDebug,v=d.views[0];
   const capture=async()=>{v.rt.resetRefreshCounter();d.scene.render();const raw=await v.rt.readPixels(),image=new ImageData(640,480);for(let y=0;y<480;y++)image.data.set(raw.subarray((479-y)*2560,(480-y)*2560),y*2560);return image;};
