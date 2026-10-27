@@ -1,6 +1,6 @@
 import {colorDetector} from './vision.js?v=20261025-bluegreen-mold';
 import {createFruitFactory,random} from './fruit.js?v=20261025-bluegreen-mold';
-import {createMechanics,ROLLER_TRIAL} from './physics.js?v=20261027-roller-62';
+import {createMechanics,ROLLER_TRIAL} from './physics.js?v=20261027-roller-100';
 import {createYoloDetector} from './yolo-detector.js?v=20261027-vacuum';
 import {createImageTracker,fuseViews,PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261027-vacuum';
 import {createRobotArm} from './robot-arm.js?v=20261027-vacuum';
@@ -84,7 +84,7 @@ function projectedFruitDiameter(d,view){
   const left=B.Vector3.Project(center.add(new B.Vector3(-.39,0,0)),B.Matrix.Identity(),transform,viewport),right=B.Vector3.Project(center.add(new B.Vector3(.39,0,0)),B.Matrix.Identity(),transform,viewport);
   return Math.hypot(right.x-left.x,right.y-left.y);
 }
-function drawBox(ctx,b,color,text){ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);ctx.fillStyle=color;ctx.font='12px sans-serif';ctx.fillText(text,b.x0,Math.max(13,b.y0-4));}
+function drawBox(ctx,b,color,text){const y=ctx.canvas.id==='overlayB'?FRAME.height-b.y1:b.y0;ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(b.x0,y,b.x1-b.x0,b.y1-b.y0);ctx.fillStyle=color;ctx.font='12px sans-serif';ctx.fillText(text,b.x0,Math.max(13,y-4));}
 async function scan(){if(busy||paused||switching)return;busy=true;const detector=activeDetector,threshold=+$('confidence').value/100,token=epoch,frame=++tick,capturedAt=performance.now()/1000,t0=performance.now();
   const heldAtCapture=activeJob?.fruit?claw.position.clone():null;
   // Calibration matrices and capture time only: no fruit positions, IDs or orientations.
@@ -112,7 +112,7 @@ async function scan(){if(busy||paused||switching)return;busy=true;const detector
     }
     tracker.update(fuseViews(measurements),capturedAt,frame);
     for(const view of captures)for(const t of tracker.tracks.filter(t=>t.lastSeen===capturedAt&&!t.closed)){
-      const p=B.Vector3.Project(new B.Vector3(t.x,.35,t.z),B.Matrix.Identity(),view.viewMatrix.multiply(view.projectionMatrix),new B.Viewport(0,0,FRAME.width,FRAME.height));view.overlay.fillStyle='#72e7ed';view.overlay.font='bold 15px sans-serif';view.overlay.fillText(t.id,p.x+10,p.y+18);
+      const p=B.Vector3.Project(new B.Vector3(t.x,.35,t.z),B.Matrix.Identity(),view.viewMatrix.multiply(view.projectionMatrix),new B.Viewport(0,0,FRAME.width,FRAME.height));view.overlay.fillStyle='#72e7ed';view.overlay.font='bold 15px sans-serif';view.overlay.fillText(t.id,p.x+10,(view.id==='B'?FRAME.height-p.y:p.y)+18);
     }
     for(const auxiliary of measurements.filter(v=>v.id!=='A'))tracker.confirmAuxiliary(auxiliary.detections,capturedAt,frame,auxiliary.id);flushEvents();
     $('latency').textContent=Math.round(performance.now()-t0)+' ms';

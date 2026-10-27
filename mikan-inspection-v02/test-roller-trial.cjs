@@ -13,17 +13,21 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
  assert.deepEqual(cameras.ids,['A','B']);assert.ok(!cameras.cameraNames.includes('inspection-C'));assert.equal(cameras.housing,false);assert.equal(await page.locator('#inspectionC').count(),0);
  await page.waitForTimeout(100);
  const rates=await page.evaluate(()=>mikanDebug.mechanics.rollers.map(r=>({x:r.position.x,s:r.driveSpeed,w:r.body.getAngularVelocity().z})));
- const inside=rates.filter(r=>r.x>=-1.2&&r.x<=1.2),outside=rates.filter(r=>r.x< -1.2||r.x>1.2);
- assert.ok(inside.length>=6);inside.forEach((r,i)=>{assert.ok(Math.abs(r.s-(i%2?8.8:6.2))<1e-6);assert.ok(Math.abs(r.w+r.s)<1e-4);});assert.ok(outside.every(r=>r.s===8));
+ const inside=rates.filter(r=>r.x>=-2&&r.x<=2.2),outside=rates.filter(r=>r.x< -2||r.x>2.2);
+ assert.equal(inside.length,14);inside.forEach((r,i)=>{assert.ok(Math.abs(r.s-(i%2?8.8:6.2))<1e-6);assert.ok(Math.abs(r.w+r.s)<1e-4);});assert.ok(outside.every(r=>r.s===8));
  console.log('PASS two cameras only; alternating 6.2/8.8 in trial zone, 8 elsewhere');
+ assert.equal(await page.locator('#rollerSlowdown').getAttribute('max'),'100');assert.equal(await page.locator('#rollerDifference').getAttribute('max'),'100');
+ await page.locator('#rollerSlowdown').fill('100');await page.locator('#rollerDifference').fill('100');await page.waitForTimeout(150);
+ const extremes=await page.evaluate(()=>mikanDebug.mechanics.rollers.filter(r=>r.position.x>=-2&&r.position.x<=2.2).map(r=>({speed:r.driveSpeed,w:r.body.getAngularVelocity().z})));
+ extremes.forEach((r,i)=>{assert.ok(Math.abs(r.speed-(i%2?16:0))<1e-6);assert.ok(Math.abs(r.w+r.speed)<1e-4);});console.log('PASS 14 variable rollers and 100% settings physically drive 0/16 rad/s');
  const reports=[];
  for(const difference of [0,10]){
   await page.locator('#rollerDifference').fill(String(difference));await page.locator('#rollerSlowdown').fill(difference?'22.5':'0');await page.locator('#reset').click();
   reports.push(await page.evaluate(async difference=>{
-   const f=mikanDebug.spawn(0,false,new BABYLON.Vector3(-1.1,.58,0));f.root.rotationQuaternion=BABYLON.Quaternion.Identity();let steps=0,angle=0,maxY=0,minY=1,maxZ=0,zoneSteps=0;
+   const f=mikanDebug.spawn(0,false,new BABYLON.Vector3(-1.9,.58,0));f.root.rotationQuaternion=BABYLON.Quaternion.Identity();let steps=0,angle=0,maxY=0,minY=1,maxZ=0,zoneSteps=0;
    return await new Promise(resolve=>{const handle=mikanDebug.scene.onAfterPhysicsObservable.add(()=>{
-    const p=f.root.position;angle+=f.body.getAngularVelocity().length()/120;maxY=Math.max(maxY,p.y);minY=Math.min(minY,p.y);maxZ=Math.max(maxZ,Math.abs(p.z));if(p.x<=1.2&&p.x>=-1.2)zoneSteps++;
-    if(++steps>=600){mikanDebug.scene.onAfterPhysicsObservable.remove(handle);resolve({difference,physicsSeconds:steps/120,angleRadians:angle,dx:p.x+1.1,maxY,minY,maxZ,zoneSeconds:zoneSteps/120});}
+    const p=f.root.position;angle+=f.body.getAngularVelocity().length()/120;maxY=Math.max(maxY,p.y);minY=Math.min(minY,p.y);maxZ=Math.max(maxZ,Math.abs(p.z));if(p.x<=2.2&&p.x>=-2)zoneSteps++;
+    if(++steps>=600){mikanDebug.scene.onAfterPhysicsObservable.remove(handle);resolve({difference,physicsSeconds:steps/120,angleRadians:angle,dx:p.x+1.9,maxY,minY,maxZ,zoneSeconds:zoneSteps/120});}
    });});
   },difference));
  }
