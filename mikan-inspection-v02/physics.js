@@ -26,13 +26,16 @@ export async function createMechanics(scene,rollers){
   scene.getPhysicsEngine().setSubTimeStep(1000/120);
   const rollerShape=new B.PhysicsShapeCylinder(new B.Vector3(0,-1.325,0),new B.Vector3(0,1.325,0),.15,scene);
   const slowRollerShape=new B.PhysicsShapeCylinder(new B.Vector3(0,-1.325,0),new B.Vector3(0,1.325,0),.15,scene);
-  const slowCollisionMask=slowRollerShape.filterCollideMask;let zoneIndex=0;
-  for(const roller of rollers){
-    roller.driveRole=roller.position.x>=ROLLER_TRIAL.minX&&roller.position.x<=ROLLER_TRIAL.maxX?(zoneIndex++%2===0?'slow':'fast'):'normal';
-    const body=new B.PhysicsBody(roller,B.PhysicsMotionType.ANIMATED,false,scene);
-    body.shape=roller.driveRole==='slow'?slowRollerShape:rollerShape;body.setMassProperties({mass:10});
-    roller.body=body;
+  const slowCollisionMask=slowRollerShape.filterCollideMask;
+  function attachRollers(){
+    for(const roller of rollers){
+      const body=new B.PhysicsBody(roller,B.PhysicsMotionType.ANIMATED,false,scene);
+      body.shape=roller.driveRole==='slow'?slowRollerShape:rollerShape;body.setMassProperties({mass:10});roller.body=body;
+    }
   }
+  // Standalone fixtures may supply meshes without a preassigned role.
+  let zoneIndex=0;for(const r of rollers)r.driveRole??=r.position.x>=ROLLER_TRIAL.minX&&r.position.x<=ROLLER_TRIAL.maxX?(zoneIndex++%2===0?'slow':'fast'):'normal';
+  attachRollers();
   // Bake the same ellipsoid proportions as the visible fruit into the collision hull.
   const fruitShapes=new Map([12,32].map(segments=>{
     const hullMesh=B.MeshBuilder.CreateSphere('fruit-collision-template',{diameter:.78,segments},scene);
@@ -64,6 +67,7 @@ export async function createMechanics(scene,rollers){
   });
   return {
     plugin,rollers,get fruitShape(){return fruitShape();},fruitForBody:body=>fruitBodies.get(body)||null,
+    rebuildRollers(){attachRollers();for(const f of fruitBodies.values())f.rollerContacts.clear();for(const r of rollers)if(r.driveRole==='slow')r.setEnabled(!slowRollersRemoved);},
     syncLayout(){
       // A setting change resets fruit first; teleport equipment once, then resume velocity drive.
       const bodies=[...rollers.map(r=>r.body),...staticBodies.map(a=>a.body)];

@@ -1,5 +1,5 @@
 import {PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261027-vacuum';
-export const PICK_RULE={stationX:2.3,hoverY:1.42,settleSeconds:.20,tcpHeight:.79,maxFinalLead:1.5,minFinalX:1.2,maxFinalX:3.1,followLeadSeconds:.22};
+export const PICK_RULE={hoverY:1.42,settleSeconds:.20,tcpHeight:.79,maxFinalLead:1.5,minFinalX:1.2,maxFinalX:3.1,maxFollowLead:.5};
 // estimate() is derived from robot joints. tracker data is calibrated image data only.
 export function chooseIntercept(tracker,track,now,estimate,onReject=()=>{},heightAt=()=>.35){
   function reject(reason,details={}){onReject(reason,details);return null;}
