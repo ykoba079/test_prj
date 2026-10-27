@@ -18,7 +18,7 @@ function material(name,color){const m=new B.StandardMaterial(name,scene);m.diffu
 const metal=material('metal','#80968a'),dark=material('belt','#35433d'),accent=material('robot','#d9e5b4'),amber=material('zone','#af873f');
 function box(name,w,h,d,x,y,z,m,layer=1){const a=B.MeshBuilder.CreateBox(name,{width:w,height:h,depth:d},scene);a.position.set(x,y,z);a.material=m;a.layerMask=layer;return a;}
 box('floor',28,.1,20,0,-1.4,0,material('floor','#21312b'));
-const inspectionBed=box('inspection-background',14,.15,2.6,0,-.23,0,dark,3);
+box('inspection-background',14,.15,2.6,0,-.23,0,dark,3);
 const rollers=[];
 const trialSlow=material('trial-slow','#648fbc'),trialFast=material('trial-fast','#c5ab6c');let trialIndex=0;
 for(let x=-6.8;x<7.2;x+=.31){const roller=B.MeshBuilder.CreateCylinder('roller',{height:2.65,diameter:.3,tessellation:20},scene);roller.material=x>=ROLLER_TRIAL.minX&&x<=ROLLER_TRIAL.maxX?(trialIndex++%2===0?trialSlow:trialFast):metal;roller.position.set(x,-.13,0);roller.rotationQuaternion=B.Quaternion.RotationAxis(B.Axis.X,Math.PI/2);roller.layerMask=1;
@@ -31,9 +31,12 @@ box('camera-crossbar',8,.13,.13,0,3,-1.9,metal);const topHousing=box('top-camera
 box('robot-base',.8,.35,.8,3,.05,2.1,metal);
 const arm=createRobotArm(B,scene,material('robot-metal','#3f454b'),material('robot-shell','#8e969d')),claw=arm.claw;
 function robot(target){return arm.command(target);}
+// Share the visible equipment with inspection views. Fruit is added/removed below.
+// Each camera's schematic housing sits in its own optical path, so omit only itself.
+const inspectionEquipment=[...scene.meshes];
 const views=['A','B'].map(id=>{
-  const camera=new B.FreeCamera('inspection-'+id,new B.Vector3(1.2,9,id==='A'?0:8.65),scene);camera.upVector=new B.Vector3(0,0,1);camera.setTarget(new B.Vector3(1.2,.35,0));camera.mode=B.Camera.ORTHOGRAPHIC_CAMERA;camera.orthoLeft=-2.4;camera.orthoRight=2.4;camera.orthoTop=1.8;camera.orthoBottom=-1.8;camera.layerMask=2;
-  const rt=new B.RenderTargetTexture('frame-'+id,FRAME,scene,false,true,B.Engine.TEXTURETYPE_UNSIGNED_BYTE);rt.refreshRate=0;rt.activeCamera=camera;rt.renderList=[inspectionBed,...arm.meshes];rt.clearColor=new B.Color4(.08,.1,.09,1);scene.customRenderTargets.push(rt);
+  const camera=new B.FreeCamera('inspection-'+id,new B.Vector3(1.2,9,id==='A'?0:8.65),scene);camera.upVector=new B.Vector3(0,0,1);camera.setTarget(new B.Vector3(1.2,.35,0));camera.mode=B.Camera.ORTHOGRAPHIC_CAMERA;camera.orthoLeft=-2.4;camera.orthoRight=2.4;camera.orthoTop=1.8;camera.orthoBottom=-1.8;camera.layerMask=3;
+  const rt=new B.RenderTargetTexture('frame-'+id,FRAME,scene,false,true,B.Engine.TEXTURETYPE_UNSIGNED_BYTE);rt.refreshRate=0;rt.activeCamera=camera;rt.renderList=inspectionEquipment.filter(mesh=>mesh!==(id==='A'?topHousing:camHousing));rt.clearColor=new B.Color4(.08,.1,.09,1);scene.customRenderTargets.push(rt);
   return {id,camera,rt,ctx:$('inspection'+id).getContext('2d'),overlay:$('overlay'+id).getContext('2d')};
 });
 // Draw fruit and equipment immediately; WASM loading must never gate the first frame.
