@@ -1,0 +1,237 @@
+{
+  "configuration": {
+    "slopeDegrees": 5,
+    "rollerDiameter": 0.35,
+    "rollerPitch": 0.45,
+    "slowRollersRemoved": true,
+    "fastRollerPitch": 0.5,
+    "rollerRadPerSecond": 8,
+    "fastIncrease": 0.1,
+    "yoloInputSize": 640,
+    "confidence": 0.25
+  },
+  "method": {
+    "trialsPerStructure": 4,
+    "maxWallSecondsPerTrial": 6.5,
+    "detector": "YOLOv9-T / WASM CPU",
+    "fruit": "one initially mold-up synthetic fruit per trial; same seed",
+    "scope": "single headless-browser run; not a precision/recall benchmark",
+    "resultDefinitions": {
+      "timeout": "observation period ended without confirmed recovery",
+      "passed": "fruit reached good-product exit without rejection"
+    }
+  },
+  "reachabilitySamples": {
+    "two": 7950,
+    "three": 7950,
+    "total": 7950
+  },
+  "linkLengths": {
+    "two": [
+      2,
+      1.9
+    ],
+    "three": [
+      1.7,
+      1.4,
+      0.8
+    ]
+  },
+  "trials": [
+    {
+      "model": "two",
+      "x": 1.75,
+      "z": 0,
+      "result": "timeout",
+      "wallSeconds": 6.506300000011921,
+      "stats": {
+        "total": 0,
+        "good": 0,
+        "reject": 0,
+        "unknown": 0,
+        "escaped": 0,
+        "lost": 0,
+        "passed": 0,
+        "pickFailed": 0,
+        "observationRejected": 19,
+        "unclassified": 0
+      },
+      "observationIssues": {
+        "A:implausible-size-or-shape": 9,
+        "B:implausible-size-or-shape": 9,
+        "A:incomplete-contour": 1
+      }
+    },
+    {
+      "model": "two",
+      "x": 2.75,
+      "z": 0,
+      "result": "timeout",
+      "wallSeconds": 6.5106000000238415,
+      "stats": {
+        "total": 0,
+        "good": 0,
+        "reject": 0,
+        "unknown": 0,
+        "escaped": 0,
+        "lost": 0,
+        "passed": 0,
+        "pickFailed": 0,
+        "observationRejected": 19,
+        "unclassified": 0
+      },
+      "observationIssues": {
+        "A:implausible-size-or-shape": 10,
+        "B:implausible-size-or-shape": 8,
+        "A:incomplete-contour": 1
+      }
+    },
+    {
+      "model": "two",
+      "x": 3.65,
+      "z": 0,
+      "result": "timeout",
+      "wallSeconds": 6.500300000011921,
+      "stats": {
+        "total": 1,
+        "good": 0,
+        "reject": 0,
+        "unknown": 0,
+        "escaped": 0,
+        "lost": 0,
+        "passed": 0,
+        "pickFailed": 0,
+        "observationRejected": 16,
+        "unclassified": 1
+      },
+      "observationIssues": {
+        "A:implausible-size-or-shape": 5,
+        "B:implausible-size-or-shape": 8,
+        "A:incomplete-contour": 1,
+        "B:outside-inspection-range": 2
+      }
+    },
+    {
+      "model": "two",
+      "x": 2.75,
+      "z": 1,
+      "result": "timeout",
+      "wallSeconds": 6.5135,
+      "stats": {
+        "total": 1,
+        "good": 0,
+        "reject": 0,
+        "unknown": 0,
+        "escaped": 0,
+        "lost": 0,
+        "passed": 0,
+        "pickFailed": 0,
+        "observationRejected": 32,
+        "unclassified": 0
+      },
+      "observationIssues": {
+        "A:implausible-size-or-shape": 11,
+        "B:implausible-size-or-shape": 19,
+        "A:incomplete-contour": 1,
+        "B:outside-inspection-range": 1
+      }
+    },
+    {
+      "model": "three",
+      "x": 1.75,
+      "z": 0,
+      "result": "timeout",
+      "wallSeconds": 6.503,
+      "stats": {
+        "total": 0,
+        "good": 0,
+        "reject": 0,
+        "unknown": 0,
+        "escaped": 0,
+        "lost": 0,
+        "passed": 0,
+        "pickFailed": 0,
+        "observationRejected": 21,
+        "unclassified": 0
+      },
+      "observationIssues": {
+        "A:implausible-size-or-shape": 13,
+        "B:implausible-size-or-shape": 7,
+        "A:incomplete-contour": 1
+      }
+    },
+    {
+      "model": "three",
+      "x": 2.75,
+      "z": 0,
+      "result": "timeout",
+      "wallSeconds": 6.5035,
+      "stats": {
+        "total": 0,
+        "good": 0,
+        "reject": 0,
+        "unknown": 0,
+        "escaped": 0,
+        "lost": 0,
+        "passed": 0,
+        "pickFailed": 0,
+        "observationRejected": 29,
+        "unclassified": 0
+      },
+      "observationIssues": {
+        "A:implausible-size-or-shape": 14,
+        "B:implausible-size-or-shape": 13,
+        "B:outside-inspection-range": 2
+      }
+    },
+    {
+      "model": "three",
+      "x": 3.65,
+      "z": 0,
+      "result": "passed",
+      "wallSeconds": 5.406300000011921,
+      "stats": {
+        "total": 0,
+        "good": 0,
+        "reject": 0,
+        "unknown": 0,
+        "escaped": 0,
+        "lost": 0,
+        "passed": 1,
+        "pickFailed": 0,
+        "observationRejected": 21,
+        "unclassified": 0
+      },
+      "observationIssues": {
+        "A:implausible-size-or-shape": 10,
+        "B:implausible-size-or-shape": 10,
+        "B:outside-inspection-range": 1
+      }
+    },
+    {
+      "model": "three",
+      "x": 2.75,
+      "z": 1,
+      "result": "timeout",
+      "wallSeconds": 6.5411000000238415,
+      "stats": {
+        "total": 1,
+        "good": 0,
+        "reject": 0,
+        "unknown": 0,
+        "escaped": 0,
+        "lost": 0,
+        "passed": 0,
+        "pickFailed": 0,
+        "observationRejected": 39,
+        "unclassified": 0
+      },
+      "observationIssues": {
+        "A:implausible-size-or-shape": 15,
+        "B:implausible-size-or-shape": 22,
+        "A:incomplete-contour": 2
+      }
+    }
+  ],
+  "conclusion": "No recovery improvement established. Both structures reach all sampled pickup positions. Most fruit candidates were rejected by size/shape or contour checks before reliable tracking; this was not an IK failure."
+}
