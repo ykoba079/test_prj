@@ -104,6 +104,25 @@ let fruits=[],nextId=1,paused=false,motorEnabled=true,busy=false,epoch=0,tick=0,
 const rest=new B.Vector3(ARM_REST.x,ARM_REST.y,ARM_REST.z),attempts=[];
 const observationMarker=B.MeshBuilder.CreateSphere('image-last-observation',{diameter:.13},scene);observationMarker.material=material('last-observation','#ff7bd3');observationMarker.layerMask=1;observationMarker.isPickable=false;observationMarker.setEnabled(false);
 const targetMarker=B.MeshBuilder.CreateSphere('image-predicted-contact',{diameter:.16},scene);targetMarker.material=material('predicted-contact','#44e5e8');targetMarker.material.emissiveColor=new B.Color3(.15,.8,.8);targetMarker.layerMask=1;targetMarker.isPickable=false;targetMarker.setEnabled(false);
+// Display-only, keyed by image track IDs. Never attach to or look up fruit meshes.
+// These meshes are created after inspection render lists and never added to them.
+const defectMarkers=new Map(),defectMarkerMaterial=material('yolo-defect-debug','#ff2538');
+defectMarkerMaterial.emissiveColor=B.Color3.FromHexString('#ff2538');defectMarkerMaterial.disableLighting=true;
+function clearDefectMarkers(){for(const marker of defectMarkers.values())marker.dispose();defectMarkers.clear();}
+function updateDefectMarkers(now){
+  if(!activeDetector.name.startsWith('yolov9')){clearDefectMarkers();return;}
+  const visible=new Set();
+  for(const track of tracker.tracks){
+    if(track.closed||!(track.evidence.mold||track.evidence.damage))continue;
+    const held=activeJob?.track===track&&!!activeJob.fruit;
+    if(!held&&now-track.lastSeen>TRACK_RULE.maxAge)continue;
+    visible.add(track.id);let marker=defectMarkers.get(track.id);
+    if(!marker){marker=B.MeshBuilder.CreateBox('yolo-defect-'+track.id,{size:.16},scene);marker.material=defectMarkerMaterial;marker.layerMask=1;marker.isPickable=false;defectMarkers.set(track.id,marker);}
+    if(held)marker.position.set(claw.position.x,claw.position.y+.10,claw.position.z);
+    else{const p=tracker.predict(track,now);marker.position.set(p.x,fruitHeight(p.x)+.58,p.z);}
+  }
+  for(const [id,marker] of defectMarkers)if(!visible.has(id)){marker.dispose();defectMarkers.delete(id);}
+}
 const pickupMaterial=material('pickup-area-color','#33e6a0');pickupMaterial.alpha=.28;pickupMaterial.emissiveColor=new B.Color3(.08,.55,.3);pickupMaterial.backFaceCulling=false;
 let pickupArea=null;
 function updatePickupArea(){
@@ -273,7 +292,7 @@ function update(dt){if(paused||switching)return;suction.configure({targetKPa:+$(
   }
   const holding=!!activeJob&&(!!activeJob.fruit||!!activeJob.touchGoal);
   arm.servo.setMotionScale(holding?1:+$('armSpeed').value);
-  plan(now);advanceArm(dt,now);arm.step(dt*(activeJob?.fruit?SUCTION_RULE.carryMotionScale:1));suction.update(dt);tracker.prune();
+  plan(now);advanceArm(dt,now);arm.step(dt*(activeJob?.fruit?SUCTION_RULE.carryMotionScale:1));suction.update(dt);tracker.prune();updateDefectMarkers(now);
   // World poses below are used only for physics lifecycle and outcome accounting.
   for(const f of [...fruits]){if(f.picked)continue;if(f.sorted)continue;if(f.root.position.x>linePoint({x:7.3,y:0}).x){stats.passed++;f.sorted=true;f.bin='good';f.releaseAt=now;}else if(f.root.position.y< -1||Math.abs(f.root.position.z)>2||f.root.position.x< -7.5||f.root.position.x>8){stats.lost++;remove(f);}}
 }
@@ -285,7 +304,7 @@ function renderHistory(){const now=performance.now()/1000;for(const k in stats){
   const phases={observing:'画像追跡中',approaching:'予測把持へ移動','grip-check':'吸着の持ち上げ確認',sorting:'箱へ移動',reject:'不良排除',unknown:'未判定隔離',good:'不良未検出通過',unclassified:'未判定通過',escaped:'追跡喪失・取り逃がし'};
   $('history').replaceChildren(...tracker.records.slice(-14).reverse().map(t=>{const tr=document.createElement('tr');const p=tracker.predict(t,now);const label=t.state==='observing'&&t.defects.size?(!observedInPickZone(t)?'\u628a\u6301\u7bc4\u56f2\u3078\u306e\u9032\u5165\u5f85\u3061':t.missedFrames?'不良確定・再検出待ち':!t.stable?'不良確定・位置推定中':'不良確定・把持待ち'):phases[t.state]||t.state;const texts=[t.id,label,String(t.frames),t.x.toFixed(2)+', '+t.z.toFixed(2)+' / vx '+t.vx.toFixed(2),[...t.defects].map(k=>names[k]).join('・')||'—',t.events.slice(-3).join(' → ')];for(const [i,text] of texts.entries()){const td=document.createElement('td');td.textContent=text;if(i===1&&t.defects.size)td.className='bad';tr.append(td);}return tr;}));
 }
-function reset(keepBins=false){epoch++;for(const f of [...fruits])if(!keepBins||!f.sorted)remove(f);tracker.reset();nextId=1+fruits.reduce((max,f)=>Math.max(max,f.id),0);spawnClock=scanClock=0;tick=0;activeJob=null;targetMarker.setEnabled(false);observationMarker.setEnabled(false);attempts.length=0;for(const k in observationIssues)delete observationIssues[k];for(const k in stats)stats[k]=0;for(const v of views){v.ctx.clearRect(0,0,FRAME.width,FRAME.height);v.overlay.clearRect(0,0,FRAME.width,FRAME.height);}arm.reset();suction.reset();renderHistory();updateStatus();log('物理ラインと画像追跡をリセット');}
+function reset(keepBins=false){epoch++;clearDefectMarkers();for(const f of [...fruits])if(!keepBins||!f.sorted)remove(f);tracker.reset();nextId=1+fruits.reduce((max,f)=>Math.max(max,f.id),0);spawnClock=scanClock=0;tick=0;activeJob=null;targetMarker.setEnabled(false);observationMarker.setEnabled(false);attempts.length=0;for(const k in observationIssues)delete observationIssues[k];for(const k in stats)stats[k]=0;for(const v of views){v.ctx.clearRect(0,0,FRAME.width,FRAME.height);v.overlay.clearRect(0,0,FRAME.width,FRAME.height);}arm.reset();suction.reset();renderHistory();updateStatus();log('物理ラインと画像追跡をリセット');}
 function setPaused(value){if(paused===value)return;epoch++;paused=value;if(paused)pauseStarted=performance.now()/1000;else{const delta=performance.now()/1000-pauseStarted;tracker.shiftTime(delta);if(activeJob?.intercept)activeJob.intercept.contactAt+=delta;if(activeJob?.verifyStarted)activeJob.verifyStarted+=delta;}mechanics.pause(paused);updateStatus();}
 function setMotorEnabled(value){motorEnabled=!!value;updateStatus();}
 $('clearBins').onclick=()=>{for(const f of [...fruits])if(f.sorted)remove(f);renderHistory();log('箱の回収済みミカンを取り除きました');};
@@ -306,7 +325,7 @@ $('slopeAngle').onchange=()=>{reset(false);applySlopeLayout(+$('slopeAngle').val
 function changeRollerLayout(resetLine=true){
   if(fastPitchValue()!==null&&fastPitchValue()<+$('rollerDiameter').value+.01-1e-8)$('fastRollerPitch').value=[...$('fastRollerPitch').options].find(o=>o.value!=='auto'&&+o.value>=+$('rollerDiameter').value+.01-1e-8).value;
   $('rollerPitch').value=String(compatiblePitch(+$('rollerPitch').value,+$('rollerDiameter').value));
-  if(resetLine)reset(true);else{epoch++;if(activeJob&&preContact.has(activeJob.phase))failPick(activeJob,'\u30ed\u30fc\u30e9\u30fc\u9593\u9694\u5909\u66f4\u3067\u628a\u6301\u3092\u4e2d\u6b62');tracker.reset();}
+  if(resetLine)reset(true);else{epoch++;clearDefectMarkers();if(activeJob&&preContact.has(activeJob.phase))failPick(activeJob,'\u30ed\u30fc\u30e9\u30fc\u9593\u9694\u5909\u66f4\u3067\u628a\u6301\u3092\u4e2d\u6b62');tracker.reset();}
   mechanics.setSlowRollersRemoved($('removeSlowRollers').checked);
   const old=rollers.flatMap(r=>[r,...r.getChildMeshes()]);
   for(const view of views)view.rt.renderList=view.rt.renderList.filter(m=>!old.includes(m));
@@ -338,4 +357,4 @@ if(startup.get('preset')==='joint-trial'){
 }else seedLine();
 if(startup.get('arm')==='three'){$('armModel').value='three';$('armModel').onchange();}
 $('fastRollerPitch').disabled=!$('removeSlowRollers').checked;detectorInfo();updateStatus();renderHistory();
-globalThis.mikanDebug={setPaused,setMotorEnabled,get motorEnabled(){return motorEnabled;},get line(){return line;},get pickupArea(){return pickupArea;},fruitHeight,get support(){return support;},worldAt,projectedFruitDiameter,scene,stats,observationIssues,views,mechanics,suction,reset,spawn,tracker,attempts,arm,get detector(){return activeDetector;},get switching(){return switching;},get fruits(){return fruits;},get records(){return tracker.records;},get busy(){return busy;},get paused(){return paused;},get activeJob(){return activeJob;}};
+globalThis.mikanDebug={setPaused,setMotorEnabled,get motorEnabled(){return motorEnabled;},get line(){return line;},get pickupArea(){return pickupArea;},get defectMarkers(){return defectMarkers;},fruitHeight,get support(){return support;},worldAt,projectedFruitDiameter,scene,stats,observationIssues,views,mechanics,suction,reset,spawn,tracker,attempts,arm,get detector(){return activeDetector;},get switching(){return switching;},get fruits(){return fruits;},get records(){return tracker.records;},get busy(){return busy;},get paused(){return paused;},get activeJob(){return activeJob;}};
