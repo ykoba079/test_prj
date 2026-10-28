@@ -1,5 +1,5 @@
 // Rigid-body approximation of a compliant vacuum cup. No CFD and no fruit pose attachment.
-export const SUCTION_RULE={radius:.16,effectiveAreaM2:.0002,targetKPa:60,pumpSeconds:.05,ventSeconds:.055,readyKPa:12,holdingKPa:8,sealSeconds:.10,contactAge:.10,maxGap:.14,minNormalY:.65,spring:120,damping:6,angularSpring:.6,angularDamping:.08,momentArm:.056,carryMotionScale:.65,shearRatio:.70,padForce:3,verifyRise:.12,verifySeconds:1.8,slipSeconds:.25,sealTimeout:1.4,maxOcclusionAge:3.5,probeDepth:.08,probeRate:.07};
+export const SUCTION_RULE={radius:.16,effectiveAreaM2:.0002,targetKPa:60,pumpSeconds:.05,ventSeconds:.055,readyKPa:12,holdingKPa:8,sealSeconds:.10,contactAge:.10,maxGap:.14,minNormalY:.65,spring:120,damping:6,angularSpring:.6,angularDamping:.08,momentArm:.056,carryMotionScale:.65,shearRatio:.70,padForce:3,verifyRise:.12,verifySeconds:1.8,slipSeconds:.25,sealTimeout:1.4,maxOcclusionAge:3.5};
 export function createVacuumGripper(B,scene,arm,mechanics){
   let clock=0,pressure=0,targetKPa=SUCTION_RULE.targetKPa,leak=0,seal=null,readySince=null,lastBreak='idle',lastApplied=0;
   const contacts=new Map(),lastSupport=new Map(),anchor=new B.TransformNode('vacuum-wrist-anchor',scene);anchor.position.copyFrom(arm.claw.position);anchor.rotationQuaternion=arm.claw.rotationQuaternion.clone();

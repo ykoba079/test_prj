@@ -24,9 +24,9 @@ export async function createMechanics(scene,rollers){
   const plugin=new B.HavokPlugin(true,havok);
   scene.enablePhysics(new B.Vector3(0,-9.81,0),plugin);
   scene.getPhysicsEngine().setSubTimeStep(1000/120);
-  const rollerShape=new B.PhysicsShapeCylinder(new B.Vector3(0,-1.325,0),new B.Vector3(0,1.325,0),.15,scene);
-  const slowRollerShape=new B.PhysicsShapeCylinder(new B.Vector3(0,-1.325,0),new B.Vector3(0,1.325,0),.15,scene);
-  const slowCollisionMask=slowRollerShape.filterCollideMask;
+  let rollerDiameter=.30;
+  const makeRollerShape=()=>new B.PhysicsShapeCylinder(new B.Vector3(0,-1.325,0),new B.Vector3(0,1.325,0),rollerDiameter/2,scene);
+  let rollerShape=makeRollerShape(),slowRollerShape=makeRollerShape(),slowCollisionMask=slowRollerShape.filterCollideMask;
   function attachRollers(){
     for(const roller of rollers){
       const body=new B.PhysicsBody(roller,B.PhysicsMotionType.ANIMATED,false,scene);
@@ -67,7 +67,7 @@ export async function createMechanics(scene,rollers){
   });
   return {
     plugin,rollers,get fruitShape(){return fruitShape();},fruitForBody:body=>fruitBodies.get(body)||null,
-    rebuildRollers(){attachRollers();for(const f of fruitBodies.values())f.rollerContacts.clear();for(const r of rollers)if(r.driveRole==='slow')r.setEnabled(!slowRollersRemoved);},
+    rebuildRollers(diameter=rollerDiameter){rollerShape.dispose();slowRollerShape.dispose();rollerDiameter=diameter;rollerShape=makeRollerShape();slowRollerShape=makeRollerShape();slowCollisionMask=slowRollerShape.filterCollideMask;slowRollerShape.filterCollideMask=slowRollersRemoved?0:slowCollisionMask;applyMaterials();attachRollers();for(const f of fruitBodies.values())f.rollerContacts.clear();for(const r of rollers)if(r.driveRole==='slow')r.setEnabled(!slowRollersRemoved);},
     syncLayout(){
       // A setting change resets fruit first; teleport equipment once, then resume velocity drive.
       const bodies=[...rollers.map(r=>r.body),...staticBodies.map(a=>a.body)];
@@ -75,7 +75,7 @@ export async function createMechanics(scene,rollers){
       scene.onAfterPhysicsObservable.addOnce(()=>{for(const body of bodies)body.setPrestepType(B.PhysicsPrestepType.DISABLED);});
     },
     setRollingPreset(name){if(!ROLLING_PRESETS[name])throw new Error('Unknown rolling preset');preset=name;friction=rule().friction;applyMaterials();},
-    readRolling(){return {preset,...rule(),friction,slowRollersRemoved,fruitMaterial:fruitShape().material,rollerMaterial:rollerShape.material,slowRollerMaterial:slowRollerShape.material};},
+    readRolling(){return {preset,...rule(),friction,rollerDiameter,slowRollersRemoved,fruitMaterial:fruitShape().material,rollerMaterial:rollerShape.material,slowRollerMaterial:slowRollerShape.material};},
     setSlowRollersRemoved(value){
       if(slowRollersRemoved===value)return;slowRollersRemoved=value;
       slowRollerShape.filterCollideMask=value?0:slowCollisionMask;
