@@ -1,5 +1,6 @@
+import {ROLLER_TRIAL,rollerRole} from './roller-layout.js?v=20261029-layout';
+export {ROLLER_TRIAL};
 const B=globalThis.BABYLON;
-export const ROLLER_TRIAL={minX:-2,maxX:2.2,defaultDifference:.10,defaultSlowdown:.225};
 export const ROLLING_PRESETS={
   legacy:{segments:12,angularDamping:.12,acceleration:0,friction:.7,staticRatio:1},
   friction:{segments:12,angularDamping:.12,acceleration:0,friction:1,staticRatio:1.2},
@@ -34,7 +35,8 @@ export async function createMechanics(scene,rollers){
     }
   }
   // Standalone fixtures may supply meshes without a preassigned role.
-  let zoneIndex=0;for(const r of rollers)r.driveRole??=r.position.x>=ROLLER_TRIAL.minX&&r.position.x<=ROLLER_TRIAL.maxX?(zoneIndex++%2===0?'slow':'fast'):'normal';
+  const pitch=rollers.length>1?rollers[1].position.x-rollers[0].position.x:.31;
+  for(const r of rollers)r.driveRole??=rollerRole(r.position.x,pitch);
   attachRollers();
   // Bake the same ellipsoid proportions as the visible fruit into the collision hull.
   const fruitShapes=new Map([12,32].map(segments=>{
