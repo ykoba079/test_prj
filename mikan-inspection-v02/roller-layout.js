@@ -15,10 +15,13 @@ export function rollerPositions(pitch){
 }
 export function rollerLayout(pitch,removed=false,fastPitch=null){
   const base=rollerPositions(pitch).map(x=>({x,role:rollerRole(x,pitch)}));
-  if(!removed||fastPitch===null)return base;
-  if(!Number.isFinite(fastPitch)||fastPitch<=0)throw new Error('Invalid fast roller pitch');
-  const fast=base.filter(r=>r.role==='fast'),result=base.filter(r=>r.role!=='fast');
-  for(let i=0;fast[0].x+i*fastPitch<=fast.at(-1).x+1e-8;i++)result.push({x:fast[0].x+i*fastPitch,role:'fast'});
+  if(!removed)return base;
+  if(fastPitch!==null&&(!Number.isFinite(fastPitch)||fastPitch<=0))throw new Error('Invalid fast roller pitch');
+  const fast=base.filter(r=>r.role==='fast'),result=fastPitch===null?[...base]:base.filter(r=>r.role!=='fast');
+  if(fastPitch!==null)for(let i=0;fast[0].x+i*fastPitch<=fast.at(-1).x+1e-8;i++)result.push({x:fast[0].x+i*fastPitch,role:'fast'});
+  // The removed first slow roller otherwise doubles the entry gap. Keep a
+  // separate normal-speed transfer roller there; the slow body stays disabled.
+  result.push({x:base.find(r=>r.role==='slow').x,role:'normal',transfer:true});
   return result.sort((a,b)=>a.x-b.x);
 }
 function restingHeight(gap,diameter=.30){
