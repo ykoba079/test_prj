@@ -1,4 +1,4 @@
-import {ARM,ARM_REST,createArmServo,inverse} from './arm-kinematics.js?v=20261027-vacuum';
+import {ARM,ARM_REST,createArmServo,inverse} from './arm-kinematics.js?v=20261029-center';
 export function createRobotArm(B,scene,metal,accent){
   const servo=createArmServo(),meshes=[];
   function cylinder(name,height,diameter,material){const m=B.MeshBuilder.CreateCylinder(name,{height,diameter,tessellation:24},scene);m.material=material;m.layerMask=3;meshes.push(m);return m;}
@@ -28,6 +28,6 @@ export function createRobotArm(B,scene,metal,accent){
   render();
   return {meshes,links,claw,suction,servo,canReach:target=>inverse(target).reachable,
     command:target=>servo.command(target),grip:closed=>servo.grip(closed),near:(target,tolerance)=>servo.near(target,tolerance),estimate:target=>servo.estimate(target),
-    step(dt){for(let left=dt;left>1e-6;left-=.02)servo.step(Math.min(left,.02));render();},reset(target=ARM_REST){servo.reset(target);render();},
+    step(dt){for(let left=dt;left>1e-6;left-=.01)servo.step(Math.min(left,.01));render();},reset(target=ARM_REST){servo.reset(target);render();},
   };
 }
