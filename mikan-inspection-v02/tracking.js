@@ -1,5 +1,5 @@
 // This module accepts calibrated image measurements only. No meshes or simulator IDs.
-export const PICK_ZONE={minX:1.55,maxX:3.25,maxZ:1.3};
+export const PICK_ZONE={minX:1.55,maxX:4.0,maxZ:1.3};
 export const TRACK_RULE={maxAge:3,expireAge:5,minFrames:12,defaultLeadSeconds:.5,startAge:1.3,gripAge:2.5,maxUncertainty:.28,singleDefectConfidence:.95};
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function fuseViews(views){

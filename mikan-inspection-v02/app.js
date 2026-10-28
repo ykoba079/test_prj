@@ -2,14 +2,14 @@ import {stepContactSearch,CONTACT_SEARCH} from './contact-search.js?v=20261029-c
 import {colorDetector} from './vision.js?v=20261025-bluegreen-mold';
 import {createFruitFactory,random} from './fruit.js?v=20261025-bluegreen-mold';
 import {createMechanics,ROLLER_TRIAL} from './physics.js?v=20261029-layout';
-import {rollerPositions,supportCalibration,compatiblePitch,rollerRole} from './roller-layout.js?v=20261029-layout';
+import {rollerLayout,supportCalibration,compatiblePitch} from './roller-layout.js?v=20261029-observed';
 import {createSlopeGeometry} from './slope.js?v=20261028-slope';
 import {createYoloDetector} from './yolo-detector.js?v=20261028-controls';
-import {createImageTracker,fuseViews,PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261027-vacuum';
-import {createRobotArm} from './robot-arm.js?v=20261029-center';
-import {ARM,ARM_REST,DROP_POINTS} from './arm-kinematics.js?v=20261029-center';
+import {createImageTracker,fuseViews,PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261029-observed';
+import {createRobotArm} from './robot-arm.js?v=20261029-observed';
+import {ARM,ARM_REST,DROP_POINTS} from './arm-kinematics.js?v=20261029-observed';
 import {checkFruitObservation,OBSERVATION_RULE} from './observation-check.js?v=20261027-vacuum';
-import {chooseIntercept,PICK_RULE,hoverReady} from './pick-planning.js?v=20261029-layout';
+import {chooseIntercept,PICK_RULE,hoverReady,observedInPickZone} from './pick-planning.js?v=20261029-observed';
 import {createVacuumGripper,SUCTION_RULE} from './vacuum-physics.js?v=20261029-center';
 const B=globalThis.BABYLON,$=id=>document.getElementById(id),names={mold:'カビ',damage:'傷'},stateNames={observing:'観測中',good:'良品通過',reject:'不良排除',unknown:'未判定隔離',sorting:'アーム移動中',escaping:'取り逃がし・搬送中',escaped:'取り逃がし通過',missed:'搬送異常'};
 if(!B?.Engine.IsSupported)throw new Error('このブラウザーでWebGLを利用できません。ブラウザーの3D描画設定を確認してください。');
@@ -27,20 +27,21 @@ box('floor',28,.1,20,0,-1.4,0,material('floor','#21312b'));
 box('inspection-background',14,.15,2.6,0,-.23,0,dark,3);
 const rollers=[];
 const trialSlow=material('trial-slow','#648fbc'),trialFast=material('trial-fast','#c5ab6c');
-function buildRollers(pitch,diameter=.30){
-  for(const x of rollerPositions(pitch)){
+function fastPitchValue(){return $('fastRollerPitch').value==='auto'?null:+$('fastRollerPitch').value;}
+function buildRollers(pitch,diameter=.30,removed=false,fastPitch=null){
+  for(const {x,role} of rollerLayout(pitch,removed,fastPitch)){
     const roller=B.MeshBuilder.CreateCylinder('roller',{height:2.65,diameter,tessellation:20},scene);
-    roller.driveRole=rollerRole(x,pitch);
+    roller.driveRole=role;
     roller.material=roller.driveRole==='slow'?trialSlow:roller.driveRole==='fast'?trialFast:metal;roller.position.set(x,-.13,0);roller.rotationQuaternion=B.Quaternion.RotationAxis(B.Axis.X,Math.PI/2);roller.layerMask=1;
     const stripe=box('roller-marker',.03,.012,2.5,0,.155,0,dark);stripe.parent=roller;stripe.position.set(diameter/2,0,0);stripe.rotation.x=-Math.PI/2;rollers.push(roller);
   }
 }
 buildRollers(.31);
-for(const z of [-1.48,1.48]){box('rail',14,.6,.12,0,.05,z,metal);box('inspection-zone',4.8,.07,.14,1.2,.38,z,amber);box('pickup-zone',1.7,.08,.16,2.4,.48,z,accent);for(const x of [-5,0,5])box('leg',.16,1.1,.16,x,-.8,z,metal);}
+for(const z of [-1.48,1.48]){box('rail',14,.6,.12,0,.05,z,metal);box('inspection-zone',4.8,.07,.14,2.0,.38,z,amber);box('pickup-zone',PICK_ZONE.maxX-PICK_ZONE.minX,.08,.16,(PICK_ZONE.minX+PICK_ZONE.maxX)/2,.48,z,accent);for(const x of [-5,0,5])box('leg',.16,1.1,.16,x,-.8,z,metal);}
 function bin(name,x,z,color){const m=material(name,color),walls=m.clone(name+'-transparent-wall');walls.alpha=.28;box(name+'-bottom',1.7,.12,1.8,x,-1.25,z,m);for(const dz of [-.9,.9])box(name+'-wall',1.8,1.1,.09,x,-.67,z+dz,walls);for(const dx of [-.85,.85])box(name+'-wall',.09,1.1,1.8,x+dx,-.67,z,walls);}
 bin('良品',7.7,0,'#58734d');bin('不良',1.7,3.5,'#9c5d46');bin('未判定',4.1,3.5,'#4b7384');
 for(const x of [-4,4])box('camera-post',.12,3.4,.12,x,1.4,-1.9,metal);
-box('camera-crossbar',8,.13,.13,0,3,-1.9,metal);const topHousing=box('top-camera',.52,.23,.55,1.2,2.9,0,accent);topHousing.rotation.x=0;const camHousing=box('oblique-camera',.52,.23,.55,1.2,2.8,2.4,accent);camHousing.rotation.x=-Math.PI/4;
+box('camera-crossbar',8,.13,.13,0,3,-1.9,metal);const topHousing=box('top-camera',.52,.23,.55,2.0,2.9,0,accent);topHousing.rotation.x=0;const camHousing=box('oblique-camera',.52,.23,.55,2.0,2.8,2.4,accent);camHousing.rotation.x=-Math.PI/4;
 box('robot-base',.8,.35,.8,3,.05,2.1,metal);
 const arm=createRobotArm(B,scene,material('robot-metal','#3f454b'),material('robot-shell','#8e969d')),claw=arm.claw;
 function robot(target){return arm.command(target);}
@@ -51,7 +52,7 @@ let lineLayout=scene.meshes.filter(m=>['roller','rail','inspection-background','
 const legs=scene.meshes.filter(m=>m.name==='leg').map(mesh=>({mesh,position:mesh.position.clone()}));
 const goodBinLayout=scene.meshes.filter(m=>m.name.startsWith('良品-')).map(mesh=>({mesh,position:mesh.position.clone()}));
 const views=['A','B'].map(id=>{
-  const camera=new B.FreeCamera('inspection-'+id,id==='A'?new B.Vector3(1.2,9,0):camHousing.position.clone(),scene);camera.upVector=new B.Vector3(0,0,1);camera.setTarget(new B.Vector3(1.2,.35,0));camera.layerMask=3;
+  const camera=new B.FreeCamera('inspection-'+id,id==='A'?new B.Vector3(2.0,9,0):camHousing.position.clone(),scene);camera.upVector=new B.Vector3(0,0,1);camera.setTarget(new B.Vector3(2.0,.35,0));camera.layerMask=3;
   if(id==='A'){
     camera.mode=B.Camera.ORTHOGRAPHIC_CAMERA;camera.orthoLeft=-2.4;camera.orthoRight=2.4;camera.orthoTop=1.8;camera.orthoBottom=-1.8;
   }else{
@@ -69,7 +70,7 @@ function applySlopeLayout(degrees){
   for(const item of goodBinLayout)item.mesh.position.copyFrom(item.position.add(binShift));
   const floor=scene.getMeshByName('floor');floor.position.y=-1.4+binShift.y;
   for(const item of legs){const top=linePoint({x:item.position.x,y:-.25,z:item.position.z}),bottom=floor.position.y+.05;item.mesh.position.set(top.x,(top.y+bottom)/2,top.z);item.mesh.scaling.y=(top.y-bottom)/1.1;}
-  for(const view of views)view.camera.setTarget(new B.Vector3(1.2,fruitHeight(1.2),0));
+  for(const view of views)view.camera.setTarget(new B.Vector3(2.0,fruitHeight(2.0),0));
   mechanics.syncLayout();updatePickupArea();
 }
 // Draw fruit and equipment immediately; WASM loading must never gate the first frame.
@@ -175,14 +176,13 @@ async function scan(){if(busy||paused||switching)return;busy=true;const detector
 function detectorInfo(){const yolo=activeDetector!==colorDetector;$('confidence').disabled=!yolo;$('detectorInfo').textContent=yolo?'YOLOv9-T / '+activeDetector.config.inputSize+' · CPU · 信頼度 '+$('confidence').value+'%':'色解析デモ';$('pipelineInput').textContent=yolo?'2視点 / 入力'+activeDetector.config.inputSize:'2視点 / 色解析';}
 function updateStatus(){$('status').textContent=(activeDetector===colorDetector?'色解析':'YOLOv9')+' · '+(switching?'切替準備中':paused?'一時停止':activeJob?'画像予測でアーム動作中 · 搬送継続':'画像追跡・Havok搬送中');}
 function closeTrack(t,state,reason){if(t.closed)return;tracker.close(t,state,reason);if(state==='good'||state==='escaped'||state==='unclassified')stats[state]++;flushEvents();}
-function plan(now){if(activeJob)return;const candidates=tracker.tracks.filter(t=>tracker.eligible(t,now)&&tracker.pickable(t,now)&&now-t.lastSeen<=TRACK_RULE.startAge&&(t.defects.size||$('collectUnknown').checked&&tracker.outcome(t)==='unknown')).map(t=>{
+function plan(now){if(activeJob)return;const candidates=tracker.tracks.filter(t=>observedInPickZone(t)&&tracker.eligible(t,now)&&tracker.pickable(t,now)&&now-t.lastSeen<=TRACK_RULE.startAge&&(t.defects.size||$('collectUnknown').checked&&tracker.outcome(t)==='unknown')).map(t=>{
     const p=tracker.predict(t,now),hover=new B.Vector3(Math.max(PICK_RULE.minFinalX,Math.min(PICK_RULE.maxFinalX,p.x)),PICK_RULE.hoverY+fruitHeight(p.x)-.35,Math.max(-1.2,Math.min(1.2,p.z))),travel=arm.estimate(hover);
-    const arrival=t.vx>.08?(PICK_RULE.minFinalX-p.x)/t.vx:p.x<PICK_RULE.minFinalX?1:0;
     const future=tracker.predict(t,now+travel+PICK_RULE.settleSeconds);
-    if(!Number.isFinite(travel)||p.x< -1.2||p.x>PICK_ZONE.maxX||arrival>3.5||t.stable&&future.x>PICK_ZONE.maxX){t.armBlocked='新しい画像と把持可能な到着時刻を待機';return null;}
+    if(!Number.isFinite(travel)||p.x<PICK_ZONE.minX||p.x>PICK_ZONE.maxX||t.stable&&future.x>PICK_ZONE.maxX){t.armBlocked='新しい画像と把持可能な到着時刻を待機';return null;}
     t.armBlocked=null;return {t,p,hover,travel};
   }).filter(Boolean).sort((a,b)=>(Number(b.t.defects.size>0)-Number(a.t.defects.size>0))||b.p.x-a.p.x);
-  if(!candidates.length)return;const {t,p,hover,travel}=candidates[0];t.state='approaching';tracker.note(t,'画像で確認した対象に備えて上方待機');const attempt={trackId:t.id,captureTime:t.lastSeen,plannedAt:now,predictedContactAt:null,aim:{x:p.x,y:fruitHeight(p.x),z:p.z},preposition:{x:hover.x,y:hover.y,z:hover.z},velocity:{x:t.vx,z:t.vz},result:'approaching'};attempts.push(attempt);activeJob={track:t,phase:'hover',t:0,approachTime:0,aim:new B.Vector3(p.x,fruitHeight(p.x),p.z),hover,attempt,rechecks:0,waitingVision:true};arm.grip(false);flushEvents();updateStatus();}
+  if(!candidates.length)return;const {t,p,hover,travel}=candidates[0];t.state='approaching';tracker.note(t,'\u753b\u50cf\u306e\u73fe\u5728\u4f4d\u7f6e\u304c\u628a\u6301\u7bc4\u56f2\u5185\u30fb\u63a5\u8fd1\u958b\u59cb');const attempt={trackId:t.id,observedAtStart:{x:t.x,z:t.z,capturedAt:t.lastSeen},captureTime:t.lastSeen,plannedAt:now,predictedContactAt:null,aim:{x:p.x,y:fruitHeight(p.x),z:p.z},preposition:{x:hover.x,y:hover.y,z:hover.z},velocity:{x:t.vx,z:t.vz},result:'approaching'};attempts.push(attempt);activeJob={track:t,phase:'hover',t:0,approachTime:0,aim:new B.Vector3(p.x,fruitHeight(p.x),p.z),hover,attempt,rechecks:0,waitingVision:true};arm.grip(false);flushEvents();updateStatus();}
 function setArmWait(j,reason,details={}){j.waitReason=reason;j.attempt.lastCheck={reason,...details,time:performance.now()/1000};if(j.attempt.waits?.at(-1)?.reason!==reason){j.attempt.waits??=[];j.attempt.waits.push(j.attempt.lastCheck);if(j.attempt.waits.length>40)j.attempt.waits.shift();}}
 function waitForImage(j,reason){
   j.phase='hover';j.t=0;j.intercept=null;j.contactGoal=null;j.touchGoal=null;j.touchAt=null;j.search=null;j.waitingVision=true;arm.grip(false);j.rechecks++;
@@ -196,7 +196,7 @@ function commandArm(j,target){const result=robot(target);if(!result.reachable){f
 function advanceArm(dt,now){const j=activeJob;targetMarker.setEnabled(!!j&&preContact.has(j.phase));observationMarker.setEnabled(!!j&&preContact.has(j.phase));if(j)observationMarker.position.set(j.track.x,fruitHeight(j.track.x)+.5,j.track.z);if(!j){robot(rest);arm.grip(false);return;}j.t+=dt;
   if(j.fruit&&['lift','transfer','lower'].includes(j.phase)&&suction.support(j.fruit.body).lastSupportAge>SUCTION_RULE.slipSeconds){failPick(j,'搬送中に吸着が外れて落下');return;}
   if(preContact.has(j.phase)){
-    j.approachTime+=dt;const age=now-j.track.lastSeen,current=tracker.predict(j.track,now);
+    j.approachTime+=dt;if(!j.touchGoal&&!observedInPickZone(j.track)){failPick(j,'\u89b3\u6e2c\u4f4d\u7f6e\u304c\u628a\u6301\u7bc4\u56f2\u3092\u5916\u308c\u305f');return;}const age=now-j.track.lastSeen,current=tracker.predict(j.track,now);
     if(age>(j.phase==='hover'?TRACK_RULE.maxAge:SUCTION_RULE.maxOcclusionAge)||j.track.ambiguous){failPick(j,'把持前に画像追跡が失効・不確実');return;}
     if(j.approachTime>10||current.x>PICK_ZONE.maxX+.1){failPick(j,'対象が把持のタイミングを通過');return;}
     if(j.phase==='hover'){
@@ -280,7 +280,7 @@ function renderHistory(){const now=performance.now()/1000;for(const k in stats){
   if(activeJob?.phase==='seal')$('predictionInfo').textContent+=' ／ 工具高さ '+claw.position.y.toFixed(2)+'・目標 '+activeJob.contactGoal.y.toFixed(2)+'・追加下降 '+(activeJob.search?.depth||0).toFixed(2);
   const vacuum=suction.readout(activeJob?.fruit?.body);$('gripInfo').textContent='吸着：負圧 −'+vacuum.pressureKPa.toFixed(1)+' kPa ／ 保持力上限 '+vacuum.forceCapacity.toFixed(1)+' N（モデル値）／ '+(vacuum.sealed?'密着中':vacuum.contact?'吸着面に接触':vacuum.physicalContact?'接触あり・密着未成立':'接触待ち');
   const phases={observing:'画像追跡中',approaching:'予測把持へ移動','grip-check':'吸着の持ち上げ確認',sorting:'箱へ移動',reject:'不良排除',unknown:'未判定隔離',good:'不良未検出通過',unclassified:'未判定通過',escaped:'追跡喪失・取り逃がし'};
-  $('history').replaceChildren(...tracker.records.slice(-14).reverse().map(t=>{const tr=document.createElement('tr');const p=tracker.predict(t,now);const label=t.state==='observing'&&t.defects.size?(t.missedFrames?'不良確定・再検出待ち':!t.stable?'不良確定・位置推定中':'不良確定・把持待ち'):phases[t.state]||t.state;const texts=[t.id,label,String(t.frames),t.x.toFixed(2)+', '+t.z.toFixed(2)+' / vx '+t.vx.toFixed(2),[...t.defects].map(k=>names[k]).join('・')||'—',t.events.slice(-3).join(' → ')];for(const [i,text] of texts.entries()){const td=document.createElement('td');td.textContent=text;if(i===1&&t.defects.size)td.className='bad';tr.append(td);}return tr;}));
+  $('history').replaceChildren(...tracker.records.slice(-14).reverse().map(t=>{const tr=document.createElement('tr');const p=tracker.predict(t,now);const label=t.state==='observing'&&t.defects.size?(!observedInPickZone(t)?'\u628a\u6301\u7bc4\u56f2\u3078\u306e\u9032\u5165\u5f85\u3061':t.missedFrames?'不良確定・再検出待ち':!t.stable?'不良確定・位置推定中':'不良確定・把持待ち'):phases[t.state]||t.state;const texts=[t.id,label,String(t.frames),t.x.toFixed(2)+', '+t.z.toFixed(2)+' / vx '+t.vx.toFixed(2),[...t.defects].map(k=>names[k]).join('・')||'—',t.events.slice(-3).join(' → ')];for(const [i,text] of texts.entries()){const td=document.createElement('td');td.textContent=text;if(i===1&&t.defects.size)td.className='bad';tr.append(td);}return tr;}));
 }
 function reset(keepBins=false){epoch++;for(const f of [...fruits])if(!keepBins||!f.sorted)remove(f);tracker.reset();nextId=1+fruits.reduce((max,f)=>Math.max(max,f.id),0);spawnClock=scanClock=0;tick=0;activeJob=null;targetMarker.setEnabled(false);observationMarker.setEnabled(false);attempts.length=0;for(const k in stats)stats[k]=0;for(const v of views){v.ctx.clearRect(0,0,FRAME.width,FRAME.height);v.overlay.clearRect(0,0,FRAME.width,FRAME.height);}arm.reset();suction.reset();renderHistory();updateStatus();log('物理ラインと画像追跡をリセット');}
 function setPaused(value){if(paused===value)return;epoch++;paused=value;if(paused)pauseStarted=performance.now()/1000;else{const delta=performance.now()/1000-pauseStarted;tracker.shiftTime(delta);if(activeJob?.intercept)activeJob.intercept.contactAt+=delta;if(activeJob?.verifyStarted)activeJob.verifyStarted+=delta;}mechanics.pause(paused);updateStatus();}
@@ -300,27 +300,29 @@ $('yoloSize').onchange=async()=>{
   finally{resolutionLoading=false;$('yoloSize').disabled=$('detector').disabled=false;detectorInfo();}
 };
 $('slopeAngle').onchange=()=>{reset(false);applySlopeLayout(+$('slopeAngle').value);seedLine();renderHistory();};
-function changeRollerLayout(){
+function changeRollerLayout(resetLine=true){
+  if(fastPitchValue()!==null&&fastPitchValue()<+$('rollerDiameter').value+.01-1e-8)$('fastRollerPitch').value=[...$('fastRollerPitch').options].find(o=>o.value!=='auto'&&+o.value>=+$('rollerDiameter').value+.01-1e-8).value;
   $('rollerPitch').value=String(compatiblePitch(+$('rollerPitch').value,+$('rollerDiameter').value));
-  reset(true);
+  if(resetLine)reset(true);else{epoch++;if(activeJob&&preContact.has(activeJob.phase))failPick(activeJob,'\u30ed\u30fc\u30e9\u30fc\u9593\u9694\u5909\u66f4\u3067\u628a\u6301\u3092\u4e2d\u6b62');tracker.reset();}
+  mechanics.setSlowRollersRemoved($('removeSlowRollers').checked);
   const old=rollers.flatMap(r=>[r,...r.getChildMeshes()]);
   for(const view of views)view.rt.renderList=view.rt.renderList.filter(m=>!old.includes(m));
   lineLayout=lineLayout.filter(item=>!rollers.includes(item.mesh));
   for(const r of rollers){r.body.dispose();r.dispose();}rollers.length=0;
-  buildRollers(+$('rollerPitch').value,+$('rollerDiameter').value);
+  buildRollers(+$('rollerPitch').value,+$('rollerDiameter').value,$('removeSlowRollers').checked,fastPitchValue());
   lineLayout.push(...rollers.map(mesh=>({mesh,position:mesh.position.clone(),rotation:mesh.rotationQuaternion.clone()})));
   for(const view of views)view.rt.renderList.push(...rollers.flatMap(r=>[r,...r.getChildMeshes()]));
-  support=supportCalibration(+$('rollerPitch').value,$('removeSlowRollers').checked,+$('rollerDiameter').value);
-  mechanics.rebuildRollers(+$('rollerDiameter').value);applySlopeLayout(line.degrees);seedLine();renderHistory();
+  support=supportCalibration(+$('rollerPitch').value,$('removeSlowRollers').checked,+$('rollerDiameter').value,fastPitchValue());
+  mechanics.rebuildRollers(+$('rollerDiameter').value);applySlopeLayout(line.degrees);if(resetLine)seedLine();$('fastRollerPitch').disabled=!$('removeSlowRollers').checked;renderHistory();
 };
 $('armSpeed').onchange=()=>{if(!activeJob?.fruit&&!activeJob?.touchGoal)arm.servo.setMotionScale(+$('armSpeed').value);};
-$('rollerPitch').onchange=$('rollerDiameter').onchange=changeRollerLayout;
-$('removeSlowRollers').onchange=()=>{epoch++;support=supportCalibration(+$('rollerPitch').value,$('removeSlowRollers').checked,+$('rollerDiameter').value);if(activeJob&&preContact.has(activeJob.phase))failPick(activeJob,'ローラー配置変更で把持を中止');tracker.reset();mechanics.setSlowRollersRemoved($('removeSlowRollers').checked);};
+$('rollerPitch').onchange=$('rollerDiameter').onchange=()=>changeRollerLayout(true);
+$('removeSlowRollers').onchange=$('fastRollerPitch').onchange=()=>changeRollerLayout(false);
 $('rollingPreset').onchange=()=>{reset(true);mechanics.setRollingPreset($('rollingPreset').value);$('friction').value=String(mechanics.readRolling().friction);$('frictionValue').value=(+$('friction').value).toFixed(2);seedLine();renderHistory();};
 $('confidence').oninput=()=>{$('confidenceValue').value=$('confidence').value+'%';};$('confidence').onchange=()=>{reset(true);seedLine();detectorInfo();};
 for(const [id,type,hidden] of [['addGood',0,false],['addMold',1,false],['addDamage',2,false],['addHidden',1,true]])$(id).onclick=()=>spawn(type,hidden);
 for(const [id,unit] of [['rollerSlowdown','%'],['rollerDifference','%'],['vacuumPressure',' kPa'],['vacuumLeak','%'],['speed',' rad/s'],['friction',''],['rate','%'],['feedInterval',' 秒']])$(id).oninput=()=>{$(id+'Value').value=((id==='rate'||id==='vacuumLeak'||id==='rollerDifference')?$(id).value:(+$(id).value).toFixed(id==='friction'?2:1))+unit;};
-$('export').onclick=()=>{const data={version:'0.2-vacuum',detector:activeDetector.name,confidence:activeDetector===colorDetector?null:+$('confidence').value/100,inventory:{retained:fruits.filter(f=>f.sorted).length,bins:{good:fruits.filter(f=>f.bin==='good').length,reject:fruits.filter(f=>f.bin==='reject').length,unknown:fruits.filter(f=>f.bin==='unknown').length}},picking:{rules:PICK_RULE,observationRules:OBSERVATION_RULE,collectUnknown:$('collectUnknown').checked,feedInterval:+$('feedInterval').value,conveyorSlopeDegrees:line.degrees,rollerPitch:+$('rollerPitch').value,rollerDiameter:+$('rollerDiameter').value,supportCalibration:{source:'known-equipment-and-nominal-ellipsoid',knots:support.knots},rollerAngularSpeed:+$('speed').value,rollerTrial:{...ROLLER_TRIAL,activeCenters:mechanics.rollers.filter(r=>r.driveRole!=='normal').map(r=>({x:r.position.x,y:r.position.y,role:r.driveRole})),difference:+$('rollerDifference').value/100,slowdown:+$('rollerSlowdown').value/100}},tracking:{positionCamera:'A',auxiliaryDefectCameras:['B'],source:'calibrated-image-detections',simulatorIds:false,simulatorPositionsForPlanning:false,rules:TRACK_RULE,pickupZone:PICK_ZONE},robot:{approachMotionScale:+$('armSpeed').value,carryMotionScale:1,motionScale:arm.servo.motionScale,kinematics:'fixed-link-IK',linkLengths:ARM.lengths,jointLimitsRadians:ARM.limits,maxSpeedsRadiansPerSecond:ARM.speed.map(v=>v*arm.servo.motionScale/ARM.motionScale),maxAccelerationsRadiansPerSecondSquared:ARM.acceleration.map(v=>v*(arm.servo.motionScale/ARM.motionScale)**2),joints:arm.servo.joints,predictionLead:'capture-age-plus-remaining-joint-travel',dropPoints:DROP_POINTS},physics:{engine:'Havok',rolling:mechanics.readRolling(),slope:{degrees:line.degrees,pivotX:line.pivotX,plane:line.plane},continuous:true,grasp:'vacuum-force-and-lift',fruitDynamicDuringCarry:true,vacuumRules:SUCTION_RULE,contactSearchRules:CONTACT_SEARCH,vacuumSettings:suction.readout()},stats,attempts,records:tracker.records.map(t=>({...t,defects:[...t.defects],views:[...t.views]}))};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='mikan-image-tracking.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('export').onclick=()=>{const data={version:'0.2-vacuum',detector:activeDetector.name,confidence:activeDetector===colorDetector?null:+$('confidence').value/100,inventory:{retained:fruits.filter(f=>f.sorted).length,bins:{good:fruits.filter(f=>f.bin==='good').length,reject:fruits.filter(f=>f.bin==='reject').length,unknown:fruits.filter(f=>f.bin==='unknown').length}},picking:{rules:PICK_RULE,observationRules:OBSERVATION_RULE,collectUnknown:$('collectUnknown').checked,feedInterval:+$('feedInterval').value,conveyorSlopeDegrees:line.degrees,rollerPitch:+$('rollerPitch').value,rollerDiameter:+$('rollerDiameter').value,fastRollerPitch:fastPitchValue(),supportCalibration:{source:'known-equipment-and-nominal-ellipsoid',knots:support.knots},rollerAngularSpeed:+$('speed').value,rollerTrial:{...ROLLER_TRIAL,activeCenters:mechanics.rollers.filter(r=>r.driveRole!=='normal').map(r=>({x:r.position.x,y:r.position.y,role:r.driveRole})),difference:+$('rollerDifference').value/100,slowdown:+$('rollerSlowdown').value/100}},tracking:{positionCamera:'A',auxiliaryDefectCameras:['B'],source:'calibrated-image-detections',simulatorIds:false,simulatorPositionsForPlanning:false,rules:TRACK_RULE,pickupZone:PICK_ZONE},robot:{approachMotionScale:+$('armSpeed').value,carryMotionScale:1,motionScale:arm.servo.motionScale,kinematics:'fixed-link-IK',linkLengths:ARM.lengths,jointLimitsRadians:ARM.limits,maxSpeedsRadiansPerSecond:ARM.speed.map(v=>v*arm.servo.motionScale/ARM.motionScale),maxAccelerationsRadiansPerSecondSquared:ARM.acceleration.map(v=>v*(arm.servo.motionScale/ARM.motionScale)**2),joints:arm.servo.joints,predictionLead:'capture-age-plus-remaining-joint-travel',dropPoints:DROP_POINTS},physics:{engine:'Havok',rolling:mechanics.readRolling(),slope:{degrees:line.degrees,pivotX:line.pivotX,plane:line.plane},continuous:true,grasp:'vacuum-force-and-lift',fruitDynamicDuringCarry:true,vacuumRules:SUCTION_RULE,contactSearchRules:CONTACT_SEARCH,vacuumSettings:suction.readout()},stats,attempts,records:tracker.records.map(t=>({...t,defects:[...t.defects],views:[...t.views]}))};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='mikan-image-tracking.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 let last=performance.now();engine.runRenderLoop(()=>{const now=performance.now(),dt=Math.min((now-last)/1000,.25);last=now;update(dt);const capture=scanClock>=.2&&!busy&&!paused&&!switching;if(capture)for(const v of views)v.rt.resetRefreshCounter();scene.render();if(capture){scanClock=0;scan();}if(uiClock>=.3){uiClock=0;renderHistory();}});
-seedLine();detectorInfo();updateStatus();renderHistory();
+$('fastRollerPitch').disabled=!$('removeSlowRollers').checked;seedLine();detectorInfo();updateStatus();renderHistory();
 globalThis.mikanDebug={setPaused,setMotorEnabled,get motorEnabled(){return motorEnabled;},get line(){return line;},get pickupArea(){return pickupArea;},fruitHeight,get support(){return support;},worldAt,projectedFruitDiameter,scene,stats,views,mechanics,suction,reset,spawn,tracker,attempts,arm,get detector(){return activeDetector;},get switching(){return switching;},get fruits(){return fruits;},get records(){return tracker.records;},get busy(){return busy;},get paused(){return paused;},get activeJob(){return activeJob;}};

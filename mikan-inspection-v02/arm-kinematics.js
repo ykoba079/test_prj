@@ -1,6 +1,6 @@
 const rad=value=>value*Math.PI/180,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const ARM={motionScale:2,base:{x:3,y:.9,z:2.1},lengths:[2,1.9],toolOffset:.22,
-  limits:[[-160,160],[-20,135],[12,150]].map(([a,b])=>[rad(a),rad(b)]),
+  limits:[[-170,170],[-35,150],[8,165]].map(([a,b])=>[rad(a),rad(b)]),
   speed:[rad(230),rad(170),rad(230)],acceleration:[rad(1000),rad(800),rad(1040)]};
 export const ARM_REST={x:2.3,y:1.7,z:1};
 export const DROP_POINTS={reject:{x:1.7,y:.65,z:3.5},unknown:{x:4.1,y:.65,z:3.5}};

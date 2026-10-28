@@ -1,4 +1,4 @@
-import {ROLLER_TRIAL,rollerRole} from './roller-layout.js?v=20261029-layout';
+import {ROLLER_TRIAL,rollerRole} from './roller-layout.js?v=20261029-observed';
 export {ROLLER_TRIAL};
 const B=globalThis.BABYLON;
 export const ROLLING_PRESETS={
@@ -48,7 +48,7 @@ export async function createMechanics(scene,rollers){
   for(const mesh of scene.meshes.filter(m=>m.name==='floor'||m.name==='rail'||/^(良品|不良|未判定)-(bottom|wall)$/.test(m.name))){
     const aggregate=new B.PhysicsAggregate(mesh,B.PhysicsShapeType.BOX,{mass:0,friction:.5,restitution:0},scene);staticBodies.push(aggregate);
   }
-  let preset='combined',friction=1,clock=0,slowRollersRemoved=false;const fruitBodies=new Map();
+  let preset='combined',friction=1,clock=0,slowRollersRemoved=false,layoutSync=0;const fruitBodies=new Map();
   const rule=()=>ROLLING_PRESETS[preset],fruitShape=()=>fruitShapes.get(rule().segments);
   function applyMaterials(){
     const combine=B.PhysicsMaterialCombineMode.MINIMUM,staticFriction=friction*rule().staticRatio;
@@ -69,12 +69,13 @@ export async function createMechanics(scene,rollers){
   });
   return {
     plugin,rollers,get fruitShape(){return fruitShape();},fruitForBody:body=>fruitBodies.get(body)||null,
-    rebuildRollers(diameter=rollerDiameter){rollerShape.dispose();slowRollerShape.dispose();rollerDiameter=diameter;rollerShape=makeRollerShape();slowRollerShape=makeRollerShape();slowCollisionMask=slowRollerShape.filterCollideMask;slowRollerShape.filterCollideMask=slowRollersRemoved?0:slowCollisionMask;applyMaterials();attachRollers();for(const f of fruitBodies.values())f.rollerContacts.clear();for(const r of rollers)if(r.driveRole==='slow')r.setEnabled(!slowRollersRemoved);},
+    rebuildRollers(diameter=rollerDiameter){layoutSync++;rollerShape.dispose();slowRollerShape.dispose();rollerDiameter=diameter;rollerShape=makeRollerShape();slowRollerShape=makeRollerShape();slowCollisionMask=slowRollerShape.filterCollideMask;slowRollerShape.filterCollideMask=slowRollersRemoved?0:slowCollisionMask;applyMaterials();attachRollers();for(const f of fruitBodies.values())f.rollerContacts.clear();for(const r of rollers)if(r.driveRole==='slow')r.setEnabled(!slowRollersRemoved);},
     syncLayout(){
       // A setting change resets fruit first; teleport equipment once, then resume velocity drive.
+      const revision=++layoutSync;
       const bodies=[...rollers.map(r=>r.body),...staticBodies.map(a=>a.body)];
       for(const body of bodies)body.setPrestepType(B.PhysicsPrestepType.TELEPORT);
-      scene.onAfterPhysicsObservable.addOnce(()=>{for(const body of bodies)body.setPrestepType(B.PhysicsPrestepType.DISABLED);});
+      scene.onAfterPhysicsObservable.addOnce(()=>{if(revision!==layoutSync)return;for(const body of bodies)body.setPrestepType(B.PhysicsPrestepType.DISABLED);});
     },
     setRollingPreset(name){if(!ROLLING_PRESETS[name])throw new Error('Unknown rolling preset');preset=name;friction=rule().friction;applyMaterials();},
     readRolling(){return {preset,...rule(),friction,rollerDiameter,slowRollersRemoved,fruitMaterial:fruitShape().material,rollerMaterial:rollerShape.material,slowRollerMaterial:slowRollerShape.material};},

@@ -13,6 +13,14 @@ export function rollerPositions(pitch){
   if(!ROLLER_PITCHES.includes(pitch))throw new Error('Unsupported roller pitch');
   const positions=[];for(let i=0;-6.8+i*pitch<7.2;i++)positions.push(-6.8+i*pitch);return positions;
 }
+export function rollerLayout(pitch,removed=false,fastPitch=null){
+  const base=rollerPositions(pitch).map(x=>({x,role:rollerRole(x,pitch)}));
+  if(!removed||fastPitch===null)return base;
+  if(!Number.isFinite(fastPitch)||fastPitch<=0)throw new Error('Invalid fast roller pitch');
+  const fast=base.filter(r=>r.role==='fast'),result=base.filter(r=>r.role!=='fast');
+  for(let i=0;fast[0].x+i*fastPitch<=fast.at(-1).x+1e-8;i++)result.push({x:fast[0].x+i*fastPitch,role:'fast'});
+  return result.sort((a,b)=>a.x-b.x);
+}
 function restingHeight(gap,diameter=.30){
   // Ellipsoid (.39 x .3276) resting between two cylinders.
   const radius=diameter/2;
@@ -24,12 +32,11 @@ function restingHeight(gap,diameter=.30){
   return height-.13;
 }
 const baseline=restingHeight(.31);
-export function supportCalibration(pitch,removed=false,diameter=.30){
-  const xs=rollerPositions(pitch);
-  const supports=xs.filter(x=>!removed||rollerRole(x,pitch)!=='slow');
+export function supportCalibration(pitch,removed=false,diameter=.30,fastPitch=null){
+  const supports=rollerLayout(pitch,removed,fastPitch).filter(r=>!removed||r.role!=='slow').map(r=>r.x);
   // Pocket height at the middle of each pair; interpolate to avoid calibration jumps.
   const knots=supports.slice(1).map((x,i)=>({x:(x+supports[i])/2,y:.35+restingHeight(x-supports[i],diameter)-baseline}));
-  return {pitch,removed,diameter,knots,heightAt(x){
+  return {pitch,removed,diameter,fastPitch,knots,heightAt(x){
     if(x<=knots[0].x)return knots[0].y;
     for(let i=1;i<knots.length;i++)if(x<=knots[i].x){const a=knots[i-1],b=knots[i],t=(x-a.x)/(b.x-a.x);return a.y+(b.y-a.y)*t;}
     return knots.at(-1).y;
