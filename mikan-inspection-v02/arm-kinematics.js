@@ -54,7 +54,7 @@ export function createArmServo(initial=ARM_REST,motionScale=ARM.motionScale,mode
   const config=ARM_MODELS[model];if(!config)throw new Error('Unknown arm model');
   const solve=(target,reference=null)=>inverseForModel(target,model,reference),fk=model==='three'?forwardThree:forward;
   let speed,acceleration,gain;
-  function setMotionScale(value){if(![1,2].includes(value))throw new Error('Unsupported arm speed');motionScale=value;const ratio=value/config.motionScale;speed=config.speed.map(v=>v*ratio);acceleration=config.acceleration.map(v=>v*ratio*ratio);gain=8*value;}
+  function setMotionScale(value){if(![1,1.5,2].includes(value))throw new Error('Unsupported arm speed');motionScale=value;const ratio=value/config.motionScale;speed=config.speed.map(v=>v*ratio);acceleration=config.acceleration.map(v=>v*ratio*ratio);gain=8*value;}
   setMotionScale(motionScale);
   const start=solve(initial);if(!start.reachable)throw new Error('Invalid robot rest pose');
   let joints=[...start.joints],goal=[...joints],velocity=joints.map(()=>0),valveOn=false;

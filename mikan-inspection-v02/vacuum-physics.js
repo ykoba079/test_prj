@@ -1,6 +1,7 @@
 // Rigid-body approximation of a compliant vacuum cup. No CFD and no fruit pose attachment.
-export const SUCTION_RULE={radius:.16,effectiveAreaM2:.0002,targetKPa:60,pumpSeconds:.05,ventSeconds:.055,readyKPa:12,holdingKPa:8,sealSeconds:.10,contactAge:.10,maxGap:.14,minNormalY:.65,spring:120,damping:6,angularSpring:.6,angularDamping:.08,momentArm:.056,carryMotionScale:.65,shearRatio:.70,padForce:3,verifyRise:.12,verifySeconds:1.8,slipSeconds:.25,sealTimeout:1.4,maxOcclusionAge:3.5};
+export const SUCTION_RULE={radius:.16,effectiveAreaM2:.0002,targetKPa:78,pumpSeconds:.05,ventSeconds:.055,readyKPa:12,holdingKPa:8,sealSeconds:.10,contactAge:.10,maxGap:.14,minNormalY:.65,spring:120,damping:6,angularSpring:.6,angularDamping:.08,momentArm:.056,carryMotionScale:.65,shearRatio:.70,padForce:3,verifyRise:.12,verifySeconds:1.8,slipSeconds:.25,sealTimeout:1.4,maxOcclusionAge:3.5};
 export function createVacuumGripper(B,scene,arm,mechanics){
+  let allowedBody=null;
   let clock=0,pressure=0,targetKPa=SUCTION_RULE.targetKPa,leak=0,seal=null,readySince=null,lastBreak='idle',lastApplied=0;
   const physicalContacts=new Map(),contacts=new Map(),lastSupport=new Map(),anchor=new B.TransformNode('vacuum-wrist-anchor',scene);anchor.position.copyFrom(arm.claw.position);anchor.rotationQuaternion=arm.claw.rotationQuaternion.clone();
   const anchorBody=new B.PhysicsBody(anchor,B.PhysicsMotionType.ANIMATED,false,scene),empty=new B.PhysicsShapeBox(B.Vector3.Zero(),B.Quaternion.Identity(),new B.Vector3(.05,.05,.05),scene);empty.filterCollideMask=0;anchorBody.shape=empty;
@@ -14,10 +15,10 @@ export function createVacuumGripper(B,scene,arm,mechanics){
   });
   function detach(reason){if(seal){lastBreak=reason;contacts.delete(seal.body);}seal=null;readySince=null;lastApplied=0;arm.suction.stretch=0;}
   function capacity(){return pressure*1000*SUCTION_RULE.effectiveAreaM2;}
-  function currentContact(){return [...contacts].filter(([b,c])=>mechanics.fruitForBody(b)&&!mechanics.fruitForBody(b).sorted&&clock-c.time<=SUCTION_RULE.contactAge).sort((a,b)=>b[1].quality-a[1].quality)[0]||null;}
+  function currentContact(forBody=null){return [...contacts].filter(([b,c])=>(!allowedBody||b===allowedBody)&&(!forBody||b===forBody)&&mechanics.fruitForBody(b)&&!mechanics.fruitForBody(b).sorted&&clock-c.time<=SUCTION_RULE.contactAge).sort((a,b)=>b[1].quality-a[1].quality)[0]||null;}
   function worldPoint(){seal.fruit.root.computeWorldMatrix(true);return B.Vector3.TransformCoordinates(seal.localPoint,seal.fruit.root.getWorldMatrix());}
   function targetPoint(){pad.root.computeWorldMatrix(true);return B.Vector3.TransformCoordinates(seal.padPoint,pad.root.getWorldMatrix());}
-  function status(forBody=null){const active=!!seal&&(!forBody||forBody===seal.body),contact=currentContact();return {sealed:active,physicalContact:[...physicalContacts].some(([b,t])=>mechanics.fruitForBody(b)&&!mechanics.fruitForBody(b).sorted&&clock-t<=SUCTION_RULE.contactAge),contact:!!contact,quality:active?seal.quality:contact?.[1].quality||0,pressureKPa:pressure,forceCapacity:capacity(),appliedForce:lastApplied,stableSeconds:active&&readySince!==null?clock-readySince:0,lastSupportAge:forBody?clock-(lastSupport.get(forBody)??-100):active?clock-(lastSupport.get(seal.body)??-100):100,breakReason:lastBreak,targetKPa,leak};}
+  function status(forBody=null){const active=!!seal&&(!forBody||forBody===seal.body),contact=currentContact(forBody);return {sealed:active,physicalContact:[...physicalContacts].some(([b,t])=>(!allowedBody||b===allowedBody)&&(!forBody||b===forBody)&&mechanics.fruitForBody(b)&&!mechanics.fruitForBody(b).sorted&&clock-t<=SUCTION_RULE.contactAge),contact:!!contact,quality:active?seal.quality:contact?.[1].quality||0,pressureKPa:pressure,forceCapacity:capacity(),appliedForce:lastApplied,stableSeconds:active&&readySince!==null?clock-readySince:0,lastSupportAge:forBody?clock-(lastSupport.get(forBody)??-100):active?clock-(lastSupport.get(seal.body)??-100):100,breakReason:lastBreak,targetKPa,leak};}
   // Forces are applied once per Havok substep, not once per rendered frame.
   scene.onBeforePhysicsObservable.add(()=>{
     const dt=(scene.getPhysicsEngine().getSubTimeStep()||1000/60)/1000;clock+=dt;
@@ -36,11 +37,12 @@ export function createVacuumGripper(B,scene,arm,mechanics){
     if(pressure>=SUCTION_RULE.holdingKPa)lastSupport.set(seal.body,clock);if(pressure>=SUCTION_RULE.readyKPa){if(readySince===null)readySince=clock;}else readySince=null;
   });
   return {rules:SUCTION_RULE,anchorBody,padBody:body,
+    target(value){allowedBody=value;if(seal&&allowedBody&&seal.body!==allowedBody)detach('target-changed');},
     update(dt){const step=Math.max(.008,Math.min(dt,.1));anchorBody.setLinearVelocity(arm.claw.position.subtract(anchor.position).scale(1/step));const a=2*Math.atan2(anchor.rotationQuaternion.y,anchor.rotationQuaternion.w),b=2*Math.atan2(arm.claw.rotationQuaternion.y,arm.claw.rotationQuaternion.w);anchorBody.setAngularVelocity(new B.Vector3(0,Math.atan2(Math.sin(b-a),Math.cos(b-a))/step));},
     configure(settings){if(settings.targetKPa!==undefined)targetKPa=Math.max(0,Math.min(80,settings.targetKPa));if(settings.leak!==undefined)leak=Math.max(0,Math.min(1,settings.leak));},
     support:status,readout:status,
     candidate(){return seal&&readySince!==null&&clock-readySince>=SUCTION_RULE.sealSeconds?{fruit:seal.fruit,body:seal.body,...status(seal.body)}:null;},
     opened(){return !arm.servo.valveOn&&!seal&&pressure<2;},
-    reset(){detach('reset');lastBreak='reset';pressure=0;physicalContacts.clear();contacts.clear();lastSupport.clear();anchor.position.copyFrom(arm.claw.position);anchor.rotationQuaternion.copyFrom(arm.claw.rotationQuaternion);pad.root.position.copyFrom(pad.targetPosition);pad.root.rotationQuaternion.copyFrom(pad.targetRotation);for(const b of [anchorBody,body]){b.setLinearVelocity(B.Vector3.Zero());b.setAngularVelocity(B.Vector3.Zero());b.setPrestepType(B.PhysicsPrestepType.TELEPORT);}scene.onAfterPhysicsObservable.addOnce(()=>{for(const b of [anchorBody,body])b.setPrestepType(B.PhysicsPrestepType.DISABLED);});},
+    reset(){allowedBody=null;detach('reset');lastBreak='reset';pressure=0;physicalContacts.clear();contacts.clear();lastSupport.clear();anchor.position.copyFrom(arm.claw.position);anchor.rotationQuaternion.copyFrom(arm.claw.rotationQuaternion);pad.root.position.copyFrom(pad.targetPosition);pad.root.rotationQuaternion.copyFrom(pad.targetRotation);for(const b of [anchorBody,body]){b.setLinearVelocity(B.Vector3.Zero());b.setAngularVelocity(B.Vector3.Zero());b.setPrestepType(B.PhysicsPrestepType.TELEPORT);}scene.onAfterPhysicsObservable.addOnce(()=>{for(const b of [anchorBody,body])b.setPrestepType(B.PhysicsPrestepType.DISABLED);});},
   };
 }
