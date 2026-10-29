@@ -1,5 +1,23 @@
 // Detection authorizes an individual. Its simulator pose may then guide the robot.
 export const DETECTED_PICK={cupOffset:.1175,indent:.012,maxIndent:.025,hoverClearance:.55,followLead:.14,timeout:6};
+export const DEFECT_CONFIRMATION={windowSeconds:2,captures:2};
+export function pendingDefectCount(record,time){return (record.defectCaptures||[]).filter(s=>time>=s.time&&time-s.time<=DEFECT_CONFIRMATION.windowSeconds).length;}
+export function recordDefectCapture(record,kinds,time,frame){
+  record.defectCaptures=(record.defectCaptures||[]).filter(s=>time>=s.time&&time-s.time<=DEFECT_CONFIRMATION.windowSeconds);
+  record.lastEvidence??={mold:-1,damage:-1};
+  const accepted=[...new Set(kinds)].filter(k=>k==='mold'||k==='damage');
+  if(accepted.length){
+    let capture=record.defectCaptures.find(s=>s.frame===frame);
+    if(!capture){capture={frame,time,kinds:[]};record.defectCaptures.push(capture);}
+    for(const kind of accepted){
+      if(!capture.kinds.includes(kind))capture.kinds.push(kind);
+      if(record.lastEvidence[kind]!==frame){record.evidence[kind]++;record.lastEvidence[kind]=frame;}
+    }
+  }
+  const confirmed=[];
+  if(record.defectCaptures.length>=DEFECT_CONFIRMATION.captures)for(const kind of new Set(record.defectCaptures.flatMap(s=>s.kinds)))if(!record.defects.has(kind)){record.defects.add(kind);confirmed.push(kind);}
+  return confirmed;
+}
 export function matchDetectedFruits(detections,candidates){
   const matches=[];
   for(const d of detections){
