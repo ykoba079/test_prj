@@ -120,6 +120,7 @@ function bindDefectMarkers(snapshot,capturedAt){
     if(!defectMarkers.has(fruit.id)){
       const marker=B.MeshBuilder.CreateBox('yolo-defect-fruit-'+fruit.id,{size:.16},scene);
       marker.material=defectMarkerMaterial;marker.layerMask=1;marker.isPickable=false;
+      marker.position.copyFrom(fruit.root.position);marker.position.y+=.58;
       marker.metadata={debugFruitId:fruit.id};defectMarkers.set(fruit.id,marker);
     }
   }
