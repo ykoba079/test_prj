@@ -27,6 +27,7 @@ export function createImageTracker(){
     const eligible=tracks.filter(t=>!t.closed&&['observing','approaching'].includes(t.state)&&time>=t.lastSeen&&time-t.lastSeen<=TRACK_RULE.expireAge);
     const pairs=[];
     for(const t of eligible)for(const [i,d] of observations.entries()){
+      if(d.trackOnly&&d.trackOnly!==t.id)continue;
       const dt=Math.max(.01,time-t.lastSeen),prior=t.frames<2?{x:t.x+.7*dt,z:t.z}:predict(t,time),gap=distance(prior,d);
       // Broad forward gate for the first association. The prior is never used for picking.
       const forward=d.x-t.x,lateral=Math.abs(d.z-t.z),gate=t.frames<2?Math.min(2.8,.45+1.8*dt):Math.min(1.8,.5+dt*.8);
@@ -39,7 +40,7 @@ export function createImageTracker(){
       if(rivals.some(q=>Math.abs(q.gap-p.gap)<.16)){ambiguous.add(p.i);p.t.ambiguous=true;continue;}
       matchedT.add(p.t);matchedD.add(p.i);observe(p.t,observations[p.i],time,frame);
     }
-    for(const [i,d] of observations.entries())if(!matchedD.has(i)&&!ambiguous.has(i)&&d.x<=PICK_ZONE.maxX&&!records.some(t=>(t.closed||t.state==='sorting')&&time-t.lastSeen<2&&distance(predict(t,time),d)<.65)){
+    for(const [i,d] of observations.entries())if(!d.trackOnly&&!matchedD.has(i)&&!ambiguous.has(i)&&d.x<=PICK_ZONE.maxX&&!records.some(t=>(t.closed||t.state==='sorting')&&time-t.lastSeen<2&&distance(predict(t,time),d)<.65)){
       const t={id:'T'+nextId++,x:d.x,z:d.z,vx:0,vz:0,lastSeen:time,firstSeen:time,samples:[],fitX:d.x,fitZ:d.z,fitError:0,speedChange:0,stable:false,missedFrames:0,missedAtFrame:-1,frames:0,lastFrame:-1,evidence:{mold:0,damage:0},lastEvidence:{mold:-1,damage:-1},defects:new Set(),scores:{},views:new Set(),events:[],state:'observing',closed:false,ambiguous:false};
       tracks.push(t);records.push(t);note(t,'画像から追跡開始');observe(t,d,time,frame);
     }
@@ -51,7 +52,7 @@ export function createImageTracker(){
     const fresh=t.lastFrame!==frame;
     if(fresh){
       t.samples.push({time,x:d.x,z:d.z});t.samples=t.samples.filter(p=>time-p.time<=5).slice(-3);
-      t.x=d.x;t.z=d.z;t.lastSeen=time;fitMotion(t);
+      t.x=d.x;t.z=d.z;t.lastSeen=time;t.positionSource=d.positionSource||'detector';fitMotion(t);
     }
     t.ambiguous=false;t.missedFrames=0;for(const v of d.views||[])t.views.add(v);
     for(const [key,value] of Object.entries(d.scores||{}))t.scores[key]=Math.max(t.scores[key]||0,value);
