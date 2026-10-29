@@ -1,6 +1,6 @@
 // This module accepts calibrated image measurements only. No meshes or simulator IDs.
 export const PICK_ZONE={minX:1.55,maxX:4.0,maxZ:1.3};
-export const TRACK_RULE={maxAge:3,expireAge:5,minFrames:12,defaultLeadSeconds:.5,startAge:1.3,gripAge:2.5,maxUncertainty:.28,singleDefectConfidence:.95};
+export const TRACK_RULE={maxAge:3,expireAge:5,minFrames:12,defaultLeadSeconds:.5,startAge:1.3,gripAge:2.5,maxUncertainty:.28,defectObservations:1};
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function fuseViews(views){
   const primary=views.find(v=>v.id==='A');
@@ -60,7 +60,7 @@ export function createImageTracker(){
   }
   function recordDefects(t,d,frame){
     for(const kind of new Set(d.defects))if(t.lastEvidence[kind]!==frame){t.lastEvidence[kind]=frame;t.evidence[kind]++;t.scores[kind]=Math.max(t.scores[kind]||0,d.scores?.[kind]||0);}
-    for(const kind of ['mold','damage'])if((t.evidence[kind]>=2||t.frames>=3&&t.evidence[kind]>=1&&t.scores[kind]>=TRACK_RULE.singleDefectConfidence)&&!t.defects.has(kind)){t.defects.add(kind);note(t,(kind==='mold'?'カビ':'傷')+'確定（別撮影2回、または3回追跡＋信頼度95%以上）');}
+    for(const kind of ['mold','damage'])if(t.evidence[kind]>=TRACK_RULE.defectObservations&&!t.defects.has(kind)){t.defects.add(kind);note(t,(kind==='mold'?'カビ':'傷')+'確定（不良検出1回）');}
   }
   function confirmAuxiliary(detections,time,frame,view){
     const matched=new Set();for(const d of detections){const options=tracks.filter(t=>!t.closed&&!matched.has(t)&&['observing','approaching'].includes(t.state)&&t.lastFrame!==frame&&time>=t.lastSeen&&time-t.lastSeen<=TRACK_RULE.gripAge).map(t=>({t,gap:distance(predict(t,time),d)})).filter(c=>c.gap<.25).sort((a,b)=>a.gap-b.gap);

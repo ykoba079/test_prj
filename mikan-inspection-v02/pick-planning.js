@@ -1,4 +1,4 @@
-import {PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261029-observed';
+import {PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261030-single-defect';
 export const PICK_RULE={hoverY:1.42,settleSeconds:.20,tcpHeight:.79,maxFinalLead:1.5,minFinalX:PICK_ZONE.minX,maxFinalX:PICK_ZONE.maxX,maxFollowLead:.5,occlusionAge:.45,occlusionHorizon:.8,occlusionUncertainty:.12};
 export function canDescend(tracker,t,now,lead=0){
   return tracker.pickable(t,now,lead)||!t.closed&&t.state==='approaching'&&t.stable&&!t.ambiguous&&t.missedFrames===1&&now-t.lastSeen<=PICK_RULE.occlusionAge&&now+lead-t.lastSeen<=PICK_RULE.occlusionHorizon&&tracker.uncertainty(t,now,lead)<=PICK_RULE.occlusionUncertainty;

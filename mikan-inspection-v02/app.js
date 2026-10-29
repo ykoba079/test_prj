@@ -5,11 +5,11 @@ import {createMechanics,ROLLER_TRIAL} from './physics.js?v=20261029-transfer';
 import {rollerLayout,supportCalibration,compatiblePitch} from './roller-layout.js?v=20261029-transfer';
 import {createSlopeGeometry} from './slope.js?v=20261028-slope';
 import {createYoloDetector} from './yolo-detector.js?v=20261028-controls';
-import {createImageTracker,fuseViews,PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261029-observed';
+import {createImageTracker,fuseViews,PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261030-single-defect';
 import {createRobotArm} from './robot-arm.js?v=20261029-articulated';
 import {ARM_REST,DROP_POINTS} from './arm-kinematics.js?v=20261029-articulated';
 import {checkFruitObservation,OBSERVATION_RULE} from './observation-check.js?v=20261027-vacuum';
-import {chooseIntercept,PICK_RULE,hoverReady,observedInPickZone} from './pick-planning.js?v=20261029-observed';
+import {chooseIntercept,PICK_RULE,hoverReady,observedInPickZone} from './pick-planning.js?v=20261030-single-defect';
 import {createVacuumGripper,SUCTION_RULE} from './vacuum-physics.js?v=20261029-center';
 const B=globalThis.BABYLON,$=id=>document.getElementById(id),names={mold:'カビ',damage:'傷'},stateNames={observing:'観測中',good:'良品通過',reject:'不良排除',unknown:'未判定隔離',sorting:'アーム移動中',escaping:'取り逃がし・搬送中',escaped:'取り逃がし通過',missed:'搬送異常'};
 if(!B?.Engine.IsSupported)throw new Error('このブラウザーでWebGLを利用できません。ブラウザーの3D描画設定を確認してください。');
@@ -104,24 +104,35 @@ let fruits=[],nextId=1,paused=false,motorEnabled=true,busy=false,epoch=0,tick=0,
 const rest=new B.Vector3(ARM_REST.x,ARM_REST.y,ARM_REST.z),attempts=[];
 const observationMarker=B.MeshBuilder.CreateSphere('image-last-observation',{diameter:.13},scene);observationMarker.material=material('last-observation','#ff7bd3');observationMarker.layerMask=1;observationMarker.isPickable=false;observationMarker.setEnabled(false);
 const targetMarker=B.MeshBuilder.CreateSphere('image-predicted-contact',{diameter:.16},scene);targetMarker.material=material('predicted-contact','#44e5e8');targetMarker.material.emissiveColor=new B.Color3(.15,.8,.8);targetMarker.layerMask=1;targetMarker.isPickable=false;targetMarker.setEnabled(false);
-// Display-only, keyed by image track IDs. Never attach to or look up fruit meshes.
-// These meshes are created after inspection render lists and never added to them.
-const defectMarkers=new Map(),defectMarkerMaterial=material('yolo-defect-debug','#ff2538');
+// Simulator association is exclusively for debug display; never supplied to the tracker or planner.
+const defectMarkers=new Map(),defectMarkerBindings=new Map(),defectMarkerMaterial=material('yolo-defect-debug','#ff2538');
 defectMarkerMaterial.emissiveColor=B.Color3.FromHexString('#ff2538');defectMarkerMaterial.disableLighting=true;
-function clearDefectMarkers(){for(const marker of defectMarkers.values())marker.dispose();defectMarkers.clear();}
-function updateDefectMarkers(now){
-  if(!activeDetector.name.startsWith('yolov9')){clearDefectMarkers();return;}
-  const visible=new Set();
+function clearDefectMarkers(){for(const marker of defectMarkers.values())marker.dispose();defectMarkers.clear();defectMarkerBindings.clear();}
+function bindDefectMarkers(snapshot,capturedAt){
+  if(!activeDetector.name.startsWith('yolov9'))return;
   for(const track of tracker.tracks){
-    if(track.closed||!(track.evidence.mold||track.evidence.damage))continue;
-    const held=activeJob?.track===track&&!!activeJob.fruit;
-    if(!held&&now-track.lastSeen>TRACK_RULE.maxAge)continue;
-    visible.add(track.id);let marker=defectMarkers.get(track.id);
-    if(!marker){marker=B.MeshBuilder.CreateBox('yolo-defect-'+track.id,{size:.16},scene);marker.material=defectMarkerMaterial;marker.layerMask=1;marker.isPickable=false;defectMarkers.set(track.id,marker);}
-    if(held)marker.position.set(claw.position.x,claw.position.y+.10,claw.position.z);
-    else{const p=tracker.predict(track,now);marker.position.set(p.x,fruitHeight(p.x)+.58,p.z);}
+    if(track.closed||!track.defects.size||(track.lastSeen!==capturedAt&&track.auxiliarySeen!==capturedAt)||defectMarkerBindings.has(track.id))continue;
+    // Match against positions at image capture, never at inference completion. Reject ambiguous matches.
+    const observed=track.lastSeen===capturedAt?track:tracker.predict(track,capturedAt);
+    const candidates=snapshot.map(p=>({...p,gap:Math.hypot(p.x-observed.x,p.z-observed.z)})).filter(p=>fruits.includes(p.fruit)&&!p.fruit.root.isDisposed()&&p.gap<.45).sort((a,b)=>a.gap-b.gap);
+    if(!candidates.length||candidates[1]&&candidates[1].gap-candidates[0].gap<.15)continue;
+    const fruit=candidates[0].fruit;defectMarkerBindings.set(track.id,fruit);
+    if(!defectMarkers.has(fruit.id)){
+      const marker=B.MeshBuilder.CreateBox('yolo-defect-fruit-'+fruit.id,{size:.16},scene);
+      marker.material=defectMarkerMaterial;marker.layerMask=1;marker.isPickable=false;
+      marker.metadata={debugFruitId:fruit.id};defectMarkers.set(fruit.id,marker);
+    }
   }
-  for(const [id,marker] of defectMarkers)if(!visible.has(id)){marker.dispose();defectMarkers.delete(id);}
+}
+function updateDefectMarkers(){
+  if(!activeDetector.name.startsWith('yolov9')){clearDefectMarkers();return;}
+  for(const [trackId,fruit] of defectMarkerBindings)if(!fruits.includes(fruit))defectMarkerBindings.delete(trackId);
+  for(const [id,marker] of defectMarkers){
+    const fruit=fruits.find(f=>f.id===id);
+    if(!fruit||fruit.root.isDisposed()){marker.dispose();defectMarkers.delete(id);continue;}
+    // Follow the bound fruit's actual center, with a world-up offset unaffected by fruit rotation.
+    marker.position.copyFrom(fruit.root.position);marker.position.y+=.58;
+  }
 }
 const pickupMaterial=material('pickup-area-color','#33e6a0');pickupMaterial.alpha=.28;pickupMaterial.emissiveColor=new B.Color3(.08,.55,.3);pickupMaterial.backFaceCulling=false;
 let pickupArea=null;
@@ -163,8 +174,9 @@ function projectedFruitDiameter(d,view){
 }
 function drawBox(ctx,b,color,text){const y=ctx.canvas.id==='overlayB'?FRAME.height-b.y1:b.y0;ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(b.x0,y,b.x1-b.x0,b.y1-b.y0);ctx.fillStyle=color;ctx.font='12px sans-serif';ctx.fillText(text,b.x0,Math.max(13,y-4));}
 async function scan(){if(busy||paused||switching)return;busy=true;const detector=activeDetector,threshold=+$('confidence').value/100,token=epoch,frame=++tick,capturedAt=performance.now()/1000,t0=performance.now();
+  const debugFruitSnapshot=detector.name.startsWith('yolov9')?fruits.filter(f=>!f.sorted).map(f=>({fruit:f,x:f.root.position.x,z:f.root.position.z})):[];
   const heldAtCapture=activeJob?.fruit?claw.position.clone():null;
-  // Calibration matrices and capture time only: no fruit positions, IDs or orientations.
+  // Control uses image calibration only; the separate snapshot above is exclusively for debug markers.
   const captures=views.map(v=>({...v,geometry:line,support,viewMatrix:v.camera.getViewMatrix().clone(),projectionMatrix:v.camera.getProjectionMatrix().clone(),linePlane:new B.Plane(line.plane.x,line.plane.y,line.plane.z,line.plane.d)})),measurements=[];
   try{
     const pixels=await Promise.all(captures.map(v=>v.rt.readPixels()));
@@ -191,7 +203,7 @@ async function scan(){if(busy||paused||switching)return;busy=true;const detector
     for(const view of captures)for(const t of tracker.tracks.filter(t=>t.lastSeen===capturedAt&&!t.closed)){
       const p=B.Vector3.Project(new B.Vector3(t.x,fruitHeight(t.x),t.z),B.Matrix.Identity(),view.viewMatrix.multiply(view.projectionMatrix),new B.Viewport(0,0,FRAME.width,FRAME.height));view.overlay.fillStyle='#72e7ed';view.overlay.font='bold 15px sans-serif';view.overlay.fillText(t.id,p.x+10,(view.id==='B'?FRAME.height-p.y:p.y)+18);
     }
-    for(const auxiliary of measurements.filter(v=>v.id!=='A'))tracker.confirmAuxiliary(auxiliary.detections,capturedAt,frame,auxiliary.id);flushEvents();
+    for(const auxiliary of measurements.filter(v=>v.id!=='A'))tracker.confirmAuxiliary(auxiliary.detections,capturedAt,frame,auxiliary.id);bindDefectMarkers(debugFruitSnapshot,capturedAt);flushEvents();
     $('latency').textContent=Math.round(performance.now()-t0)+' ms';$('inferenceInfo').textContent=results.filter(r=>r?.timings).map(r=>r.view.id+' 推論 '+Math.round(r.timings.inferenceMs)+' ms').join(' ／ ');
   }catch(error){if(token!==epoch)return;paused=true;mechanics.pause(true);updateStatus();globalThis.mikanShowError?.(error);log('検査エラー：'+error.message);}finally{busy=false;}
 }
@@ -292,7 +304,7 @@ function update(dt){if(paused||switching)return;suction.configure({targetKPa:+$(
   }
   const holding=!!activeJob&&(!!activeJob.fruit||!!activeJob.touchGoal);
   arm.servo.setMotionScale(holding?1:+$('armSpeed').value);
-  plan(now);advanceArm(dt,now);arm.step(dt*(activeJob?.fruit?SUCTION_RULE.carryMotionScale:1));suction.update(dt);tracker.prune();updateDefectMarkers(now);
+  plan(now);advanceArm(dt,now);arm.step(dt*(activeJob?.fruit?SUCTION_RULE.carryMotionScale:1));suction.update(dt);tracker.prune();updateDefectMarkers();
   // World poses below are used only for physics lifecycle and outcome accounting.
   for(const f of [...fruits]){if(f.picked)continue;if(f.sorted)continue;if(f.root.position.x>linePoint({x:7.3,y:0}).x){stats.passed++;f.sorted=true;f.bin='good';f.releaseAt=now;}else if(f.root.position.y< -1||Math.abs(f.root.position.z)>2||f.root.position.x< -7.5||f.root.position.x>8){stats.lost++;remove(f);}}
 }
