@@ -158,8 +158,7 @@
     <div class="row">
       <button class="motionButton" type="button" data-motion="idle">&#24453;&#27231;</button>
       <button class="motionButton" type="button" data-motion="walk">&#27497;&#12367;</button>
-      <button class="motionButton" type="button" data-motion="jogBack">&#12472;&#12519;&#12464;&#24460;&#36864;</button>
-      <button class="motionButton" type="button" data-motion="stepBack">&#24460;&#36864;</button>
+      <button class="motionButton" type="button" data-motion="wave">&#25163;&#12434;&#25391;&#12427;</button>
       <button id="stopMotionButton" type="button">&#20572;&#27490;</button>
     </div>
     <div id="advancedControls" class="advancedControls">
@@ -250,8 +249,7 @@
     const MOTIONS = {
       idle: { label: "\u5f85\u6a5f", url: "mixamo/Fighting Idle.glb" },
       walk: { label: "\u6b69\u304f", url: "mixamo/Walking.glb" },
-      jogBack: { label: "\u30b8\u30e7\u30b0\u5f8c\u9000", url: "mixamo/Slow Jog Backwards.glb" },
-      stepBack: { label: "\u5f8c\u9000", url: "mixamo/Step Backward.glb" }
+      wave: { label: "\u624b\u3092\u632f\u308b", procedural: true }
     };
     const DEFAULT_VISIBLE_PARTS = [];
     const savedSettings = loadSettings();
@@ -274,6 +272,8 @@
       motionChannels: null,
       motionBind: null,
       motionActive: false,
+      proceduralMotion: null,
+      motionStartedAt: 0,
       lastMotionUpdate: 0,
       templateRig: null
     };
@@ -707,6 +707,10 @@
         : fallback * side;
       const shoulderZ = (point, fallback) => point ? point.z : fallback;
       const hipY = BABYLON.Scalar.Clamp(templateRatio(base, "hips", 0.48), 0.42, 0.56);
+      const spine2Y = shoulderY - 0.02;
+      const torsoHeight = spine2Y - hipY;
+      const spine1Y = hipY + torsoHeight * 0.65;
+      const spineY = hipY + torsoHeight * 0.30;
       const leftThighY = BABYLON.Scalar.Clamp(templateRatio(base, "leftThigh", hipY - 0.035), hipY - 0.065, hipY + 0.01);
       const rightThighY = BABYLON.Scalar.Clamp(templateRatio(base, "rightThigh", hipY - 0.035), hipY - 0.065, hipY + 0.01);
       const leftShinY = BABYLON.Scalar.Clamp(templateRatio(base, "leftShin", 0.25), 0.18, Math.min(leftThighY - 0.08, 0.36));
@@ -717,9 +721,9 @@
       const rightHipX = BABYLON.Scalar.Clamp(templateXRatio(base, "rightThigh", 0.12), 0.08, 0.19);
       const joints = {
         hips: pointAt(0, hipY),
-        spine: pointAt(0, BABYLON.Scalar.Clamp(templateRatio(base, "spine", 0.56), hipY + 0.04, 0.62)),
-        spine1: pointAt(0, BABYLON.Scalar.Clamp(templateRatio(base, "spine1", 0.63), hipY + 0.1, 0.7)),
-        spine2: pointAt(0, Math.min(shoulderY - 0.02, 0.67)),
+        spine: pointAt(0, spineY),
+        spine1: pointAt(0, spine1Y),
+        spine2: pointAt(0, spine2Y),
         neck: pointAt(0, neckY, profile?.neckCenterZ ?? bodyCenterZ, profile?.neckCenterX ?? bodyCenterX),
         head: pointAt(0, headCenterY, profile?.headCenterZ ?? bodyCenterZ, profile?.headCenterX ?? bodyCenterX),
         leftShoulder: pointAt(shoulderRatioX(leftShoulderGuess, fallbackShoulderX, -1), shoulderY, shoulderZ(leftShoulderGuess, profile?.shoulderCenterZ ?? bodyCenterZ), center.x),
@@ -1011,8 +1015,39 @@
       }
     }
 
+    function waveMotionOffsets(base, elapsed) {
+      const joints = base.poseRig.joints;
+      const offsets = Object.fromEntries(Object.keys(joints).map((id) => [id, BABYLON.Vector3.Zero()]));
+      const lift = BABYLON.Scalar.Clamp(elapsed / 0.7, 0, 1);
+      const blend = lift * lift * (3 - 2 * lift);
+      const phase = Math.max(0, elapsed - 0.7) * Math.PI * 2 * 1.4;
+      const sway = Math.sin(phase) * 0.5;
+      const segments = [
+        ["rightShoulder", "rightUpperArm", new BABYLON.Vector3(0.9, 0.35, 0).normalize()],
+        ["rightUpperArm", "rightForearm", new BABYLON.Vector3(Math.sin(sway), Math.cos(sway), 0)],
+        ["rightForearm", "rightHand", new BABYLON.Vector3(Math.sin(sway + Math.sin(phase) * 0.18), Math.cos(sway + Math.sin(phase) * 0.18), 0)]
+      ];
+      // Rotate each rest-pose segment without changing its length.
+      for (const [start, end, direction] of segments) {
+        const rest = joints[end].subtract(joints[start]);
+        if (rest.lengthSquared() < 1e-10) continue;
+        const rotation = BABYLON.Quaternion.Identity();
+        BABYLON.Quaternion.FromUnitVectorsToRef(rest.clone().normalize(), direction, rotation);
+        BABYLON.Quaternion.SlerpToRef(BABYLON.Quaternion.Identity(), rotation, blend, rotation);
+        rest.rotateByQuaternionToRef(rotation, rest);
+        const target = joints[start].add(offsets[start]).add(rest);
+        offsets[end] = target.subtract(joints[end]);
+      }
+      Object.values(offsets).forEach((offset) => { offset.z *= state.frontSign; });
+      return offsets;
+    }
+
     function currentMotionOffsets(base) {
-      if (!state.motionActive || !state.motionChannels || !state.motionBind) return null;
+      if (!state.motionActive) return null;
+      if (state.proceduralMotion === "wave") {
+        return waveMotionOffsets(base, (performance.now() - state.motionStartedAt) / 1000);
+      }
+      if (!state.motionChannels || !state.motionBind) return null;
       const offsets = {};
       Object.entries(state.motionChannels).forEach(([jointId, channel]) => {
         const bind = state.motionBind[jointId];
@@ -1023,19 +1058,87 @@
       return offsets;
     }
 
+    const PART_BONES = [
+      ["hips", "hips", "spine"],
+      ["spine", "hips", "spine"],
+      ["spine1", "spine", "spine1"],
+      ["spine2", "spine1", "spine2"],
+      ["neck", "spine2", "neck"],
+      ["head", "neck", "head"],
+      ...["left", "right"].flatMap((side) => [
+        [`${side}Shoulder`, "spine2", `${side}Shoulder`],
+        [`${side}UpperArm`, `${side}Shoulder`, `${side}UpperArm`],
+        [`${side}Forearm`, `${side}UpperArm`, `${side}Forearm`],
+        [`${side}Hand`, `${side}Forearm`, `${side}Hand`],
+        [`${side}Thigh`, `${side}Thigh`, `${side}Shin`],
+        [`${side}Shin`, `${side}Shin`, `${side}Foot`],
+        [`${side}Foot`, `${side}Shin`, `${side}Foot`, `${side}Foot`]
+      ])
+    ];
+
+    function partMotionTransforms(base, motionOffsets) {
+      if (!motionOffsets || !base.poseRig) return {};
+      const transforms = {};
+      const joints = base.poseRig.joints;
+      for (const [part, startId, end, pivotId = startId] of PART_BONES) {
+        if (!joints[startId] || !joints[end] || !joints[pivotId] || !motionOffsets[startId] || !motionOffsets[end] || !motionOffsets[pivotId]) continue;
+        const restDirection = joints[end].subtract(joints[startId]);
+        const startOffset = motionOffsets[startId].clone();
+        const endOffset = motionOffsets[end].clone();
+        startOffset.z *= state.frontSign;
+        endOffset.z *= state.frontSign;
+        const direction = restDirection.add(endOffset).subtract(startOffset);
+        if (restDirection.lengthSquared() < 1e-10 || direction.lengthSquared() < 1e-10) continue;
+        const rotation = BABYLON.Quaternion.Identity();
+        BABYLON.Quaternion.FromUnitVectorsToRef(restDirection.normalize(), direction.normalize(), rotation);
+        const start = joints[pivotId];
+        const pivotOffset = motionOffsets[pivotId].clone();
+        pivotOffset.z *= state.frontSign;
+        transforms[part] = { start, target: start.add(pivotOffset), rotation };
+      }
+      return transforms;
+    }
+
     function updateSegmentMask() {
       const mesh = state.segmentMesh;
       if (!mesh?.sourceSplatsData || !state.sourceBounds || !state.sourceBase) return;
-      mesh.splatsData = mesh.sourceSplatsData.slice(0);
-      const floatData = new Float32Array(mesh.splatsData);
-      const view = new DataView(mesh.splatsData);
+      // Start from the rest pose each frame; splatsData is a read-only accessor.
+      const frameData = mesh.sourceSplatsData.slice(0);
+      const floatData = new Float32Array(frameData);
+      const view = new DataView(frameData);
       const count = floatData.length / 8;
       let kept = 0;
       const motionOffsets = currentMotionOffsets(state.sourceBase);
+      const partTransforms = partMotionTransforms(state.sourceBase, motionOffsets);
+      const point = BABYLON.Vector3.Zero();
+      const orientation = BABYLON.Quaternion.Identity();
       for (let i = 0; i < count; i++) {
         const partId = state.partIndices ? INDEX_PART[state.partIndices[i]] : partRegionForPoint(splatPointAt(floatData, i), state.sourceBounds, state.sourceBase);
         const motionOffset = motionOffsets?.[partAnchorId(partId)];
-        if (motionOffset) {
+        const transform = partTransforms[partId];
+        if (transform) {
+          const offset = i * 8;
+          point.set(floatData[offset], floatData[offset + 1], floatData[offset + 2]);
+          point.subtractInPlace(transform.start);
+          point.rotateByQuaternionToRef(transform.rotation, point);
+          point.addInPlace(transform.target);
+          floatData[offset] = point.x;
+          floatData[offset + 1] = point.y;
+          floatData[offset + 2] = point.z;
+          const q = i * 32 + 28;
+          // Match Babylon's render-time quaternion decoding, including the negated W.
+          orientation.set(
+            (view.getUint8(q + 1) - 127.5) / 127.5,
+            (view.getUint8(q + 2) - 127.5) / 127.5,
+            (view.getUint8(q + 3) - 127.5) / 127.5,
+            -(view.getUint8(q) - 127.5) / 127.5
+          ).normalize();
+          transform.rotation.multiplyToRef(orientation, orientation);
+          view.setUint8(q, Math.round(-orientation.w * 127.5 + 127.5));
+          view.setUint8(q + 1, Math.round(orientation.x * 127.5 + 127.5));
+          view.setUint8(q + 2, Math.round(orientation.y * 127.5 + 127.5));
+          view.setUint8(q + 3, Math.round(orientation.z * 127.5 + 127.5));
+        } else if (motionOffset) {
           const offset = i * 8;
           floatData[offset] += motionOffset.x;
           floatData[offset + 1] += motionOffset.y;
@@ -1049,7 +1152,7 @@
           view.setUint8(opacityByteIndex, 0);
         }
       }
-      mesh.updateData(mesh.splatsData, undefined, { flipY: false });
+      mesh.updateData(frameData, undefined, { flipY: false });
       mesh.refreshBoundingInfo?.(true);
       mesh.visibility = kept > 0 ? 0.82 : 0;
     }
@@ -1062,7 +1165,11 @@
       mat.emissiveColor = new BABYLON.Color3(0.35, 0.25, 0.04);
       const joints = base.poseRig.joints;
       const motionOffsets = currentMotionOffsets(state.sourceBase);
-      const toWorld = (id, point) => localToPlayer(point.add(motionOffsets?.[id] ?? BABYLON.Vector3.Zero()), base);
+      const toWorld = (id, point) => {
+        const offset = motionOffsets?.[id]?.clone() ?? BABYLON.Vector3.Zero();
+        offset.z *= state.frontSign;
+        return localToPlayer(point.add(offset), base);
+      };
       RIG_LINES.forEach(([a, b]) => {
         if (!joints[a] || !joints[b]) return;
         const line = BABYLON.MeshBuilder.CreateLines(`rig_${a}_${b}`, { points: [toWorld(a, joints[a]), toWorld(b, joints[b])] }, scene);
@@ -1195,6 +1302,7 @@
       state.motionChannels = null;
       state.motionBind = null;
       state.motionActive = false;
+      state.proceduralMotion = null;
       ui.motionButtons.forEach((button) => button.classList.remove("active"));
       updateSegmentMask();
       if (state.sourceBase) createRigDebug(makeDisplayBase(state.sourceBase));
@@ -1208,6 +1316,14 @@
         return;
       }
       disposeMotion();
+      if (motion.procedural) {
+        state.proceduralMotion = key;
+        state.motionStartedAt = performance.now();
+        state.motionActive = true;
+        ui.motionButtons.forEach((button) => button.classList.toggle("active", button.dataset.motion === key));
+        setStatus(`${motion.label} motion applied to loaded SPZ parts.`);
+        return;
+      }
       setStatus(`${motion.label} loading...`);
       try {
         const result = await BABYLON.ImportMeshAsync(motion.url, scene);
