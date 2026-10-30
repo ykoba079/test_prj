@@ -83,7 +83,7 @@ function render(){
  for(const [id,value] of [['iso',state.iso],['plan',!state.iso],['floor',state.floor],['under',state.underOnly]]){$(id).classList.toggle('active',value);$(id).setAttribute('aria-pressed',value);}
  $('floor').textContent='床透過 '+(state.floor?'ON':'OFF');
  $('layers').innerHTML=Object.entries({lan:'LAN',power:'電源',ceiling:'天井配線',wifi:'Wi-Fi接続'}).map(([k,v])=>'<button data-layer="'+k+'" class="'+(state.layers[k]?'active':'')+'" aria-pressed="'+state.layers[k]+'">'+v+'</button>').join('');
- $('legend').innerHTML=[['#d94037','故障ハブ'],['#e07652','通信影響あり'],['#0b887d','通信正常'],['#9485be','Wi-Fi（点線）'],['#edb321','Windows更新が必要']].map(([c,t])=>'<span><i class="dot" style="background:'+c+'"></i>'+t+'</span>').join('');
+ $('legend').innerHTML=[['#d94037','故障ハブ'],['#e07652','通信影響あり'],['#0b887d','通信正常'],['#439d8b','Wi-Fi（点線）'],['#edb321','Windows更新が必要']].map(([c,t])=>'<span><i class="dot" style="background:'+c+'"></i>'+t+'</span>').join('');
  viewer?.update();renderDetail();
  const rows=equipment.filter(d=>affected(d)||d.patch==='missing').filter(matches);
  $('listtitle').textContent='対応が必要な機器';$('listcount').textContent=rows.length+'件';
