@@ -127,7 +127,7 @@ window.OfficeV2Scene = function (ctx) {
       B.MeshBuilder.CreateTube(c.mesh.name, { path: c.points.map(([x, y, z]) => new B.Vector3(x, height(y), z)), instance: c.mesh });
       const highlight = related[c.field].has(c.d.id) && related[c.field].has(c.u.id), fault = c.field === 'up' && affected(c.d);
       const hex = c.field === 'power' ? '#b38d58' : fault ? '#e55243' : '#439d8b';
-      c.material.diffuseColor = C(hex); c.material.emissiveColor = C(hex).scale(highlight ? .4 : .1); c.material.alpha = highlight || fault ? 1 : .23;
+      c.material.diffuseColor = C(hex); c.material.emissiveColor = C(hex).scale(highlight ? .4 : .1); c.material.alpha = highlight || fault ? 1 : .5;
     }
     const d = byId[state.selected]; selection.position.set(d.x, height(d.h) + .4, d.y); selection.setEnabled(visible(d) && (!state.underOnly || d.h < 0));
     selectedLabel.position.set(d.x, height(d.h) + 2.5, d.y); selectedLabel.setEnabled(d.kind === 'pc' && !state.underOnly);
