@@ -493,8 +493,10 @@ $('export').onclick=()=>{const data={version:'0.2-vacuum',detector:activeDetecto
 let last=performance.now();engine.runRenderLoop(()=>{const now=performance.now(),dt=Math.min((now-last)/1000,.25);last=now;update(dt);const capture=scanClock>=.2&&!busy&&!paused&&!switching;if(capture)for(const v of views)v.rt.resetRefreshCounter();scene.render();if(capture){scanClock=0;scan();}if(uiClock>=.3){uiClock=0;renderHistory();}});
 const startup=new URLSearchParams(location.search);
 if(startup.get('preset')==='joint-trial'){
-  $('slopeAngle').value='5';$('rollerDiameter').value='0.35';$('rollerPitch').value='0.45';$('removeSlowRollers').checked=true;$('fastRollerPitch').value='0.5';applySlopeLayout(5);changeRollerLayout(true);
-}else seedLine();
-if(startup.get('arm')==='three'){$('armModel').value='three';$('armModel').onchange();}
+  $('slopeAngle').value='5';$('rollerDiameter').value='0.35';$('rollerPitch').value='0.45';$('removeSlowRollers').checked=true;$('fastRollerPitch').value='0.5';
+}
+applySlopeLayout(+$('slopeAngle').value);changeRollerLayout(true);
+if(['two','three'].includes(startup.get('arm')))$('armModel').value=startup.get('arm');
+if(arm.model!==$('armModel').value)$('armModel').onchange();
 $('fastRollerPitch').disabled=!$('removeSlowRollers').checked;detectorInfo();updateStatus();renderHistory();
 globalThis.mikanDebug={setPaused,setMotorEnabled,get motorEnabled(){return motorEnabled;},get line(){return line;},get pickupArea(){return pickupArea;},get defectMarkers(){return defectMarkers;},fruitHeight,get support(){return support;},worldAt,projectedFruitDiameter,scene,stats,detectedFruits,detectedRecords,observationIssues,views,mechanics,suction,reset,spawn,tracker,attempts,arm,get detector(){return activeDetector;},get switching(){return switching;},get fruits(){return fruits;},get records(){return tracker.records;},get busy(){return busy;},get paused(){return paused;},get activeJob(){return activeJob;}};
