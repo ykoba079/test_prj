@@ -126,7 +126,7 @@ export function createEquipmentDetails(scene){
     for(let y=-.42;y<-.15;y+=.055)box('vent-slot',.5,.015,.008,[-.08,y,.31],rubber,cabinet);
     const estop=cyl('emergency-stop',.07,.13,[-.28,.1,.34],pbr(scene,'stop-red','#ad2524',0,.5),cabinet);estop.rotation.x=Math.PI/2;
     lineMeshes.push(tube('conveyor-conduit',[[-3.6,0,-2.15],[-3.6,-.12,-1.9],[-5,-.38,-1.9],[-6.2,-.38,-1.9]],.035,rubber));
-    
+
     const pedestal=scene.getMeshByName('robot-base');pedestal.material=paint;
     for(const x of [-.3,.3])for(const z of [-.3,.3])bolt(pedestal,[x,.19,z],'y',.085);
     return lineMeshes;
