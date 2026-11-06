@@ -1,5 +1,5 @@
 import {ARM,ARM_MODELS,ARM_REST,createArmServo,inverseForModel} from './arm-kinematics.js?v=20261030-detected';
-export function createRobotArm(B,scene,metal,accent){
+export function createRobotArm(B,scene,metal,accent,details=null){
   let model='two',config=ARM_MODELS.two,servo=createArmServo(),links=[],joints=[];const meshes=[];
   function cylinder(name,height,diameter,material){const m=B.MeshBuilder.CreateCylinder(name,{height,diameter,tessellation:24},scene);m.material=material;m.layerMask=3;meshes.push(m);return m;}
   function block(name,w,h,d,material){const m=B.MeshBuilder.CreateBox(name,{width:w,height:h,depth:d},scene);m.material=material;m.layerMask=3;meshes.push(m);return m;}
@@ -7,6 +7,7 @@ export function createRobotArm(B,scene,metal,accent){
   function buildChain(){
     links=config.lengths.map((length,i)=>block('robot-rigid-link-'+i,i?.24:.3,length,i?.26:.32,accent));
     joints=Array.from({length:config.lengths.length+1},(_,i)=>cylinder('robot-joint-'+i,i===1?.38:.32,i===1?.43:.36,metal));
+    if(details){links.forEach((link,i)=>meshes.push(...details.armLink(link,config.lengths[i],i)));joints.forEach((joint,i)=>meshes.push(...details.armJoint(joint,i)));}
   }
   buildChain();
   const shaft=cylinder('robot-wrist-tool',ARM.toolOffset,.13,metal),claw=new B.TransformNode('tool-tcp',scene);
@@ -30,7 +31,7 @@ export function createRobotArm(B,scene,metal,accent){
   }
   render();
   return {meshes,get links(){return links;},claw,suction,get servo(){return servo;},get model(){return model;},get config(){return config;},canReach:target=>inverseForModel(target,model).reachable,
-    setModel(value){if(!ARM_MODELS[value])throw new Error('Unknown arm model');if(value===model)return;for(const mesh of [...links,...joints]){meshes.splice(meshes.indexOf(mesh),1);mesh.dispose();}const scale=servo.motionScale;model=value;config=ARM_MODELS[model];servo=createArmServo(ARM_REST,scale,model);buildChain();render();},
+    setModel(value){if(!ARM_MODELS[value])throw new Error('Unknown arm model');if(value===model)return;for(const mesh of [...links,...joints])mesh.dispose();for(let i=meshes.length-1;i>=0;i--)if(meshes[i].isDisposed())meshes.splice(i,1);const scale=servo.motionScale;model=value;config=ARM_MODELS[model];servo=createArmServo(ARM_REST,scale,model);buildChain();render();},
     command:target=>servo.command(target),grip:closed=>servo.grip(closed),near:(target,tolerance)=>servo.near(target,tolerance),estimate:target=>servo.estimate(target),
     step(dt){for(let left=dt;left>1e-6;left-=.01)servo.step(Math.min(left,.01));render();},reset(target=ARM_REST){servo.reset(target);render();},
   };

@@ -1,3 +1,4 @@
+import {createEquipmentDetails} from './equipment-detail.js?v=20261107-equipment';
 import {stepContactSearch,CONTACT_SEARCH} from './contact-search.js?v=20261029-transfer';
 import {colorDetector} from './vision.js?v=20261025-bluegreen-mold';
 import {createFruitFactory,random} from './fruit.js?v=20261025-bluegreen-mold';
@@ -6,7 +7,7 @@ import {rollerLayout,supportCalibration,compatiblePitch} from './roller-layout.j
 import {createSlopeGeometry} from './slope.js?v=20261028-slope';
 import {createYoloDetector} from './yolo-detector.js?v=20261028-controls';
 import {createImageTracker,fuseViews,PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261030-contour-track';
-import {createRobotArm} from './robot-arm.js?v=20261030-detected';
+import {createRobotArm} from './robot-arm.js?v=20261107-equipment';
 import {ARM_REST,DROP_POINTS} from './arm-kinematics.js?v=20261030-detected';
 import {checkFruitObservation,OBSERVATION_RULE} from './observation-check.js?v=20261030-contour';
 import {chooseIntercept,PICK_RULE,hoverReady,observedInPickZone,pickStartStatus} from './pick-planning.js?v=20261030-readiness';
@@ -22,7 +23,8 @@ const engine=new B.Engine($('scene'),true),scene=new B.Scene(engine);scene.clear
 const orbit=new B.ArcRotateCamera('orbit',-Math.PI/2.6,Math.PI/3.2,21,new B.Vector3(.7,.1,.8),scene);orbit.attachControl($('scene'),true);orbit.lowerRadiusLimit=8;orbit.upperRadiusLimit=26;orbit.layerMask=1;
 const sky=new B.HemisphericLight('sky',new B.Vector3(0,1,.2),scene);sky.intensity=1.25;sky.groundColor=new B.Color3(.48,.46,.4);
 function material(name,color){const m=new B.StandardMaterial(name,scene);m.diffuseColor=B.Color3.FromHexString(color);m.specularColor=new B.Color3(.1,.1,.1);return m;}
-const metal=material('metal','#80968a'),dark=material('belt','#35433d'),accent=material('robot','#d9e5b4'),amber=material('zone','#af873f');
+const equipment=createEquipmentDetails(scene);
+const metal=equipment.steel,dark=equipment.rubber,accent=equipment.paint,amber=material('zone','#af873f');
 function box(name,w,h,d,x,y,z,m,layer=1){const a=B.MeshBuilder.CreateBox(name,{width:w,height:h,depth:d},scene);a.position.set(x,y,z);a.material=m;a.layerMask=layer;return a;}
 box('floor',28,.1,20,0,-1.4,0,material('floor','#21312b'));
 box('inspection-background',14,.15,2.6,0,-.23,0,dark,3);
@@ -33,23 +35,24 @@ function buildRollers(pitch,diameter=.30,removed=false,fastPitch=null){
   for(const {x,role,transfer=false} of rollerLayout(pitch,removed,fastPitch)){
     const roller=B.MeshBuilder.CreateCylinder('roller',{height:2.65,diameter,tessellation:20},scene);
     roller.driveRole=role;roller.transfer=transfer;
-    roller.material=roller.driveRole==='slow'?trialSlow:roller.driveRole==='fast'?trialFast:metal;roller.position.set(x,-.13,0);roller.rotationQuaternion=B.Quaternion.RotationAxis(B.Axis.X,Math.PI/2);roller.layerMask=1;
+    roller.material=roller.driveRole==='slow'?trialSlow:roller.driveRole==='fast'?trialFast:metal;roller.position.set(x,-.13,0);roller.rotationQuaternion=B.Quaternion.RotationAxis(B.Axis.X,Math.PI/2);roller.layerMask=1;equipment.roller(roller,diameter);
     const stripe=box('roller-marker',.03,.012,2.5,0,.155,0,dark);stripe.parent=roller;stripe.position.set(diameter/2,0,0);stripe.rotation.x=-Math.PI/2;rollers.push(roller);
   }
 }
 buildRollers(.31);
 for(const z of [-1.48,1.48]){box('rail',14,.6,.12,0,.05,z,metal);box('inspection-zone',4.8,.07,.14,2.0,.38,z,amber);box('pickup-zone',PICK_ZONE.maxX-PICK_ZONE.minX,.08,.16,(PICK_ZONE.minX+PICK_ZONE.maxX)/2,.48,z,accent);for(const x of [-5,0,5])box('leg',.16,1.1,.16,x,-.8,z,metal);}
-function bin(name,x,z,color){const m=material(name,color),walls=m.clone(name+'-transparent-wall');walls.alpha=.28;box(name+'-bottom',1.7,.12,1.8,x,-1.25,z,m);for(const dz of [-.9,.9])box(name+'-wall',1.8,1.1,.09,x,-.67,z+dz,walls);for(const dx of [-.85,.85])box(name+'-wall',.09,1.1,1.8,x+dx,-.67,z,walls);}
+function bin(name,x,z,color){const m=material(name,color),walls=m.clone(name+'-transparent-wall');walls.alpha=.28;box(name+'-bottom',1.7,.12,1.8,x,-1.25,z,m);for(const dz of [-.9,.9])box(name+'-wall',1.8,1.1,.09,x,-.67,z+dz,walls).visibility=0;for(const dx of [-.85,.85])box(name+'-wall',.09,1.1,1.8,x+dx,-.67,z,walls).visibility=0;equipment.crate(name,x,z,color);}
 bin('良品',7.7,0,'#58734d');bin('不良',1.7,3.5,'#9c5d46');bin('未判定',4.1,3.5,'#4b7384');
 for(const x of [-4,4])box('camera-post',.12,3.4,.12,x,1.4,-1.9,metal);
 box('camera-crossbar',8,.13,.13,0,3,-1.9,metal);const topHousing=box('top-camera',.52,.23,.55,2.0,2.9,0,accent);topHousing.rotation.x=0;const camHousing=box('oblique-camera',.52,.23,.55,2.0,2.8,2.4,accent);camHousing.rotation.x=-Math.PI/4;
 box('robot-base',.8,.35,.8,3,.05,2.1,metal);
-const arm=createRobotArm(B,scene,material('robot-metal','#3f454b'),material('robot-shell','#8e969d')),claw=arm.claw;
+const arm=createRobotArm(B,scene,equipment.alloy,equipment.paint,equipment),claw=arm.claw;
+const lineDetails=equipment.decorate();
 function robot(target){return arm.command(target);}
 // Share the visible equipment with inspection views. Fruit is added/removed below.
 // Each camera's schematic housing sits in its own optical path, so omit only itself.
 const inspectionEquipment=[...scene.meshes];
-let lineLayout=scene.meshes.filter(m=>['roller','rail','inspection-background','inspection-zone','pickup-zone'].includes(m.name)).map(mesh=>({mesh,position:mesh.position.clone(),rotation:mesh.rotationQuaternion?.clone()||B.Quaternion.Identity()}));
+let lineLayout=scene.meshes.filter(m=>lineDetails.includes(m)||['roller','rail','inspection-background','inspection-zone','pickup-zone'].includes(m.name)).map(mesh=>({mesh,position:mesh.position.clone(),rotation:mesh.rotationQuaternion?.clone()||B.Quaternion.Identity()}));
 const legs=scene.meshes.filter(m=>m.name==='leg').map(mesh=>({mesh,position:mesh.position.clone()}));
 const goodBinLayout=scene.meshes.filter(m=>m.name.startsWith('良品-')).map(mesh=>({mesh,position:mesh.position.clone()}));
 const views=['A','B'].map(id=>{
@@ -61,7 +64,7 @@ const views=['A','B'].map(id=>{
     // Keep image calibration at the 640x480 sensor aspect, independent of the UI canvas.
     camera.freezeProjectionMatrix(B.Matrix.PerspectiveFovLH(camera.fov,FRAME.width/FRAME.height,camera.minZ,camera.maxZ));
   }
-  const rt=new B.RenderTargetTexture('frame-'+id,FRAME,scene,false,true,B.Engine.TEXTURETYPE_UNSIGNED_BYTE);rt.refreshRate=0;rt.activeCamera=camera;rt.renderList=inspectionEquipment.filter(mesh=>mesh!==(id==='A'?topHousing:camHousing));rt.clearColor=new B.Color4(.08,.1,.09,1);scene.customRenderTargets.push(rt);
+  const rt=new B.RenderTargetTexture('frame-'+id,FRAME,scene,false,true,B.Engine.TEXTURETYPE_UNSIGNED_BYTE);rt.refreshRate=0;rt.activeCamera=camera;rt.renderList=inspectionEquipment.filter(mesh=>mesh!==(id==='A'?topHousing:camHousing)&&!mesh.isDescendantOf(id==='A'?topHousing:camHousing));rt.clearColor=new B.Color4(.08,.1,.09,1);scene.customRenderTargets.push(rt);
   return {id,camera,rt,ctx:$('inspection'+id).getContext('2d'),overlay:$('overlay'+id).getContext('2d')};
 });
 function applySlopeLayout(degrees){
@@ -69,7 +72,7 @@ function applySlopeLayout(degrees){
   for(const item of lineLayout){item.mesh.position.copyFrom(linePoint(item.position));item.mesh.rotationQuaternion=rotation.multiply(item.rotation);}
   const binAnchor=linePoint({x:7.7,y:0,z:0}),binShift=binAnchor.subtract(new B.Vector3(7.7,0,0));
   for(const item of goodBinLayout)item.mesh.position.copyFrom(item.position.add(binShift));
-  const floor=scene.getMeshByName('floor');floor.position.y=-1.4+binShift.y;
+  const floor=scene.getMeshByName('floor');floor.position.y=-1.4+binShift.y;equipment.syncFloor(floor.position.y+.05);
   for(const item of legs){const top=linePoint({x:item.position.x,y:-.25,z:item.position.z}),bottom=floor.position.y+.05;item.mesh.position.set(top.x,(top.y+bottom)/2,top.z);item.mesh.scaling.y=(top.y-bottom)/1.1;}
   for(const view of views)view.camera.setTarget(new B.Vector3(2.0,fruitHeight(2.0),0));
   mechanics.syncLayout();updatePickupArea();
