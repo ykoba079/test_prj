@@ -1,4 +1,4 @@
-import {createEquipmentDetails} from './equipment-detail.js?v=20261107-equipment';
+import {createEquipmentDetails} from './equipment-detail.js?v=20261107-mounts';
 import {stepContactSearch,CONTACT_SEARCH} from './contact-search.js?v=20261029-transfer';
 import {colorDetector} from './vision.js?v=20261025-bluegreen-mold';
 import {createFruitFactory,random} from './fruit.js?v=20261025-bluegreen-mold';
@@ -41,10 +41,17 @@ function buildRollers(pitch,diameter=.30,removed=false,fastPitch=null){
 }
 buildRollers(.31);
 for(const z of [-1.48,1.48]){box('rail',14,.6,.12,0,.05,z,metal);box('inspection-zone',4.8,.07,.14,2.0,.38,z,amber);box('pickup-zone',PICK_ZONE.maxX-PICK_ZONE.minX,.08,.16,(PICK_ZONE.minX+PICK_ZONE.maxX)/2,.48,z,accent);for(const x of [-5,0,5])box('leg',.16,1.1,.16,x,-.8,z,metal);}
-function bin(name,x,z,color){const m=material(name,color),walls=m.clone(name+'-transparent-wall');walls.alpha=.28;box(name+'-bottom',1.7,.12,1.8,x,-1.25,z,m);for(const dz of [-.9,.9])box(name+'-wall',1.8,1.1,.09,x,-.67,z+dz,walls).visibility=0;for(const dx of [-.85,.85])box(name+'-wall',.09,1.1,1.8,x+dx,-.67,z,walls).visibility=0;equipment.crate(name,x,z,color);}
+function bin(name,x,z,color){
+  const spec=equipment.crateSpec,m=material(name,color),walls=m.clone(name+'-collision-wall'),floorY=-1.35+spec.footDepth,t=spec.wallThickness;
+  box(name+'-bottom',spec.width,.12,spec.depth,x,floorY-.06,z,m).visibility=0;
+  for(const side of [-1,1]){
+    box(name+'-wall',spec.width,spec.wallHeight,t,x,floorY+spec.wallHeight/2,z+side*(spec.innerHalfZ+t/2),walls).visibility=0;
+    box(name+'-wall',t,spec.wallHeight,spec.depth,x+side*(spec.innerHalfX+t/2),floorY+spec.wallHeight/2,z,walls).visibility=0;
+  }
+  equipment.crate(name,x,z,color);
+}
 bin('良品',7.7,0,'#58734d');bin('不良',1.7,3.5,'#9c5d46');bin('未判定',4.1,3.5,'#4b7384');
-for(const x of [-4,4])box('camera-post',.12,3.4,.12,x,1.4,-1.9,metal);
-box('camera-crossbar',8,.13,.13,0,3,-1.9,metal);const topHousing=box('top-camera',.52,.23,.55,2.0,2.9,0,accent);topHousing.rotation.x=0;const camHousing=box('oblique-camera',.52,.23,.55,2.0,2.8,2.4,accent);camHousing.rotation.x=-Math.PI/4;
+const topHousing=box('top-camera',.52,.23,.55,2.0,2.9,0,accent);topHousing.rotation.x=0;const camHousing=box('oblique-camera',.52,.23,.55,2.0,2.8,2.4,accent);camHousing.rotation.x=-Math.PI/4;
 box('robot-base',.8,.35,.8,3,.05,2.1,metal);
 const arm=createRobotArm(B,scene,equipment.alloy,equipment.paint,equipment),claw=arm.claw;
 const lineDetails=equipment.decorate();
@@ -54,9 +61,9 @@ function robot(target){return arm.command(target);}
 const inspectionEquipment=[...scene.meshes];
 let lineLayout=scene.meshes.filter(m=>lineDetails.includes(m)||['roller','rail','inspection-background','inspection-zone','pickup-zone'].includes(m.name)).map(mesh=>({mesh,position:mesh.position.clone(),rotation:mesh.rotationQuaternion?.clone()||B.Quaternion.Identity()}));
 const legs=scene.meshes.filter(m=>m.name==='leg').map(mesh=>({mesh,position:mesh.position.clone()}));
-const goodBinLayout=scene.meshes.filter(m=>m.name.startsWith('良品-')).map(mesh=>({mesh,position:mesh.position.clone()}));
+const binLayout=scene.meshes.filter(m=>/^(良品|不良|未判定)-/.test(m.name)).map(mesh=>({mesh,position:mesh.position.clone()}));
 const views=['A','B'].map(id=>{
-  const camera=new B.FreeCamera('inspection-'+id,id==='A'?new B.Vector3(2.0,9,0):camHousing.position.clone(),scene);camera.upVector=new B.Vector3(0,0,1);camera.setTarget(new B.Vector3(2.0,.35,0));camera.layerMask=3;
+  const camera=new B.FreeCamera('inspection-'+id,id==='A'?topHousing.position.clone():camHousing.position.clone(),scene);camera.minZ=.05;camera.maxZ=100;camera.upVector=new B.Vector3(0,0,1);camera.setTarget(new B.Vector3(2.0,.35,0));camera.layerMask=3;
   if(id==='A'){
     camera.mode=B.Camera.ORTHOGRAPHIC_CAMERA;camera.orthoLeft=-2.4;camera.orthoRight=2.4;camera.orthoTop=1.8;camera.orthoBottom=-1.8;
   }else{
@@ -71,7 +78,7 @@ function applySlopeLayout(degrees){
   line=createSlopeGeometry(degrees);const rotation=B.Quaternion.RotationAxis(B.Axis.Z,-line.angle);
   for(const item of lineLayout){item.mesh.position.copyFrom(linePoint(item.position));item.mesh.rotationQuaternion=rotation.multiply(item.rotation);}
   const binAnchor=linePoint({x:7.7,y:0,z:0}),binShift=binAnchor.subtract(new B.Vector3(7.7,0,0));
-  for(const item of goodBinLayout)item.mesh.position.copyFrom(item.position.add(binShift));
+  for(const item of binLayout)item.mesh.position.copyFrom(item.position.add(new B.Vector3(item.mesh.name.startsWith('良品-')?binShift.x:0,binShift.y,0)));
   const floor=scene.getMeshByName('floor');floor.position.y=-1.4+binShift.y;equipment.syncFloor(floor.position.y+.05);
   for(const item of legs){const top=linePoint({x:item.position.x,y:-.25,z:item.position.z}),bottom=floor.position.y+.05;item.mesh.position.set(top.x,(top.y+bottom)/2,top.z);item.mesh.scaling.y=(top.y-bottom)/1.1;}
   for(const view of views)view.camera.setTarget(new B.Vector3(2.0,fruitHeight(2.0),0));

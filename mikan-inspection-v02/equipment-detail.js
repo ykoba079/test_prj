@@ -1,5 +1,6 @@
 // Equipment appearance adapted from https://playground.babylonjs.com/#KK480H#3.
-// Existing conveyor, robot and container collision dimensions are preserved.
+// Conveyor and robot dimensions are preserved; crate collision proxies follow the reference shape.
+import {createHarvestCrate,HARVEST_CRATE_SCALE,HARVEST_CRATE_SPEC} from './harvest-crate.js?v=20261107-mounts';
 const B=globalThis.BABYLON;
 function pbr(scene,name,color,metallic=0,roughness=.5){
   const m=new B.PBRMaterial(name,scene);m.albedoColor=B.Color3.FromHexString(color).toLinearSpace();m.metallic=metallic;m.roughness=roughness;return m;
@@ -20,7 +21,7 @@ function installStudioReflections(scene){
 
 export function createEquipmentDetails(scene){
   installStudioReflections(scene);
-  const floorSupports=[];
+  const floorSupports=[],floorFeet=[];
   const steel=pbr(scene,'brushed-stainless','#b6bdc4',.86,.28),rubber=pbr(scene,'black-rubber','#222831',0,.78),alloy=pbr(scene,'machined-alloy','#d1d5d9',.82,.22),paint=pbr(scene,'powder-coat','#e7ebed',.12,.37),blue=pbr(scene,'motor-blue','#284c65',.25,.42);
   const slowBand=pbr(scene,'slow-band','#648fbc',.1,.5),fastBand=pbr(scene,'fast-band','#c5ab6c',.1,.5);
   const lineMeshes=[];
@@ -40,22 +41,11 @@ export function createEquipmentDetails(scene){
     const ring=cyl('roller-drive-band',.035,diameter*1.008,[0,1.2,0],mesh.driveRole==='fast'?fastBand:mesh.driveRole==='slow'?slowBand:rubber,mesh);
   }
   function crate(name,x,z,color){
-    // Match the existing solid collision container: bottom top -1.19, wall top -.12.
-    const mat=pbr(scene,name+'-crate-plastic',color,0,.72),parts=[];
-    const bar=(w,h,d,pos)=>{const m=box('crate-part',w,h,d,pos,mat);parts.push(m);};
-    const width=1.7,depth=1.8,height=1.07;
-    for(const sx of [-1,1])for(const sz of [-1,1])bar(.09,height,.09,[sx*width/2,height/2,sz*depth/2]);
-    for(const side of [-1,1]){
-      for(const y of [.12,.35,.58,.81,height])bar(width+.09,.055,.065,[0,y,side*depth/2]);
-      for(let px=-.64;px<=.65;px+=.21)bar(.04,height,.045,[px,height/2,side*depth/2]);
-      for(const y of [.12,.35,.58,.81,height])bar(.065,.055,depth+.09,[side*width/2,y,0]);
-      for(let pz=-.67;pz<=.68;pz+=.22)bar(.045,height,.04,[side*width/2,height/2,pz]);
-      // A thicker grip along each end; the opening remains visible beneath the rim.
-      bar(.095,.10,.65,[side*width/2,height-.03,0]);
-    }
-    for(let px=-.65;px<=.66;px+=.22)bar(.045,.025,depth,[px,.015,0]);
-    const mesh=B.Mesh.MergeMeshes(parts,true,true);mesh.name=name+'-crate-detail';mesh.position.set(x,-1.19,z);mesh.layerMask=3;mesh.isPickable=false;
-    label(mesh,name, .55,.18,[0,.61,depth/2+.035],color);
+    const model=createHarvestCrate(scene,color),mesh=model.mesh,k=HARVEST_CRATE_SCALE;
+    // Local y=0 is the inside floor; feet project below it to rest on the room floor.
+    mesh.bakeTransformIntoVertices(B.Matrix.Translation(0,-model.floorTop,0).multiply(B.Matrix.Scaling(k,k,k)));
+    mesh.name=name+'-crate-detail';mesh.position.set(x,-1.35+HARVEST_CRATE_SPEC.footDepth,z);mesh.layerMask=3;mesh.isPickable=false;
+    mesh.metadata={crate:{...HARVEST_CRATE_SPEC,referenceMm:[535,370,305]}};
     return mesh;
   }
   function armLink(link,length,index){
@@ -74,16 +64,47 @@ export function createEquipmentDetails(scene){
     }
     return joint.getChildMeshes().filter(m=>!before.has(m));
   }
+  function railShell(rail){
+    const side=Math.sign(rail.position.z),p=[[-.3,-.06],[-.3,.06],[.3,.06],[.3,-.06],[.275,-.06],[.275,.035],[-.275,.035],[-.275,-.06]].map(([y,z])=>[y,z*side]);
+    const positions=[],normals=[],indices=[];
+    function face(points,normal){
+      let vertices=points.map(p=>new B.Vector3(...p));const n=B.Vector3.FromArray(normal).normalize();
+      if(B.Vector3.Dot(B.Vector3.Cross(vertices[1].subtract(vertices[0]),vertices[2].subtract(vertices[0])),n)<0)vertices=vertices.reverse();
+      const start=positions.length/3;for(const v of vertices){positions.push(v.x,v.y,v.z);normals.push(n.x,n.y,n.z);}indices.push(start,start+1,start+2,start,start+2,start+3);
+    }
+    const area=p.reduce((sum,a,i)=>{const b=p[(i+1)%p.length];return sum+a[0]*b[1]-b[0]*a[1];},0),sign=Math.sign(area);
+    for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];face([[-7,...a],[7,...a],[7,...b],[-7,...b]],[0,(b[1]-a[1])*sign,-(b[0]-a[0])*sign]);}
+    for(const x of [-7,7])for(const ids of [[0,1,6,7],[1,2,5,6],[2,3,4,5]])face(ids.map(i=>[x,...p[i]]),[Math.sign(x),0,0]);
+    const mesh=new B.Mesh('folded-rail-shell',scene),data=new B.VertexData();data.positions=positions;data.normals=normals;data.indices=indices;data.applyToMesh(mesh);mesh.material=steel;mesh.parent=rail;mesh.layerMask=3;
+    rail.isVisible=false; // Keep the original box only as the existing Havok collision proxy.
+    return mesh;
+  }
+  function visionFrame(){
+    const rear=-2.3,top=4.15;
+    for(const x of [-.8,4.8]){
+      const post=box('vision-gantry-post',.16,1,.16,[x,0,rear],alloy);floorSupports.push({mesh:post,top,height:1});
+      const foot=box('vision-gantry-base',.48,.05,.44,[x,0,rear],steel);floorFeet.push(foot);
+      for(const dx of [-.16,.16])for(const dz of [-.14,.14])bolt(foot,[dx,.035,dz],'y',.065);
+    }
+    box('vision-gantry-top',5.76,.16,.16,[2,top,rear],alloy);
+    box('vision-light-support-rail',5.76,.12,.12,[2,2.8,rear],alloy);
+    for(const x of [-.8,4.8])tube('vision-gantry-gusset',[[x,top-.6,rear],[x+(x<2?.6:-.6),top,rear]],.045,alloy);
+    const anchors=[scene.getMeshByName('top-camera'),scene.getMeshByName('oblique-camera')].map(cam=>B.Vector3.TransformCoordinates(new B.Vector3(0,.4,0),cam.computeWorldMatrix(true)));
+    const endZ=Math.max(...anchors.map(a=>a.z));box('vision-camera-crossarm',.14,.14,endZ-rear+.12,[2,top,(rear+endZ)/2],alloy);
+    for(const [i,a] of anchors.entries()){
+      box('camera-hanger',.10,top-a.y,.10,[a.x,(top+a.y)/2,a.z],alloy);
+      box('camera-adjustment-plate',.22,.06,.22,[a.x,a.y+.03,a.z],steel);
+      tube('camera-frame-cable',[[a.x+.08,a.y,a.z],[a.x+.08,top+.1,a.z],[a.x+.08,top+.1,rear],[4.8,top+.1,rear],[4.8,2.6,rear]],.018,rubber);
+    }
+  }
   function decorate(){
     const floor=scene.getMeshByName('floor');floor.material=pbr(scene,'epoxy-floor','#344641',.05,.88);
     scene.getMeshByName('inspection-background').material=rubber;
     for(const rail of scene.meshes.filter(m=>m.name==='rail')){
-      rail.material=steel;const side=Math.sign(rail.position.z);
-      box('folded-top-flange',14,.05,.16,[0,.275,side*.02],alloy,rail);
-      box('folded-bottom-flange',14,.045,.16,[0,-.2775,side*.02],steel,rail);
-      box('rail-channel',13.7,.07,.014,[0,-.08,side*.067],rubber,rail);
-      for(let x=-6.7;x<7;x+=.63){bolt(rail,[x,.18,side*.078]);bolt(rail,[x,-.2,side*.078]);}
-      if(side>0){label(rail,'MIKAN / VISION SORTER',2.4,.19,[-3.5,.04,.074]);}
+      rail.material=steel;const side=Math.sign(rail.position.z);railShell(rail);
+      box('rail-channel',13.7,.07,.014,[0,-.08,side*.071],rubber,rail);
+      for(let x=-6.7;x<7;x+=.63){bolt(rail,[x,.18,side*.075]);bolt(rail,[x,-.2,side*.075]);}
+      if(side>0){label(rail,'MIKAN / VISION SORTER',2.4,.19,[-3.5,.04,.095]);}
     }
     for(const leg of scene.meshes.filter(m=>m.name==='leg')){
       leg.material=alloy;
@@ -106,17 +127,13 @@ export function createEquipmentDetails(scene){
       bolt(cam,[-.19,0,.28]);bolt(cam,[.19,0,.28]);
       tube('camera-cable',[[.14,.15,0],[.25,.4,.08],[.40,.48,.1],[.5,.35,.1]],.018,rubber,cam);
     }
-    // Supported top camera bridge, positioned above the fruit's optical volume.
-    box('camera-overhead-boom',.12,.12,2.0,[2,3.27,-.95],alloy);
-    const post=box('oblique-camera-support',.10,3.7,.10,[2,1.1,2.7],alloy);
-    floorSupports.push({mesh:post,top:2.95,height:3.7});
-    box('oblique-camera-bracket',.1,.12,.38,[2,2.9,2.55],alloy);
+    visionFrame();
     for(const x of [-.1,3.9]){
       const lamp=box('inspection-light-bar',.16,.09,2.5,[x,2.35,0],alloy);
       const diffuser=pbr(scene,'led-diffuser','#fcfcf1',0,.65);diffuser.emissiveColor=new B.Color3(.8,.85,.9);
       box('light-diffuser',.12,.012,2.34,[0,-.05,0],diffuser,lamp);
-      box('light-mount',.1,.65,.1,[x,2.63,-1.75],alloy);
-      box('light-support',.10,.1,1.9,[x,2.34,-.9],alloy);
+      box('light-mount',.1,.45,.1,[x,2.575,-2.3],alloy);
+      box('light-support',.10,.1,1.1,[x,2.35,-1.775],alloy);
     }
     const cabinet=box('electrical-cabinet',1.05,1.25,.55,[-3.6,-.65,-2.15],paint);
     floorSupports.push({mesh:box('cabinet-stand',.88,1,.42,[-3.6,-1.4,-2.15],alloy),top:-1.275,height:1});
@@ -129,7 +146,9 @@ export function createEquipmentDetails(scene){
 
     const pedestal=scene.getMeshByName('robot-base');pedestal.material=paint;
     for(const x of [-.3,.3])for(const z of [-.3,.3])bolt(pedestal,[x,.19,z],'y',.085);
+    syncFloor(floor.position.y+.05);
     return lineMeshes;
   }
-  return {steel,rubber,alloy,paint,blue,box,cyl,bolt,tube,label,roller,decorate,crate,armLink,armJoint,syncFloor(floorY){for(const {mesh,top,height} of floorSupports){mesh.scaling.y=(top-floorY)/height;mesh.position.y=(top+floorY)/2;}}};
+  function syncFloor(floorY){for(const {mesh,top,height} of floorSupports){mesh.scaling.y=(top-floorY)/height;mesh.position.y=(top+floorY)/2;}for(const mesh of floorFeet)mesh.position.y=floorY+.025;}
+  return {steel,rubber,alloy,paint,blue,box,cyl,bolt,tube,label,roller,decorate,crate,crateSpec:HARVEST_CRATE_SPEC,armLink,armJoint,syncFloor};
 }
