@@ -3,7 +3,7 @@ export const ARM={motionScale:2,base:{x:3,y:.9,z:2.1},lengths:[2,1.9],toolOffset
   limits:[[-170,170],[-35,150],[8,165]].map(([a,b])=>[rad(a),rad(b)]),
   speed:[rad(230),rad(170),rad(230)],acceleration:[rad(1000),rad(800),rad(1040)]};
 export const ARM_REST={x:2.3,y:1.7,z:1};
-export const DROP_POINTS={reject:{x:1.7,y:.65,z:3.5},unknown:{x:4.1,y:.65,z:3.5}};
+export const DROP_POINTS={reject:{x:1.1,y:.65,z:4.25},unknown:{x:4.9,y:.65,z:4.25}};
 export const ARM_THREE={motionScale:2,base:{...ARM.base},lengths:[1.7,1.4,.8],toolOffset:ARM.toolOffset,
   limits:[[-170,170],[-35,150],[8,165],[-140,140]].map(([a,b])=>[rad(a),rad(b)]),
   speed:[rad(230),rad(170),rad(230),rad(230)],acceleration:[rad(1000),rad(800),rad(1040),rad(1040)]};

@@ -1,4 +1,4 @@
-import {ARM,ARM_MODELS,ARM_REST,createArmServo,inverseForModel} from './arm-kinematics.js?v=20261030-detected';
+import {ARM,ARM_MODELS,ARM_REST,createArmServo,inverseForModel} from './arm-kinematics.js?v=20261107-clearance';
 export function createRobotArm(B,scene,metal,accent,details=null){
   let model='two',config=ARM_MODELS.two,servo=createArmServo(),links=[],joints=[];const meshes=[];
   function cylinder(name,height,diameter,material){const m=B.MeshBuilder.CreateCylinder(name,{height,diameter,tessellation:24},scene);m.material=material;m.layerMask=3;meshes.push(m);return m;}

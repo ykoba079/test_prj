@@ -1,6 +1,6 @@
 // Equipment appearance adapted from https://playground.babylonjs.com/#KK480H#3.
 // Conveyor and robot dimensions are preserved; crate collision proxies follow the reference shape.
-import {createHarvestCrate,HARVEST_CRATE_SCALE,HARVEST_CRATE_SPEC} from './harvest-crate.js?v=20261107-mounts';
+import {createHarvestCrate,HARVEST_CRATE_SCALE,HARVEST_CRATE_SPEC,FLOOR_TOP} from './harvest-crate.js?v=20261107-clearance';
 const B=globalThis.BABYLON;
 function pbr(scene,name,color,metallic=0,roughness=.5){
   const m=new B.PBRMaterial(name,scene);m.albedoColor=B.Color3.FromHexString(color).toLinearSpace();m.metallic=metallic;m.roughness=roughness;return m;
@@ -21,7 +21,7 @@ function installStudioReflections(scene){
 
 export function createEquipmentDetails(scene){
   installStudioReflections(scene);
-  const floorSupports=[],floorFeet=[];
+  const floorSupports=[],floorFeet=[],cameraMounts=[];
   const steel=pbr(scene,'brushed-stainless','#b6bdc4',.86,.28),rubber=pbr(scene,'black-rubber','#222831',0,.78),alloy=pbr(scene,'machined-alloy','#d1d5d9',.82,.22),paint=pbr(scene,'powder-coat','#e7ebed',.12,.37),blue=pbr(scene,'motor-blue','#284c65',.25,.42);
   const slowBand=pbr(scene,'slow-band','#648fbc',.1,.5),fastBand=pbr(scene,'fast-band','#c5ab6c',.1,.5);
   const lineMeshes=[];
@@ -32,7 +32,7 @@ export function createEquipmentDetails(scene){
   function label(parent,text,w,h,pos,bg='#203340',fg='#e5edf0'){
     const tex=new B.DynamicTexture('plate-'+text,{width:512,height:128},scene,true),c=tex.getContext();c.fillStyle=bg;c.fillRect(0,0,512,128);c.fillStyle=fg;c.font='bold 44px Arial';c.textAlign='center';c.textBaseline='middle';c.fillText(text,256,64);tex.update();
     const mat=pbr(scene,'label-'+text,'#ffffff',0,.7);mat.albedoTexture=tex;mat.emissiveColor=new B.Color3(.08,.08,.08);
-    const plane=B.MeshBuilder.CreatePlane('nameplate',{width:w,height:h,sideOrientation:B.Mesh.DOUBLESIDE},scene);plane.material=mat;plane.parent=parent;plane.position.copyFromFloats(...pos);plane.layerMask=3;return plane;
+    const plane=B.MeshBuilder.CreatePlane('nameplate',{width:w,height:h,sideOrientation:B.Mesh.DOUBLESIDE},scene);plane.material=mat;plane.parent=parent;plane.position.copyFromFloats(...pos);plane.rotation.y=Math.PI;plane.layerMask=3;return plane;
   }
   function roller(mesh,diameter){
     mesh.material=steel;
@@ -43,9 +43,13 @@ export function createEquipmentDetails(scene){
   function crate(name,x,z,color){
     const model=createHarvestCrate(scene,color),mesh=model.mesh,k=HARVEST_CRATE_SCALE;
     // Local y=0 is the inside floor; feet project below it to rest on the room floor.
-    mesh.bakeTransformIntoVertices(B.Matrix.Translation(0,-model.floorTop,0).multiply(B.Matrix.Scaling(k,k,k)));
-    mesh.name=name+'-crate-detail';mesh.position.set(x,-1.35+HARVEST_CRATE_SPEC.footDepth,z);mesh.layerMask=3;mesh.isPickable=false;
+    const transform=B.Matrix.Translation(0,-model.floorTop,0).multiply(B.Matrix.Scaling(k,k,k));
+    for(const part of [mesh,...mesh.getChildMeshes()])part.bakeTransformIntoVertices(transform);
+    mesh.name=name+'-crate-detail';mesh.position.set(x,FLOOR_TOP+HARVEST_CRATE_SPEC.footDepth,z);mesh.layerMask=3;mesh.isPickable=false;
     mesh.metadata={crate:{...HARVEST_CRATE_SPEC,referenceMm:[535,370,305]}};
+    for(const side of [-1,1]){
+      const plate=label(mesh,name==='良品'?'GOOD':name==='不良'?'REJECT':'UNKNOWN',1.2,.22,[0,HARVEST_CRATE_SPEC.wallHeight-.15,side*(HARVEST_CRATE_SPEC.depth/2+.012)],color);if(side<0)plate.rotation.y+=Math.PI;
+    }
     return mesh;
   }
   function armLink(link,length,index){
@@ -80,7 +84,7 @@ export function createEquipmentDetails(scene){
     return mesh;
   }
   function visionFrame(){
-    const rear=-2.3,top=4.15;
+    const rear=-2.3,top=4.8;
     for(const x of [-.8,4.8]){
       const post=box('vision-gantry-post',.16,1,.16,[x,0,rear],alloy);floorSupports.push({mesh:post,top,height:1});
       const foot=box('vision-gantry-base',.48,.05,.44,[x,0,rear],steel);floorFeet.push(foot);
@@ -90,11 +94,21 @@ export function createEquipmentDetails(scene){
     box('vision-light-support-rail',5.76,.12,.12,[2,2.8,rear],alloy);
     for(const x of [-.8,4.8])tube('vision-gantry-gusset',[[x,top-.6,rear],[x+(x<2?.6:-.6),top,rear]],.045,alloy);
     const anchors=[scene.getMeshByName('top-camera'),scene.getMeshByName('oblique-camera')].map(cam=>B.Vector3.TransformCoordinates(new B.Vector3(0,.4,0),cam.computeWorldMatrix(true)));
-    const endZ=Math.max(...anchors.map(a=>a.z));box('vision-camera-crossarm',.14,.14,endZ-rear+.12,[2,top,(rear+endZ)/2],alloy);
+    const endZ=3.5;box('vision-camera-crossarm',.14,.14,endZ-rear+.12,[2,top,(rear+endZ)/2],alloy);
     for(const [i,a] of anchors.entries()){
-      box('camera-hanger',.10,top-a.y,.10,[a.x,(top+a.y)/2,a.z],alloy);
-      box('camera-adjustment-plate',.22,.06,.22,[a.x,a.y+.03,a.z],steel);
+      const hanger=box('camera-hanger',.10,1,.10,[a.x,(top+a.y)/2,a.z],alloy);
+      const plate=box('camera-adjustment-plate',.22,.06,.22,[a.x,a.y+.03,a.z],steel);
+      cameraMounts.push({hanger,plate,top});
       tube('camera-frame-cable',[[a.x+.08,a.y,a.z],[a.x+.08,top+.1,a.z],[a.x+.08,top+.1,rear],[4.8,top+.1,rear],[4.8,2.6,rear]],.018,rubber);
+    }
+  }
+  function syncCameraMounts(views){
+    for(const [i,v] of views.entries()){
+      const housing=scene.getMeshByName(v.id==='A'?'top-camera':'oblique-camera');
+      // The model's lens points along local -Y; align it with the actual sensor ray.
+      housing.rotationQuaternion=B.Quaternion.FromUnitVectorsToRef(B.Vector3.Down(),v.camera.getForwardRay().direction,new B.Quaternion());
+      const a=B.Vector3.TransformCoordinates(new B.Vector3(0,.4,0),housing.computeWorldMatrix(true)),m=cameraMounts[i];
+      m.hanger.scaling.y=m.top-a.y;m.hanger.position.set(a.x,(m.top+a.y)/2,a.z);m.plate.position.set(a.x,a.y+.03,a.z);
     }
   }
   function decorate(){
@@ -129,11 +143,15 @@ export function createEquipmentDetails(scene){
     }
     visionFrame();
     for(const x of [-.1,3.9]){
-      const lamp=box('inspection-light-bar',.16,.09,2.5,[x,2.35,0],alloy);
+      const lamp=box('inspection-light-bar',.36,.14,2.5,[x,4.55,0],alloy);
       const diffuser=pbr(scene,'led-diffuser','#fcfcf1',0,.65);diffuser.emissiveColor=new B.Color3(.8,.85,.9);
-      box('light-diffuser',.12,.012,2.34,[0,-.05,0],diffuser,lamp);
-      box('light-mount',.1,.45,.1,[x,2.575,-2.3],alloy);
-      box('light-support',.10,.1,1.1,[x,2.35,-1.775],alloy);
+      box('light-diffuser',.30,.018,2.34,[0,-.08,0],diffuser,lamp);
+      for(const side of [-1,1]){
+        box('light-edge-diffuser',.014,.065,2.34,[side*.185,-.035,0],diffuser,lamp);
+        const plate=label(lamp,'LED',.32,.11,[0,0,side*1.26],'#17212a');if(side<0)plate.rotation.y+=Math.PI;
+      }
+      box('light-mount',.1,.25,.1,[x,4.675,-2.3],alloy);
+      box('light-support',.10,.1,1.1,[x,4.55,-1.775],alloy);
     }
     const cabinet=box('electrical-cabinet',1.05,1.25,.55,[-3.6,-.65,-2.15],paint);
     floorSupports.push({mesh:box('cabinet-stand',.88,1,.42,[-3.6,-1.4,-2.15],alloy),top:-1.275,height:1});
@@ -150,5 +168,5 @@ export function createEquipmentDetails(scene){
     return lineMeshes;
   }
   function syncFloor(floorY){for(const {mesh,top,height} of floorSupports){mesh.scaling.y=(top-floorY)/height;mesh.position.y=(top+floorY)/2;}for(const mesh of floorFeet)mesh.position.y=floorY+.025;}
-  return {steel,rubber,alloy,paint,blue,box,cyl,bolt,tube,label,roller,decorate,crate,crateSpec:HARVEST_CRATE_SPEC,armLink,armJoint,syncFloor};
+  return {steel,rubber,alloy,paint,blue,box,cyl,bolt,tube,label,roller,decorate,crate,crateSpec:HARVEST_CRATE_SPEC,floorTop:FLOOR_TOP,armLink,armJoint,syncFloor,syncCameraMounts};
 }

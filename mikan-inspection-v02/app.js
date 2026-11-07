@@ -1,4 +1,4 @@
-import {createEquipmentDetails} from './equipment-detail.js?v=20261107-mounts';
+import {createEquipmentDetails} from './equipment-detail.js?v=20261107-clearance';
 import {stepContactSearch,CONTACT_SEARCH} from './contact-search.js?v=20261029-transfer';
 import {colorDetector} from './vision.js?v=20261025-bluegreen-mold';
 import {createFruitFactory,random} from './fruit.js?v=20261025-bluegreen-mold';
@@ -7,8 +7,8 @@ import {rollerLayout,supportCalibration,compatiblePitch} from './roller-layout.j
 import {createSlopeGeometry} from './slope.js?v=20261028-slope';
 import {createYoloDetector} from './yolo-detector.js?v=20261028-controls';
 import {createImageTracker,fuseViews,PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261030-contour-track';
-import {createRobotArm} from './robot-arm.js?v=20261107-equipment';
-import {ARM_REST,DROP_POINTS} from './arm-kinematics.js?v=20261030-detected';
+import {createRobotArm} from './robot-arm.js?v=20261107-clearance';
+import {ARM_REST,DROP_POINTS} from './arm-kinematics.js?v=20261107-clearance';
 import {checkFruitObservation,OBSERVATION_RULE} from './observation-check.js?v=20261030-contour';
 import {chooseIntercept,PICK_RULE,hoverReady,observedInPickZone,pickStartStatus} from './pick-planning.js?v=20261030-readiness';
 import {createVacuumGripper,SUCTION_RULE} from './vacuum-physics.js?v=20261030-78kpa';
@@ -26,7 +26,7 @@ function material(name,color){const m=new B.StandardMaterial(name,scene);m.diffu
 const equipment=createEquipmentDetails(scene);
 const metal=equipment.steel,dark=equipment.rubber,accent=equipment.paint,amber=material('zone','#af873f');
 function box(name,w,h,d,x,y,z,m,layer=1){const a=B.MeshBuilder.CreateBox(name,{width:w,height:h,depth:d},scene);a.position.set(x,y,z);a.material=m;a.layerMask=layer;return a;}
-box('floor',28,.1,20,0,-1.4,0,material('floor','#21312b'));
+box('floor',28,.1,20,0,equipment.floorTop-.05,0,material('floor','#21312b'));
 box('inspection-background',14,.15,2.6,0,-.23,0,dark,3);
 const rollers=[];
 const trialSlow=material('trial-slow','#648fbc'),trialFast=material('trial-fast','#c5ab6c');
@@ -42,7 +42,7 @@ function buildRollers(pitch,diameter=.30,removed=false,fastPitch=null){
 buildRollers(.31);
 for(const z of [-1.48,1.48]){box('rail',14,.6,.12,0,.05,z,metal);box('inspection-zone',4.8,.07,.14,2.0,.38,z,amber);box('pickup-zone',PICK_ZONE.maxX-PICK_ZONE.minX,.08,.16,(PICK_ZONE.minX+PICK_ZONE.maxX)/2,.48,z,accent);for(const x of [-5,0,5])box('leg',.16,1.1,.16,x,-.8,z,metal);}
 function bin(name,x,z,color){
-  const spec=equipment.crateSpec,m=material(name,color),walls=m.clone(name+'-collision-wall'),floorY=-1.35+spec.footDepth,t=spec.wallThickness;
+  const spec=equipment.crateSpec,m=material(name,color),walls=m.clone(name+'-collision-wall'),floorY=equipment.floorTop+spec.footDepth,t=spec.wallThickness;
   box(name+'-bottom',spec.width,.12,spec.depth,x,floorY-.06,z,m).visibility=0;
   for(const side of [-1,1]){
     box(name+'-wall',spec.width,spec.wallHeight,t,x,floorY+spec.wallHeight/2,z+side*(spec.innerHalfZ+t/2),walls).visibility=0;
@@ -50,8 +50,8 @@ function bin(name,x,z,color){
   }
   equipment.crate(name,x,z,color);
 }
-bin('良品',7.7,0,'#58734d');bin('不良',1.7,3.5,'#9c5d46');bin('未判定',4.1,3.5,'#4b7384');
-const topHousing=box('top-camera',.52,.23,.55,2.0,2.9,0,accent);topHousing.rotation.x=0;const camHousing=box('oblique-camera',.52,.23,.55,2.0,2.8,2.4,accent);camHousing.rotation.x=-Math.PI/4;
+bin('良品',7.7,0,'#58734d');bin('不良',DROP_POINTS.reject.x,DROP_POINTS.reject.z,'#9c5d46');bin('未判定',DROP_POINTS.unknown.x,DROP_POINTS.unknown.z,'#4b7384');
+const topHousing=box('top-camera',.52,.23,.55,2.0,2.9,0,accent);topHousing.rotation.x=0;const camHousing=box('oblique-camera',.52,.23,.55,2.0,4.1,3.1,accent);camHousing.rotation.x=Math.PI/4;
 box('robot-base',.8,.35,.8,3,.05,2.1,metal);
 const arm=createRobotArm(B,scene,equipment.alloy,equipment.paint,equipment),claw=arm.claw;
 const lineDetails=equipment.decorate();
@@ -79,9 +79,10 @@ function applySlopeLayout(degrees){
   for(const item of lineLayout){item.mesh.position.copyFrom(linePoint(item.position));item.mesh.rotationQuaternion=rotation.multiply(item.rotation);}
   const binAnchor=linePoint({x:7.7,y:0,z:0}),binShift=binAnchor.subtract(new B.Vector3(7.7,0,0));
   for(const item of binLayout)item.mesh.position.copyFrom(item.position.add(new B.Vector3(item.mesh.name.startsWith('良品-')?binShift.x:0,binShift.y,0)));
-  const floor=scene.getMeshByName('floor');floor.position.y=-1.4+binShift.y;equipment.syncFloor(floor.position.y+.05);
+  const floor=scene.getMeshByName('floor');floor.position.y=equipment.floorTop-.05+binShift.y;equipment.syncFloor(floor.position.y+.05);
   for(const item of legs){const top=linePoint({x:item.position.x,y:-.25,z:item.position.z}),bottom=floor.position.y+.05;item.mesh.position.set(top.x,(top.y+bottom)/2,top.z);item.mesh.scaling.y=(top.y-bottom)/1.1;}
   for(const view of views)view.camera.setTarget(new B.Vector3(2.0,fruitHeight(2.0),0));
+  equipment.syncCameraMounts(views);
   mechanics.syncLayout();updatePickupArea();
 }
 // Draw fruit and equipment immediately; WASM loading must never gate the first frame.

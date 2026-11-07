@@ -1,7 +1,8 @@
 // Procedural harvest-crate geometry adapted from the reviewed Playground KK480H / 3.
 // No external GLB/OBJ asset is loaded. Dimensions describe the unscaled reference shape.
-export const HARVEST_CRATE_SCALE=2.10/.535;
-export const HARVEST_CRATE_SPEC={width:2.10,depth:.370*HARVEST_CRATE_SCALE,wallHeight:(.305-.0195)*HARVEST_CRATE_SCALE,footDepth:.0195*HARVEST_CRATE_SCALE,innerHalfX:(.2615-.0035)*HARVEST_CRATE_SCALE,innerHalfZ:(.179-.0035)*HARVEST_CRATE_SCALE,wallThickness:.04};
+export const FLOOR_TOP=-2.20;
+export const HARVEST_CRATE_SCALE=3.15/.535;
+export const HARVEST_CRATE_SPEC={width:3.15,depth:.370*HARVEST_CRATE_SCALE,wallHeight:(.305-.0195)*HARVEST_CRATE_SCALE,footDepth:.0195*HARVEST_CRATE_SCALE,innerHalfX:(.2615-.0035)*HARVEST_CRATE_SCALE,innerHalfZ:(.179-.0035)*HARVEST_CRATE_SCALE,wallThickness:.04};
 export function createHarvestCrate(scene, hex = '#58734d') {
     // ---------------- 寸法 ----------------
     const L = 0.535, W = 0.370, H = 0.305;   // 外寸（リム外形）
@@ -16,7 +17,7 @@ export function createHarvestCrate(scene, hex = '#58734d') {
     const FEET = 0.008;                       // 段積み時に下のコンテナへ入り込む深さ
 
     // ---------------- ジオメトリバッファ ----------------
-    const P = [], N = [], IDX = [];
+    const P = [], N = [], IDX = [], panels={positions:[],normals:[],uvs:[],indices:[]};
     const I4 = BABYLON.Matrix.Identity();
     const tv = new BABYLON.Vector3(), tn = new BABYLON.Vector3();
     const vOut = new BABYLON.Vector3(), nOut = new BABYLON.Vector3();
@@ -37,7 +38,9 @@ export function createHarvestCrate(scene, hex = '#58734d') {
             const q = pts[k], nn = per ? n[k] : n;
             pushV(M, q[0], q[1], q[2], nn[0], nn[1], nn[2]);
         }
-        for (let k = 1; k < pts.length - 1; k++) IDX.push(b, b + k, b + k + 1);
+        const a=pts[0],u=pts[1].map((v,i)=>v-a[i]),v=pts[2].map((q,i)=>q-a[i]),normal=per?n[0]:n;
+        const flip=(u[1]*v[2]-u[2]*v[1])*normal[0]+(u[2]*v[0]-u[0]*v[2])*normal[1]+(u[0]*v[1]-u[1]*v[0])*normal[2]<0;
+        for (let k = 1; k < pts.length - 1; k++) IDX.push(b, b + (flip?k+1:k), b + (flip?k:k+1));
     }
     function box(M, x0, x1, y0, y1, z0, z1) {
         face(M, [[x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]], [1, 0, 0]);
@@ -64,36 +67,14 @@ export function createHarvestCrate(scene, hex = '#58734d') {
     }
     // ダイヤ格子パネル（ローカル XY 平面、z: 0〜-T）
     function lattice(M, x0, y0, w, h) {
-        const nx = Math.max(1, Math.round(w / PITCH)), ny = Math.max(1, Math.round(h / PITCH));
-        const px = w / nx, py = h / ny, k = BAR * Math.SQRT1_2;
-        const hx = px / 2 - k, hy = py / 2 - k;
-        const z0 = 0, z1 = -T;
-        for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
-            const ox = x0 + i * px, oy = y0 + j * py, cx = ox + px / 2, cy = oy + py / 2;
-            const O = [[ox + hx, oy], [ox + px - hx, oy], [ox + px, oy + hy], [ox + px, oy + py - hy],
-                       [ox + px - hx, oy + py], [ox + hx, oy + py], [ox, oy + py - hy], [ox, oy + hy]];
-            const Db = [cx, cy - hy], Dr = [cx + hx, cy], Dt = [cx, cy + hy], Dl = [cx - hx, cy];
-            const polys = [[O[0], O[1], Db], [O[1], O[2], Dr, Db], [O[2], O[3], Dr], [O[3], O[4], Dt, Dr],
-                           [O[4], O[5], Dt], [O[5], O[6], Dl, Dt], [O[6], O[7], Dl], [O[7], O[0], Db, Dl]];
-            for (const pg of polys) {
-                face(M, pg.map(q => [q[0], q[1], z0]), [0, 0, 1]);
-                face(M, pg.map(q => [q[0], q[1], z1]), [0, 0, -1]);
-            }
-            const C = [cx, cy];
-            const edges = [[Db, Dr, C], [Dr, Dt, C], [Dt, Dl, C], [Dl, Db, C],
-                           [O[7], O[0], [ox, oy]], [O[1], O[2], [ox + px, oy]],
-                           [O[3], O[4], [ox + px, oy + py]], [O[5], O[6], [ox, oy + py]]];
-            for (const [a, b, c] of edges) {
-                let ex = -(b[1] - a[1]), ey = b[0] - a[0];
-                const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-                if (ex * (c[0] - mx) + ey * (c[1] - my) < 0) { ex = -ex; ey = -ey; }
-                const l = Math.hypot(ex, ey);
-                face(M, [[a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z1], [a[0], a[1], z1]],
-                     [ex / l, ey / l, 0]);
-            }
+        // Alpha-tested panels retain visible openings without thousands of tiny solids.
+        const base=panels.positions.length/3,n=BABYLON.Vector3.TransformNormal(new BABYLON.Vector3(0,0,1),M).normalize();
+        for(const [x,y] of [[x0,y0],[x0+w,y0],[x0+w,y0+h],[x0,y0+h]]){
+            const p=BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(x,y,-T/2),M);panels.positions.push(p.x,p.y,p.z);panels.normals.push(n.x,n.y,n.z);
         }
+        const nx=Math.max(1,Math.round(w/PITCH)),ny=Math.max(1,Math.round(h/PITCH));
+        panels.uvs.push(0,0,nx,0,nx,ny,0,ny);panels.indices.push(base,base+1,base+2,base,base+2,base+3);
     }
-    // 角丸長方形の輪郭（XZ）
     function rrect(hx, hz, r, seg) {
         const out = [];
         const cs = [[hx - r, hz - r, 0], [-(hx - r), hz - r, Math.PI / 2],
@@ -261,12 +242,18 @@ export function createHarvestCrate(scene, hex = '#58734d') {
     mat.albedoColor = BABYLON.Color3.FromHexString(hex).toLinearSpace();
     mat.metallic = 0;
     mat.roughness = 0.45;
-    mat.backFaceCulling = false;
+    mat.backFaceCulling = true;
     crate.material = mat;
     crate.receiveShadows = true;
+    const grille=new BABYLON.Mesh('crate-diamond-panels',scene),gd=new BABYLON.VertexData();
+    Object.assign(gd,panels);gd.applyToMesh(grille);grille.parent=crate;grille.layerMask=3;grille.isPickable=false;
+    const tex=new BABYLON.DynamicTexture('crate-diamond-pattern',128,scene,true),c=tex.getContext();
+    c.clearRect(0,0,128,128);c.strokeStyle='#ffffff';c.lineWidth=128*BAR/PITCH;c.lineJoin='round';c.beginPath();c.moveTo(64,0);c.lineTo(128,64);c.lineTo(64,128);c.lineTo(0,64);c.closePath();c.stroke();tex.hasAlpha=true;tex.wrapU=tex.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;tex.update();
+    const grilleMat=mat.clone('perforated polypropylene');grilleMat.albedoTexture=tex;grilleMat.useAlphaFromAlbedoTexture=true;grilleMat.transparencyMode=BABYLON.PBRMaterial.PBRMATERIAL_ALPHATEST;grilleMat.backFaceCulling=false;grilleMat.twoSidedLighting=true;grille.material=grilleMat;
+
     return {
         mesh: crate,
-        setColor(h) { mat.albedoColor = BABYLON.Color3.FromHexString(h).toLinearSpace(); },
+        setColor(h) { mat.albedoColor = BABYLON.Color3.FromHexString(h).toLinearSpace();grilleMat.albedoColor=mat.albedoColor.clone(); },
         ringHalfL: AX - 0.0005,   // 底の外周リング（いちばん外側の接地部）の長辺方向半寸法
         ringY: HF - 0.008,        // 同リングの下面高さ
         floorTop: HF + T,         // 内側の底面（格子の上面）
