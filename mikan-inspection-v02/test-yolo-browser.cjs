@@ -8,6 +8,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
   const url=process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html`;
   await page.goto(url);await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});await page.evaluate(()=>{document.getElementById('optionsPanel').open=true;document.getElementById('diagnosticsPanel').open=true;});
   assert.equal(await page.evaluate(()=>mikanDebug.detector.name),'yolov9-quality-640');
+  assert.equal(await page.locator('#confidence').inputValue(),'35');assert.equal(await page.locator('#confidenceValue').textContent(),'35%');
   const associations=await page.evaluate(async()=>{const {associateDetections}=await import('./yolo-detector.js?v=20261025-line-yolo');const box=(label,x1,y1,x2,y2)=>({label,x1,y1,x2,y2,score:.9});return associateDetections([box('mikan',0,0,100,100),box('mikan',110,0,210,100),box('mold',10,10,30,30),box('damage',130,20,150,40),box('mold',250,0,280,30)]);});
   assert.deepEqual(associations.fruits.map(f=>f.defects),[['mold'],['damage']]);assert.equal(associations.unassigned.length,1);
   console.log('PASS actual YOLO startup and image-space defect association');
