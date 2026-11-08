@@ -1,3 +1,4 @@
+import {createPeelKit,shapeCitrus,createCalyx,citrusPoint} from './fruit-detail.js?v=20261109-natural';
 const B=globalThis.BABYLON;
 // Appearance recipes are for generating images, never for authorizing robot picks.
 export const FRUIT_VARIANTS=[
@@ -37,14 +38,7 @@ function paintBlueGreenMold(c,w,h,r){
 }
 export function createFruitFactory(scene){
   const rng=random(803);
-  const peel=texture('peel',{width:512,height:256},scene,(c,w,h)=>{c.fillStyle='#fa961d';c.fillRect(0,0,w,h);for(let i=0;i<14000;i++){const x=rng()*w,y=rng()*h;c.fillStyle=rng()>.5?'rgba(192,93,8,.12)':'rgba(255,226,115,.19)';c.beginPath();c.ellipse(x,y,.3+rng()*.8,.3+rng()*.8,0,0,Math.PI*2);c.fill();}});
-  const bump=texture('pores',{width:512,height:256},scene,(c,w,h)=>{c.fillStyle='#888';c.fillRect(0,0,w,h);for(let i=0;i<10000;i++){c.fillStyle=rng()>.5?'#aaa':'#555';c.fillRect(rng()*w,rng()*h,1,1);}});
-  const skin=new B.StandardMaterial('citrus-peel',scene);skin.diffuseTexture=peel;skin.bumpTexture=bump;skin.bumpTexture.level=.13;skin.emissiveColor=new B.Color3(.3,.13,.02);skin.specularColor=new B.Color3(.07,.06,.03);
-  const mottled=new B.StandardMaterial('mottled-citrus-peel',scene);mottled.bumpTexture=bump;mottled.emissiveColor=skin.emissiveColor.clone();mottled.specularColor=skin.specularColor.clone();mottled.diffuseTexture=texture('mottled-peel',{width:512,height:256},scene,(c,w,h)=>{
-    c.drawImage(peel.getContext().canvas,0,0);const r=random(1903);
-    for(let i=0;i<28;i++){const x=r()*w,y=r()*h,rad=14+r()*30,g=c.createRadialGradient(x,y,0,x,y,rad);g.addColorStop(0,i%3?'rgba(219,179,42,.25)':'rgba(143,159,44,.22)');g.addColorStop(1,'rgba(240,172,35,0)');c.fillStyle=g;c.fillRect(x-rad,y-rad,rad*2,rad*2);}
-  });
-  const stem=new B.StandardMaterial('stem',scene);stem.diffuseColor=B.Color3.FromHexString('#b9aa76');stem.emissiveColor=new B.Color3(.15,.14,.08);
+  const {skin,mottled,calyx,stem}=createPeelKit(scene,rng);
   function defectMaterial(kind,seed,style){const r=random(seed),size=kind==='mold'?256:128,t=texture(kind+'-texture',{width:size,height:size},scene,(c,w,h)=>{
     c.fillStyle=style==='scuff'?'#b9854e':'#75432b';c.fillRect(0,0,w,h);
     if(kind==='mold')paintBlueGreenMold(c,w,h,r);
@@ -54,9 +48,11 @@ export function createFruitFactory(scene){
   return function create({id,type=0,hidden=false,seed=id*717,variant=null}){
     const recipe=FRUIT_VARIANTS.find(v=>v.id===variant)||FRUIT_VARIANTS.find(v=>v.type===type);type=recipe.type;
     const r=random(seed),root=new B.TransformNode('fruit-'+id,scene),visual=new B.TransformNode('orientation-'+id,scene);visual.parent=root;visual.scaling.setAll(.9);visual.rotationQuaternion=B.Quaternion.Identity();
-    const sphere=B.MeshBuilder.CreateSphere('mikan-'+id,{diameter:.78,segments:28},scene);sphere.scaling.y=.84;sphere.material=recipe.id==='mottled'?mottled:skin;sphere.parent=visual;sphere.layerMask=3;
-    const cap=B.MeshBuilder.CreateCylinder('stem-'+id,{height:.035,diameter:.1,tessellation:8},scene);cap.position.y=.329;cap.material=stem;cap.parent=visual;cap.layerMask=3;
-    const meshes=[sphere,cap],ownedMaterials=[];
+    const phase=seed*.017;
+    const sphere=B.MeshBuilder.CreateSphere('mikan-'+id,{diameter:2,segments:40,updatable:true},scene);shapeCitrus(sphere,phase);sphere.material=recipe.id==='mottled'?mottled:skin;sphere.parent=visual;sphere.layerMask=7;
+    const cap=B.MeshBuilder.CreateCylinder('stem-'+id,{height:.024,diameterTop:.026,diameterBottom:.037,tessellation:10},scene);cap.position.y=citrusPoint([0,1,0],phase)[1]+.012;cap.material=stem;cap.parent=visual;cap.layerMask=7;
+    const leaves=createCalyx(scene,id,phase,calyx);leaves.parent=visual;leaves.layerMask=7;
+    const meshes=[sphere,cap,leaves],ownedMaterials=[];
     if(type){
       // A surface-fixed irregular patch, projected onto the fruit's ellipsoid.
       const normal=hidden?new B.Vector3(0,-1,0):new B.Vector3(r()-.5,r()-.5,r()-.5).normalize();
@@ -66,7 +62,7 @@ export function createFruitFactory(scene){
         const positions=[],uvs=[],indices=[],ring=recipe.radius<.2?28:64,bands=recipe.radius<.2?4:10,radius=recipe.radius+(type===1?r()*(recipe.radius<.2?.035:.16):0);
         const a=spot*Math.PI*2/recipe.count,center=recipe.count===1?normal:normal.add(tangent.scale(Math.cos(a)*.42)).add(bitangent.scale(Math.sin(a)*.42)).normalize();
         const tx=B.Vector3.Cross(center,Math.abs(center.y)>.9?B.Axis.X:B.Axis.Y).normalize(),ty=B.Vector3.Cross(center,tx).normalize();
-        function point(u,v){const p=center.add(tx.scale(u)).add(ty.scale(v)).normalize().scale(.396);positions.push(p.x,p.y*.84,p.z);uvs.push(.5+u/(radius*2.4),.5+v/(radius*2.4));}
+        function point(u,v){const direction=center.add(tx.scale(u)).add(ty.scale(v)).normalize();positions.push(...citrusPoint(direction.asArray(),phase,.006));uvs.push(.5+u/(radius*2.4),.5+v/(radius*2.4));}
         point(0,0);
         for(let band=1;band<=bands;band++)for(let i=0;i<=ring;i++){const a=i/ring*Math.PI*2,rough=.88+.12*Math.sin(a*5)+.07*Math.cos(a*9),rho=radius*rough*band/bands;point(Math.cos(a)*rho,Math.sin(a)*rho*recipe.aspect);}
         for(let i=0;i<ring;i++)indices.push(0,1+i,2+i);
