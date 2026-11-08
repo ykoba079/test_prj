@@ -13,17 +13,19 @@ const server=http.createServer((req,res)=>{
   const url=process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html`;
   await page.goto(url+(url.includes('?')?'&':'?')+'detector=color');
   await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});
-  await page.locator('#autoSpawn').uncheck();await page.evaluate(()=>mikanDebug.setPaused(true));await page.waitForFunction(()=>!mikanDebug.busy);
+  assert.equal(await page.locator('#addGood,#addMold,#addDamage,#addHidden,#binCount,#clearBins,#autoSpawn,.operation-bar').count(),0);
+  assert.equal(await page.evaluate(()=>mikanDebug.autoSpawn),true,'automatic feed continues without the removed checkbox');
+  await page.evaluate(()=>mikanDebug.setAutoSpawn(false));await page.evaluate(()=>mikanDebug.setPaused(true));await page.waitForFunction(()=>!mikanDebug.busy);
   const burst=await page.evaluate(()=>{
     const d=mikanDebug;d.reset();
-    for(const id of ['addGood','addMold','addDamage','addHidden'])document.getElementById(id).click();
+    for(const variant of ['standard','mold-large','damage','mold-large']){document.getElementById('sampleAppearance').value=variant;document.getElementById('addSample').click();}
     document.getElementById('sampleAppearance').value='mold-small';document.getElementById('addSample').click();
     const firstCount=d.fruits.length,markers=[...d.defectMarkers.keys()],badIds=d.fruits.filter(f=>f.debugDefect).map(f=>f.id);
     const automaticBlocked=d.spawn()===null;
-    for(let i=0;i<9;i++)document.getElementById('addGood').click();
+    document.getElementById('sampleAppearance').value='standard';for(let i=0;i<9;i++)document.getElementById('addSample').click();
     const positions=d.fruits.map(f=>f.root.position.asArray());let minDistance=Infinity;
     for(let i=0;i<positions.length;i++)for(let j=i+1;j<positions.length;j++)minDistance=Math.min(minDistance,Math.hypot(...positions[i].map((v,k)=>v-positions[j][k])));
-    document.getElementById('addGood').click();
+    document.getElementById('addSample').click();
     const cameraLeaks=d.views.flatMap(v=>v.rt.renderList.filter(m=>m.name.startsWith('yolo-defect-')||m.name.startsWith('yolo-label-'))).length;
     return {firstCount,markers,badIds,automaticBlocked,count:d.fruits.length,minDistance,feedback:document.getElementById('spawnFeedback').textContent,cameraLeaks,labels:d.defectLabels.size,attempts:d.attempts.length,positions};
   });
@@ -35,5 +37,6 @@ const server=http.createServer((req,res)=>{
   fs.mkdirSync(path.join(root,'qa'),{recursive:true});await page.screenshot({path:path.join(root,'qa/manual-annotations.png'),fullPage:true});
   await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   const reset=await page.evaluate(()=>{mikanDebug.reset();return {fruit:mikanDebug.fruits.length,boxes:mikanDebug.defectMarkers.size,labels:mikanDebug.defectLabels.size,annotationMeshes:mikanDebug.scene.meshes.filter(m=>m.name.startsWith('yolo-defect-')||m.name.startsWith('yolo-label-')).length};});assert.deepEqual(reset,{fruit:0,boxes:0,labels:0,annotationMeshes:0});
+  await page.evaluate(()=>{mikanDebug.setAutoSpawn(true);mikanDebug.setMotorEnabled(true);mikanDebug.setPaused(false);});await page.waitForFunction(()=>mikanDebug.fruits.length>0,null,{timeout:7000});
   assert.deepEqual(errors,[]);console.log('PASS immediate manual burst, non-overlapping placement, capacity feedback, ground-truth markers, camera exclusion, follow and cleanup',JSON.stringify(burst));
 }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1;});

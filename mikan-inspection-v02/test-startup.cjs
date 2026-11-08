@@ -8,12 +8,12 @@ const root=__dirname,siteRoot=path.resolve(root,'..'),server=http.createServer((
   await page.route('https://cdn.babylonjs.com/**',r=>r.abort());
   let release;const gate=new Promise(r=>release=r);await page.route('**/vendor/HavokPhysics.wasm*',async r=>{await gate;await r.continue();});
   await page.goto(url,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>globalThis.mikanPreview?.fruits.length===3&&globalThis.mikanPreview.scene.getFrameId()>2,null,{timeout:15000});
-  assert.equal(await page.locator('#addGood').isDisabled(),true);assert.equal(await page.locator('#loadMessage').isVisible(),true);
+  assert.equal(await page.locator('#addSample').isDisabled(),true);assert.equal(await page.locator('#loadMessage').isVisible(),true);
   await page.screenshot({path:path.join(root,'qa/loading.png')});console.log('PASS 3 fruits and equipment render before WASM finishes loading');
-  release();await page.waitForFunction(()=>globalThis.mikanDebug?.mechanics,null,{timeout:20000});assert.equal(await page.locator('#addGood').isDisabled(),false);assert.equal(await page.locator('#loadMessage').isVisible(),false);
+  release();await page.waitForFunction(()=>globalThis.mikanDebug?.mechanics,null,{timeout:20000});assert.equal(await page.locator('#addSample').isDisabled(),false);assert.equal(await page.locator('#loadMessage').isVisible(),false);
   assert.ok(!requests.some(u=>u.includes('cdn.babylonjs.com')),'External CDN must not be required');assert.deepEqual(errors,[]);console.log('PASS same-origin vendor assets initialize Havok with external CDN blocked');
   const failure=await browser.newPage();const expectedErrors=[];failure.on('pageerror',e=>expectedErrors.push(e.message));await failure.route('**/vendor/HavokPhysics.wasm*',r=>r.abort());await failure.goto(url,{waitUntil:'domcontentloaded'});
   await failure.waitForFunction(()=>document.getElementById('loadMessage').getAttribute('role')==='alert'&&globalThis.mikanPreview?.scene.getFrameId()>2,null,{timeout:20000});
-  assert.equal(await failure.locator('#addGood').isDisabled(),true);assert.equal(await failure.evaluate(()=>globalThis.mikanPreview.fruits.length),3);assert.ok(await failure.locator('#loadMessage').textContent());await failure.screenshot({path:path.join(root,'qa/load-error.png')});console.log('PASS failed WASM keeps fruit and equipment visible and displays an error');
+  assert.equal(await failure.locator('#addSample').isDisabled(),true);assert.equal(await failure.evaluate(()=>globalThis.mikanPreview.fruits.length),3);assert.ok(await failure.locator('#loadMessage').textContent());await failure.screenshot({path:path.join(root,'qa/load-error.png')});console.log('PASS failed WASM keeps fruit and equipment visible and displays an error');
   await failure.close();await page.close();
 }finally{await browser?.close();server.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

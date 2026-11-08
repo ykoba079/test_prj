@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ja">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MIKAN LAB v0.2 — YOLOv9回転検査</title><link rel="stylesheet" href="style.css?v=20261109-top-controls"><script src="vendor/babylon.js?v=20261025-bluegreen-mold" defer></script><script src="vendor/HavokPhysics_umd.js?v=20261025-bluegreen-mold" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MIKAN LAB v0.2 — YOLOv9回転検査</title><link rel="stylesheet" href="style.css?v=20261109-streamlined"><script src="vendor/babylon.js?v=20261025-bluegreen-mold" defer></script><script src="vendor/HavokPhysics_umd.js?v=20261025-bluegreen-mold" defer></script></head>
 <body>
 <header><h1><span class="logo" aria-hidden="true">●</span> MIKAN LAB <span class="version">v0.2</span></h1><nav><a href="../index.html">サンプル一覧 ↗</a></nav></header>
 <p id="loadMessage" role="status">3D表示を準備しています…</p>
@@ -17,10 +17,6 @@ window.addEventListener('unhandledrejection',function(event){mikanShowError(even
   <div class="status-panel"><div class="status-heading"><span id="activeDetectorName">YOLOv9-T</span><span>画像判定 <strong id="latency">— ms</strong></span></div><p class="status"><i aria-hidden="true"></i><span id="status" role="status">Havok読込中…</span></p><div class="metrics"><div><strong id="total">0</strong><span>検出個体</span></div><div><strong id="reject">0</strong><span>不良回収</span></div><div><strong id="escaped">0</strong><span>取り逃がし</span></div></div><div class="appearance-controls"><label class="appearance-picker">外観を指定<select id="sampleAppearance"></select></label><button id="addSample">指定した外観で投入</button></div><section class="confidence-bar" aria-label="YOLO信頼度"><label for="confidence">YOLO信頼度 <output id="confidenceValue">35%</output></label><input id="confidence" type="range" min="10" max="90" step="5" value="35"></section></div>
 </section>
 <section class="scene-panel" aria-label="3D表示"><div class="panel-head"><span>3D表示</span><small>ドラッグで回転・ホイールで拡大</small></div><canvas id="scene" aria-label="ミカン選別ラインの3D表示"></canvas><div class="scene-caption"><span>赤BOX：生成時の不良 ／ 黄文字：YOLO候補 ／ NG!：不良確定</span><output id="spawnFeedback" role="status" aria-live="polite"></output></div></section>
-<section class="operation-bar" aria-label="ミカンの投入操作">
-  <button id="addGood">良品を投入</button><button id="addMold">カビを投入</button><button id="addDamage">傷を投入</button><button id="addHidden">裏面にカビを投入</button>
-  <div class="bin-actions"><span>通過・回収 <strong id="binCount">0</strong></span><button id="clearBins">箱を空にする</button><label class="checkbox"><input id="autoSpawn" type="checkbox" checked> 自動投入</label></div>
-</section>
 <details id="optionsPanel" class="options-panel"><summary><span>オプション</span><small>傾斜・アーム・ローラーなど</small></summary><div class="options-content">
   <div class="options-grid">
     <fieldset><legend>投入・ライン</legend><label>ゴール側への傾斜<select id="slopeAngle"><option value="0">0度（水平）</option><option value="2">2度</option><option value="5" selected>5度</option></select></label>
@@ -47,4 +43,4 @@ window.addEventListener('unhandledrejection',function(event){mikanShowError(even
   <details id="diagnosticsPanel" class="diagnostics-panel"><summary>動作詳細・履歴</summary><div class="diagnostic-grid"><div><p id="physicsInfo">Havok初期化中…</p><p id="gripInfo">真空吸着・接触の確認待ち</p><p id="predictionInfo"></p><p id="armWaitInfo"></p><p id="trackingInfo">画像追跡を準備中…</p><p id="rollingInfo"></p><p id="observationInfo"></p></div><div><p>不良未検出の追跡：<span id="good">0</span> ／ 未判定回収：<span id="unknown">0</span></p><p>未判定通過：<span id="unclassified">0</span> ／ 空振り：<span id="pickFailed">0</span> ／ 未排除の実個体通過：<span id="passed">0</span> ／ ラインからの落下：<span id="lost">0</span></p><p>橙：カメラ範囲 ／ 緑：把持範囲 ／ 赤BOX：不良確定</p><ol id="log" aria-live="polite"><li>V0.2 YOLOv9検査ラインを起動しました</li></ol></div></div><section class="history-panel"><div class="panel-head"><span>検出・選別の履歴</span><button id="export">履歴をJSON保存</button></div><div class="table-wrap"><table><thead><tr><th>追跡ID</th><th>判定・動作</th><th>観測フレーム</th><th>位置 x,z ／ 速度</th><th>画像から確認した不良</th><th>履歴</th></tr></thead><tbody id="history"></tbody></table></div></section></details>
 </div></details>
 </div></main>
-<script type="module" src="app.js?v=20261109-retry-outline"></script></body></html>
+<script type="module" src="app.js?v=20261109-streamlined"></script></body></html>

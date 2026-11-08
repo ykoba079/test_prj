@@ -40,7 +40,7 @@ const server=http.createServer((req,res)=>{
   await page.goto(process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html?preset=joint-trial&arm=three`);
   await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});await page.evaluate(()=>{document.getElementById('optionsPanel').open=true;document.getElementById('diagnosticsPanel').open=true;});
   assert.equal(await page.locator('#vacuumPressure').inputValue(),'78');assert.equal(await page.locator('#feedInterval').inputValue(),'2.5');
-  await page.locator('#autoSpawn').uncheck();const trials=[];
+  await page.evaluate(()=>mikanDebug.setAutoSpawn(false));const trials=[];
   await page.evaluate(()=>{mikanDebug.reset();mikanDebug.setMotorEnabled(false);});await page.waitForTimeout(1800);
   for(const [model,x] of [['three',3.35],['two',1.9]]){
     await page.evaluate(()=>mikanDebug.setPaused(true));await page.waitForFunction(()=>!mikanDebug.busy);

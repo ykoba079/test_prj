@@ -7,7 +7,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
 (async()=>{let browser;try{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto(process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html?detector=color`);await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});await page.evaluate(()=>{document.getElementById('optionsPanel').open=true;document.getElementById('diagnosticsPanel').open=true;});await page.locator('#autoSpawn').uncheck();
+ await page.goto(process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html?detector=color`);await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});await page.evaluate(()=>{document.getElementById('optionsPanel').open=true;document.getElementById('diagnosticsPanel').open=true;});await page.evaluate(()=>mikanDebug.setAutoSpawn(false));
  const reports=[];
  for(const pitch of ['0.31','0.35','0.4','0.45','0.5','0.55']){
   await page.locator('#rollerPitch').selectOption(pitch);await page.evaluate(()=>mikanDebug.reset(false));await page.waitForTimeout(150);
