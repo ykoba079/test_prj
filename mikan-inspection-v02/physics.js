@@ -45,8 +45,8 @@ export async function createMechanics(scene,rollers){
     const shape=new B.PhysicsShapeConvexHull(hullMesh,scene);hullMesh.dispose();return [segments,shape];
   }));
   const staticBodies=[];
-  for(const mesh of scene.meshes.filter(m=>m.name==='floor'||m.name==='rail'||/^(良品|不良|未判定)-(bottom|wall)$/.test(m.name))){
-    const aggregate=new B.PhysicsAggregate(mesh,B.PhysicsShapeType.BOX,{mass:0,friction:.5,restitution:0},scene);staticBodies.push(aggregate);
+  for(const mesh of scene.meshes.filter(m=>m.metadata?.chuteCollider||m.name==='floor'||m.name==='rail'||/^(良品|不良|未判定)-(bottom|wall)$/.test(m.name))){
+    const aggregate=new B.PhysicsAggregate(mesh,mesh.metadata?.chuteCollider==='hull'?B.PhysicsShapeType.CONVEX_HULL:B.PhysicsShapeType.BOX,{mass:0,friction:mesh.metadata?.chuteCollider ? .22 : .5,restitution:0},scene);staticBodies.push(aggregate);
   }
   let preset='combined',friction=1,clock=0,slowRollersRemoved=false,layoutSync=0;const fruitBodies=new Map();
   const rule=()=>ROLLING_PRESETS[preset],fruitShape=()=>fruitShapes.get(rule().segments);

@@ -1,6 +1,6 @@
 // Equipment appearance adapted from https://playground.babylonjs.com/#KK480H#3.
 // Conveyor and robot dimensions are preserved; crate collision proxies follow the reference shape.
-import {createHarvestCrate,HARVEST_CRATE_SCALE,HARVEST_CRATE_SPEC,FLOOR_TOP} from './harvest-crate.js?v=20261107-clearance';
+import {createHarvestCrate,HARVEST_CRATE_SCALE,HARVEST_CRATE_SPEC,FLOOR_TOP} from './harvest-crate.js?v=20261108-variety';
 const B=globalThis.BABYLON;
 function pbr(scene,name,color,metallic=0,roughness=.5){
   const m=new B.PBRMaterial(name,scene);m.albedoColor=B.Color3.FromHexString(color).toLinearSpace();m.metallic=metallic;m.roughness=roughness;return m;
@@ -111,6 +111,17 @@ export function createEquipmentDetails(scene){
       m.hanger.scaling.y=m.top-a.y;m.hanger.position.set(a.x,(m.top+a.y)/2,a.z);m.plate.position.set(a.x,a.y+.03,a.z);
     }
   }
+  function exitChute(){
+    const dx=1.15,drop=.55,length=Math.hypot(dx,drop),angle=Math.atan2(drop,dx),center=new B.Vector3(7.575,-.275,0),taper=.53;
+    const floor=new B.Mesh('exit-chute-floor',scene),data=new B.VertexData(),a=length/2,t=.025;
+    data.positions=[-a,-t,-1.35,-a,-t,1.35,a,-t,.82,a,-t,-.82,-a,t,-1.35,-a,t,1.35,a,t,.82,a,t,-.82];
+    data.indices=[4,5,6,4,6,7,0,2,1,0,3,2,0,1,5,0,5,4,3,7,6,3,6,2,0,4,7,0,7,3,1,2,6,1,6,5];
+    data.normals=[];B.VertexData.ComputeNormals(data.positions,data.indices,data.normals);data.applyToMesh(floor);floor.convertToFlatShadedMesh();floor.material=steel;floor.layerMask=3;floor.position.copyFrom(center);floor.rotationQuaternion=B.Quaternion.RotationAxis(B.Axis.Z,-angle);floor.metadata={chuteCollider:'hull'};lineMeshes.push(floor);
+    for(const side of [-1,1]){
+      const wall=box('exit-chute-wall',Math.hypot(length,taper),.32,.055,[center.x+Math.sin(angle)*.17,center.y+Math.cos(angle)*.17,side*1.085],steel);
+      wall.rotationQuaternion=B.Quaternion.RotationAxis(B.Axis.Z,-angle).multiply(B.Quaternion.RotationAxis(B.Axis.Y,side*Math.atan2(taper,length)));wall.metadata={chuteCollider:'box'};lineMeshes.push(wall);
+    }
+  }
   function decorate(){
     const floor=scene.getMeshByName('floor');floor.material=pbr(scene,'epoxy-floor','#344641',.05,.88);
     scene.getMeshByName('inspection-background').material=rubber;
@@ -131,6 +142,7 @@ export function createEquipmentDetails(scene){
     const motor=cyl('drive-motor',.83,.40,[0,0,-.55],blue,drive);motor.rotation.x=Math.PI/2;
     for(let z=-.9;z<-.2;z+=.09){const fin=cyl('motor-cooling-fin',.025,.45,[0,0,z],blue,drive);fin.rotation.x=Math.PI/2;}
     box('motor-terminal-box',.24,.14,.26,[0,.28,-.55],blue,drive);
+    exitChute();
     const cable=tube('motor-power',[[0,.2,-.55],[0,.4,-.55],[.6,.4,-.55],[.9,.15,-.1]],.025,rubber,drive);
     for(const cam of [scene.getMeshByName('top-camera'),scene.getMeshByName('oblique-camera')]){
       cam.material=paint;
@@ -163,6 +175,8 @@ export function createEquipmentDetails(scene){
     lineMeshes.push(tube('conveyor-conduit',[[-3.6,0,-2.15],[-3.6,-.12,-1.9],[-5,-.38,-1.9],[-6.2,-.38,-1.9]],.035,rubber));
 
     const pedestal=scene.getMeshByName('robot-base');pedestal.material=paint;
+    floorSupports.push({mesh:box('robot-base-stand',.62,1,.62,[3,-1,2.1],paint),top:-.125,height:1});
+    const baseFoot=box('robot-base-foot',.95,.05,.95,[3,0,2.1],steel);floorFeet.push(baseFoot);
     for(const x of [-.3,.3])for(const z of [-.3,.3])bolt(pedestal,[x,.19,z],'y',.085);
     syncFloor(floor.position.y+.05);
     return lineMeshes;

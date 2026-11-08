@@ -16,6 +16,7 @@ aside .controls{padding:12px;gap:8px}.metrics{padding:10px 0}.metrics strong{fon
 aside input[type=range]{margin-top:4px}aside select{padding:6px 8px;margin-top:3px}
 .inspection-footer{border-top:1px solid #32443b;padding:14px 18px;margin-top:16px}
 .inspection-footer .caption{padding:0;margin:0;line-height:1.8}
+.scene-controls .appearance-picker{width:auto;flex:1 1 220px;max-width:360px}.scene-controls #addSample{align-self:flex-end}
 @media(min-width:1001px){
   .scene-panel{position:sticky;top:12px}
   #scene{height:clamp(300px,calc(100dvh - 360px),600px)}

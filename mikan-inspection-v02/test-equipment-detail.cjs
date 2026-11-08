@@ -25,12 +25,12 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
       goodBottom:d.scene.meshes.find(m=>m.name==='良品-bottom').position.y};
   });
   const checkMounts=r=>{assert.ok(r.lensAlignment.every(d=>d>.999999),JSON.stringify(r.lensAlignment));assert.equal(r.railShells.length,2);assert.ok(r.railShells.every(m=>m.visible&&!m.proxyVisible));assert.equal(r.oldFlanges,0);assert.equal(r.oldCameraPosts,0);assert.deepEqual(r.postIntersections,[]);assert.ok(r.cameraOffsets.every(d=>d<=.002),JSON.stringify(r.cameraOffsets));for(const c of r.crateGeometry){assert.ok(Math.abs(c.ratio-535/370)<1e-5);assert.ok(Math.abs(c.foot-c.floor)<1e-5,'crate feet rest on the room floor');}};
-  const initial=await inspect();checkMounts(initial);assert.equal(initial.crates,3);assert.equal(initial.lights,2);assert.ok(initial.motor&&initial.slow);assert.equal(initial.metal,'PBRMaterial');assert.equal(initial.bodies-initial.rollers,20);
+  const initial=await inspect();checkMounts(initial);assert.equal(initial.crates,3);assert.equal(initial.lights,2);assert.ok(initial.motor&&initial.slow);assert.equal(initial.metal,'PBRMaterial');assert.equal(initial.bodies-initial.rollers,23);
   for(const camera of initial.cameras)assert.ok(!camera.own&&!camera.disposed&&camera.motor&&camera.decorated,JSON.stringify(camera));
   const cycles=[];
   for(const pitch of ['0.4','0.6','0.5']){
     await page.selectOption('#fastRollerPitch',pitch);await page.selectOption('#armModel','two');await page.selectOption('#armModel','three');
-    const r=await inspect();checkMounts(r);assert.equal(r.bodies-r.rollers,20);assert.equal(r.links,3);for(const camera of r.cameras)assert.ok(!camera.disposed&&camera.decorated&&!camera.own);cycles.push(r);
+    const r=await inspect();checkMounts(r);assert.equal(r.bodies-r.rollers,23);assert.equal(r.links,3);for(const camera of r.cameras)assert.ok(!camera.disposed&&camera.decorated&&!camera.own);cycles.push(r);
   }
   assert.equal(cycles.at(-1).meshes,initial.meshes,'rebuilding to the original configuration must not leave decoration meshes');
   for(const angle of ['0','2','5']){await page.selectOption('#slopeAngle',angle);const r=await inspect();checkMounts(r);assert.ok(Math.abs(r.goodCrate-r.goodBottom-.06)<1e-6,'visual crate follows the same sloped exit as its collision body');}
