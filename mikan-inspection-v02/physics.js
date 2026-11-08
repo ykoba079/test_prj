@@ -44,9 +44,9 @@ export async function createMechanics(scene,rollers){
     hullMesh.scaling.y=.84;hullMesh.bakeCurrentTransformIntoVertices();
     const shape=new B.PhysicsShapeConvexHull(hullMesh,scene);hullMesh.dispose();return [segments,shape];
   }));
-  const staticBodies=[];
+  const staticBodies=[],staticMasks=new Map();
   for(const mesh of scene.meshes.filter(m=>m.metadata?.chuteCollider||m.name==='floor'||m.name==='rail'||/^(良品|不良|未判定)-(bottom|wall)$/.test(m.name))){
-    const aggregate=new B.PhysicsAggregate(mesh,mesh.metadata?.chuteCollider==='hull'?B.PhysicsShapeType.CONVEX_HULL:B.PhysicsShapeType.BOX,{mass:0,friction:mesh.metadata?.chuteCollider ? .22 : .5,restitution:0},scene);staticBodies.push(aggregate);
+    const aggregate=new B.PhysicsAggregate(mesh,mesh.metadata?.chuteCollider==='hull'?B.PhysicsShapeType.CONVEX_HULL:B.PhysicsShapeType.BOX,{mass:0,friction:mesh.metadata?.chuteCollider ? .22 : .5,restitution:0},scene);staticBodies.push(aggregate);staticMasks.set(aggregate,aggregate.body.shape.filterCollideMask);
   }
   let preset='combined',friction=1,clock=0,slowRollersRemoved=false,layoutSync=0;const fruitBodies=new Map();
   const rule=()=>ROLLING_PRESETS[preset],fruitShape=()=>fruitShapes.get(rule().segments);
@@ -69,6 +69,7 @@ export async function createMechanics(scene,rollers){
   });
   return {
     plugin,rollers,get fruitShape(){return fruitShape();},fruitForBody:body=>fruitBodies.get(body)||null,
+    setBinEnabled(prefix,enabled){for(const a of staticBodies)if(a.body.transformNode.name.startsWith(prefix))a.body.shape.filterCollideMask=enabled?staticMasks.get(a):0;},
     rebuildRollers(diameter=rollerDiameter){layoutSync++;rollerShape.dispose();slowRollerShape.dispose();rollerDiameter=diameter;rollerShape=makeRollerShape();slowRollerShape=makeRollerShape();slowCollisionMask=slowRollerShape.filterCollideMask;slowRollerShape.filterCollideMask=slowRollersRemoved?0:slowCollisionMask;applyMaterials();attachRollers();for(const f of fruitBodies.values())f.rollerContacts.clear();for(const r of rollers)if(r.driveRole==='slow')r.setEnabled(!slowRollersRemoved);},
     syncLayout(){
       // A setting change resets fruit first; teleport equipment once, then resume velocity drive.

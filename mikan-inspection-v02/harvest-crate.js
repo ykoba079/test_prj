@@ -1,8 +1,10 @@
 // Procedural harvest-crate geometry adapted from the reviewed Playground KK480H / 3.
 // No external GLB/OBJ asset is loaded. Dimensions describe the unscaled reference shape.
-export const FLOOR_TOP=-2.20;
+export const FLOOR_TOP=-3.60;
 export const HARVEST_CRATE_SCALE=3.15/.535;
 export const HARVEST_CRATE_SPEC={width:3.15,depth:.370*HARVEST_CRATE_SCALE,wallHeight:(.305-.0195)*HARVEST_CRATE_SCALE,footDepth:.0195*HARVEST_CRATE_SCALE,innerHalfX:(.2615-.0035)*HARVEST_CRATE_SCALE,innerHalfZ:(.179-.0035)*HARVEST_CRATE_SCALE,wallThickness:.04};
+export function harvestCrateSpec(width){const ratio=width/HARVEST_CRATE_SPEC.width;return Object.fromEntries(Object.entries(HARVEST_CRATE_SPEC).map(([key,value])=>[key,key==='wallThickness'?value:value*ratio]));}
+export const GOOD_CRATE_SPEC=harvestCrateSpec(5.0),REJECT_CRATE_SPEC=harvestCrateSpec(4.2),GOOD_BIN_X=10.2;
 export function createHarvestCrate(scene, hex = '#58734d') {
     // ---------------- 寸法 ----------------
     const L = 0.535, W = 0.370, H = 0.305;   // 外寸（リム外形）
