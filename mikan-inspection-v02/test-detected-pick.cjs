@@ -9,7 +9,10 @@ const server=http.createServer((req,res)=>{
 (async()=>{let browser;try{
   const uri=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
   const {labelPresentation,labelPopScale}=await import(uri(fs.readFileSync(__dirname+'/yolo-label.js','utf8')));
-  assert.deepEqual(labelPresentation({defects:new Set(),observedKinds:new Set(['damage'])}),{confirmed:false,title:'',detail:'キズ候補'});
+  const labelCandidate={defects:new Set(),observedKinds:new Set(['mold','damage']),defectCaptures:[{time:10,kinds:['damage']}]};
+  assert.deepEqual(labelPresentation(labelCandidate,11,2),{confirmed:false,title:'',detail:'キズ候補'});
+  assert.ok(labelPresentation(labelCandidate,12,2),'the exact two-second boundary is still valid');
+  assert.equal(labelPresentation(labelCandidate,12.001,2),null);assert.equal(labelPresentation(labelCandidate,9,2),null);
   assert.deepEqual(labelPresentation({defects:new Set(['mold']),observedKinds:new Set(['mold','damage'])}),{confirmed:true,title:'NG!',detail:'カビ検出'},'unconfirmed kinds must not be announced as confirmed');
   assert.deepEqual(labelPresentation({defects:new Set(['damage','mold']),observedKinds:new Set(['mold','damage'])}),{confirmed:true,title:'NG!',detail:'カビ・キズ検出'});
   assert.equal(labelPopScale(0),.65);assert.equal(labelPopScale(.12),1.25);assert.equal(labelPopScale(.38),1);assert.equal(labelPopScale(20),1);
@@ -88,6 +91,28 @@ const server=http.createServer((req,res)=>{
   await page.evaluate(()=>{const d=mikanDebug;d.scene.activeCamera.setTarget(pickFixture.f.root.position.clone());d.scene.activeCamera.radius=8;});await page.waitForTimeout(400);
   fs.mkdirSync(path.join(__dirname,'qa'),{recursive:true});await page.screenshot({path:path.join(__dirname,'qa/yolo-annotations.png'),fullPage:true});
   const download=page.waitForEvent('download');await page.click('#export');const artifact=await download,exported=JSON.parse(fs.readFileSync(await artifact.path(),'utf8'));assert.equal(exported.tracking.simulatorPositionsForPlanning,true);assert.equal(exported.robot.returnMotionScale,2);assert.deepEqual(exported.picking.defectConfirmation,{windowSeconds:2,captures:2});
+  // Exercise expiry with no subsequent detections, and a fresh class after
+  // expiry. Keep this isolated fixture off the rollers and before the pick zone.
+  await page.evaluate(()=>{
+    const d=mikanDebug,B=BABYLON;d.reset();d.setMotorEnabled(false);
+    const f=d.spawn(1,true,new B.Vector3(.5,d.fruitHeight(.5)+.5,0),'mold-large');f.body.setGravityFactor(0);
+    globalThis.expiryFixture={f,emit:'mold'};
+    d.detector.detectFrame=async(image,threshold,index)=>{
+      if(index!==0||!expiryFixture.emit)return {fruits:[],orphans:[]};
+      const kind=expiryFixture.emit;expiryFixture.emit=null;const v=d.views[0],matrix=v.camera.getViewMatrix().multiply(v.camera.getProjectionMatrix());f.meshes[0].computeWorldMatrix(true);
+      const p=f.meshes[0].getBoundingInfo().boundingBox.vectorsWorld.map(p=>B.Vector3.Project(p,B.Matrix.Identity(),matrix,new B.Viewport(0,0,640,480))),box={x0:Math.min(...p.map(p=>p.x)),x1:Math.max(...p.map(p=>p.x)),y0:Math.min(...p.map(p=>p.y)),y1:Math.max(...p.map(p=>p.y)),score:.99,defects:[kind]},cx=(box.x0+box.x1)/2,cy=(box.y0+box.y1)/2;
+      return {fruits:[{...box,defectBoxes:[{x0:cx-5,x1:cx+5,y0:cy-5,y1:cy+5,kind,score:.99}]}],orphans:[]};
+    };d.setPaused(false);
+  });
+  await page.waitForFunction(()=>mikanDebug.defectLabels.get(expiryFixture.f.id)?.text==='カビ候補',null,{timeout:6000});
+  await page.evaluate(()=>expiryFixture.oldMesh=mikanDebug.defectLabels.get(expiryFixture.f.id).mesh);
+  await page.waitForFunction(()=>!mikanDebug.defectLabels.has(expiryFixture.f.id),null,{timeout:4500});
+  assert.ok(await page.evaluate(()=>expiryFixture.oldMesh.isDisposed()&&mikanDebug.defectMarkers.has(expiryFixture.f.id)&&mikanDebug.attempts.length===0));
+  await page.evaluate(()=>expiryFixture.emit='damage');
+  await page.waitForFunction(()=>mikanDebug.defectLabels.get(expiryFixture.f.id)?.text==='キズ候補',null,{timeout:6000});
+  await page.evaluate(()=>expiryFixture.emit='damage');
+  await page.waitForFunction(()=>mikanDebug.defectLabels.get(expiryFixture.f.id)?.text==='NG! キズ検出',null,{timeout:6000});
+  await page.waitForTimeout(2200);assert.equal(await page.evaluate(()=>mikanDebug.defectLabels.get(expiryFixture.f.id)?.text),'NG! キズ検出');
   await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   assert.deepEqual(errors,[]);console.log('PASS two captures within two seconds; same-frame A/B deduplication; clean gap, expiry and latch; ground-truth markers independent of YOLO labels; no arm on first capture; missed fruit excluded; physical surface contact and settings',JSON.stringify(trials.map(t=>({model:t.model,attempt:t.attempt,samples:t.samples.length}))));
 }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,5 +1,5 @@
 import {createEquipmentDetails} from './equipment-detail.js?v=20261108-factory';
-import {labelPresentation,labelPopScale,paintYoloLabel} from './yolo-label.js?v=20261109-ng';
+import {labelPresentation,labelPopScale,paintYoloLabel} from './yolo-label.js?v=20261109-label-expiry';
 import {stepContactSearch,CONTACT_SEARCH} from './contact-search.js?v=20261029-transfer';
 import {colorDetector} from './vision.js?v=20261025-bluegreen-mold';
 import {createFruitFactory,random,FRUIT_VARIANTS,chooseFruitAppearance,APPEARANCE_MIX} from './fruit.js?v=20261109-natural';
@@ -140,8 +140,9 @@ function showDefectMarker(fruit){
   marker.metadata={debugFruitId:fruit.id};defectMarkers.set(fruit.id,marker);
 }
 function updateDefectLabel(fruit,record){
-  const kinds=[...(record.observedKinds||[])];if(!kinds.length)return;
-  const presentation=labelPresentation(record),text=[presentation.title,presentation.detail].filter(Boolean).join(' ');
+  const presentation=labelPresentation(record,performance.now()/1000,DEFECT_CONFIRMATION.windowSeconds);
+  if(!presentation){disposeDefectLabel(fruit.id);return;}
+  const text=[presentation.title,presentation.detail].filter(Boolean).join(' ');
   let label=defectLabels.get(fruit.id);
   if(!label){
     const texture=new B.DynamicTexture('yolo-label-'+fruit.id,{width:512,height:256},scene,false);

@@ -1,9 +1,11 @@
 // Text styling inspired by the outlined NG label in Babylon Playground KK480H#3.
-export function labelPresentation(record){
+export function labelPresentation(record,time,windowSeconds){
   const confirmed=['mold','damage'].filter(k=>record.defects.has(k));
-  const observed=['mold','damage'].filter(k=>record.observedKinds?.has(k));
   const words=kinds=>kinds.map(k=>k==='mold'?'カビ':'キズ').join('・');
-  return confirmed.length?{confirmed:true,title:'NG!',detail:words(confirmed)+'検出'}:{confirmed:false,title:'',detail:words(observed)+'候補'};
+  if(confirmed.length)return {confirmed:true,title:'NG!',detail:words(confirmed)+'検出'};
+  const recent=(record.defectCaptures||[]).filter(s=>time>=s.time&&time-s.time<=windowSeconds);
+  const observed=['mold','damage'].filter(k=>recent.some(s=>s.kinds.includes(k)));
+  return observed.length?{confirmed:false,title:'',detail:words(observed)+'候補'}:null;
 }
 export function labelPopScale(seconds){
   if(seconds<0)return 1;
