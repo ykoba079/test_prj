@@ -6,7 +6,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
   await new Promise(r=>server.listen(0,'127.0.0.1',r));browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const page=await browser.newPage({viewport:{width:1440,height:1050}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html?detector=color`);
-  await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});await page.locator('#autoSpawn').uncheck();await page.evaluate(()=>mikanDebug.setPaused(true));await page.waitForFunction(()=>!mikanDebug.busy);
+  await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});await page.evaluate(()=>{document.getElementById('optionsPanel').open=true;document.getElementById('diagnosticsPanel').open=true;});await page.locator('#autoSpawn').uncheck();await page.evaluate(()=>mikanDebug.setPaused(true));await page.waitForFunction(()=>!mikanDebug.busy);
   const blueState=()=>page.evaluate(()=>({visible:mikanDebug.scene.meshes.find(m=>m.name.endsWith('-crate-detail')&&m.name.startsWith('\u672a\u5224\u5b9a-')).isEnabled(),masks:mikanDebug.scene.getPhysicsEngine().getBodies().filter(b=>b.transformNode.name.startsWith('\u672a\u5224\u5b9a-')).map(b=>b.shape.filterCollideMask)}));
   const hidden=await blueState();assert.ok(!hidden.visible&&hidden.masks.length===5&&hidden.masks.every(m=>m===0));
   await page.locator('#collectUnknown').check();const shown=await blueState();assert.ok(shown.visible&&shown.masks.every(m=>m!==0));await page.locator('#collectUnknown').uncheck();assert.ok(!(await blueState()).visible);

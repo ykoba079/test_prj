@@ -30,7 +30,7 @@ const server=http.createServer((req,res)=>{
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html?preset=joint-trial&arm=three`);
-  await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});
+  await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});await page.evaluate(()=>{document.getElementById('optionsPanel').open=true;document.getElementById('diagnosticsPanel').open=true;});
   assert.equal(await page.locator('#vacuumPressure').inputValue(),'78');assert.equal(await page.locator('#feedInterval').inputValue(),'2.5');
   await page.locator('#autoSpawn').uncheck();const trials=[];
   await page.evaluate(()=>{mikanDebug.reset();mikanDebug.setMotorEnabled(false);});await page.waitForTimeout(1800);

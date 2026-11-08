@@ -6,7 +6,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(siteRoot,'.'+
   await new Promise(r=>server.listen(0,'127.0.0.1',r));browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const page=await browser.newPage({viewport:{width:1440,height:1150}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   const url=process.env.MIKAN_TEST_URL||`http://127.0.0.1:${server.address().port}/mikan-inspection-v02/index.html`;
-  await page.goto(url);await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});
+  await page.goto(url);await page.waitForFunction(()=>globalThis.mikanDebug,null,{timeout:90000});await page.evaluate(()=>{document.getElementById('optionsPanel').open=true;document.getElementById('diagnosticsPanel').open=true;});
   assert.equal(await page.evaluate(()=>mikanDebug.detector.name),'yolov9-quality-640');
   const associations=await page.evaluate(async()=>{const {associateDetections}=await import('./yolo-detector.js?v=20261025-line-yolo');const box=(label,x1,y1,x2,y2)=>({label,x1,y1,x2,y2,score:.9});return associateDetections([box('mikan',0,0,100,100),box('mikan',110,0,210,100),box('mold',10,10,30,30),box('damage',130,20,150,40),box('mold',250,0,280,30)]);});
   assert.deepEqual(associations.fruits.map(f=>f.defects),[['mold'],['damage']]);assert.equal(associations.unassigned.length,1);

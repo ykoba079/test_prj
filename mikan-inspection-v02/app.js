@@ -20,7 +20,7 @@ let line=createSlopeGeometry(0),support=supportCalibration(.31);
 const linePoint=p=>{const q=line.point(p);return new B.Vector3(q.x,q.y,q.z);};
 const fruitHeight=x=>line.heightAt(x,support.heightAt(line.pivotX+(x-line.pivotX)/line.cos)),tcpHeight=x=>fruitHeight(x)+PICK_RULE.tcpHeight-.35;
 const engine=new B.Engine($('scene'),true),scene=new B.Scene(engine);scene.clearColor=B.Color4.FromHexString('#1b2925ff');
-const orbit=new B.ArcRotateCamera('orbit',-Math.PI/2.6,Math.PI/3.2,24,new B.Vector3(1.8,-.2,1.2),scene);orbit.attachControl($('scene'),true);orbit.lowerRadiusLimit=8;orbit.upperRadiusLimit=30;orbit.layerMask=1;
+const orbit=new B.ArcRotateCamera('orbit',-Math.PI/2.6,Math.PI/3.2,20,new B.Vector3(2.5,-.6,1.3),scene);orbit.attachControl($('scene'),true);orbit.lowerRadiusLimit=8;orbit.upperRadiusLimit=30;orbit.layerMask=1;
 const sky=new B.HemisphericLight('sky',new B.Vector3(0,1,.2),scene);sky.intensity=1.25;sky.groundColor=new B.Color3(.48,.46,.4);
 function material(name,color){const m=new B.StandardMaterial(name,scene);m.diffuseColor=B.Color3.FromHexString(color);m.specularColor=new B.Color3(.1,.1,.1);return m;}
 const equipment=createEquipmentDetails(scene);
@@ -96,6 +96,8 @@ globalThis.mikanPreview={scene,fruits:previewFruits};
 $('loadMessage').textContent='装置とミカンを表示しています。物理演算を準備中…';
 for(const element of document.querySelectorAll('button,input,select'))element.disabled=true;
 window.addEventListener('resize',()=>engine.resize());
+let viewFitRadius=20;
+const sceneResizeObserver=new ResizeObserver(()=>{const canvas=$('scene'),aspect=canvas.clientWidth/Math.max(1,canvas.clientHeight),next=Math.max(20,Math.min(30,36/Math.max(.5,aspect)));orbit.radius=Math.max(orbit.lowerRadiusLimit,Math.min(orbit.upperRadiusLimit,orbit.radius*next/viewFitRadius));viewFitRadius=next;engine.resize();});sceneResizeObserver.observe($('scene'));
 let mechanics;
 try{mechanics=await createMechanics(scene,rollers);}catch(error){$('status').textContent='Havok初期化失敗 · 静止表示';$('physicsInfo').textContent=error.message;globalThis.mikanShowError?.(error);throw error;}
 const suction=createVacuumGripper(B,scene,arm,mechanics);
@@ -282,8 +284,8 @@ async function scan(){if(busy||paused||switching)return;busy=true;const detector
     $('latency').textContent=Math.round(performance.now()-t0)+' ms';$('inferenceInfo').textContent=results.filter(r=>r?.timings).map(r=>r.view.id+' 推論 '+Math.round(r.timings.inferenceMs)+' ms').join(' ／ ');
   }catch(error){if(token!==epoch)return;paused=true;mechanics.pause(true);updateStatus();globalThis.mikanShowError?.(error);log('検査エラー：'+error.message);}finally{busy=false;}
 }
-function detectorInfo(){const yolo=activeDetector!==colorDetector;$('confidence').disabled=!yolo;$('detectorInfo').textContent=yolo?'YOLOv9-T / '+activeDetector.config.inputSize+' · CPU · 信頼度 '+$('confidence').value+'%':'色解析デモ';$('pipelineInput').textContent=yolo?'2視点 / 入力'+activeDetector.config.inputSize:'2視点 / 色解析';}
-function updateStatus(){$('status').textContent=(activeDetector===colorDetector?'色解析':'YOLOv9')+' · '+(switching?'切替準備中':paused?'一時停止':activeJob?(activeDetector.name.startsWith('yolov9')?'実座標追従でアーム動作中 · 搬送継続':'画像予測でアーム動作中 · 搬送継続'):(activeDetector.name.startsWith('yolov9')?'YOLO検出済み個体を監視・Havok搬送中':'画像追跡・Havok搬送中'));}
+function detectorInfo(){const yolo=activeDetector!==colorDetector;$('confidence').disabled=!yolo;$('detectorInfo').textContent=yolo?'YOLOv9-T / '+activeDetector.config.inputSize+' · CPU · 信頼度 '+$('confidence').value+'%':'色解析デモ';$('activeDetectorName').textContent=yolo?'YOLOv9-T':'色解析';$('camera1Label').textContent=(yolo?'YOLO ':'')+'カメラ1';$('camera2Label').textContent=(yolo?'YOLO ':'')+'カメラ2';}
+function updateStatus(){$('status').textContent=switching?'検出方式を切替中':paused?'一時停止':activeJob?'アーム動作中・搬送継続':'検査・搬送中';}
 function closeTrack(t,state,reason){if(t.closed)return;tracker.close(t,state,reason);if((!activeDetector.name.startsWith('yolov9')||t.id.startsWith('D'))&&(state==='good'||state==='escaped'||state==='unclassified'))stats[state]++;flushEvents();}
 function detectedGoal(fruit){
   const surface=fruitSurface(B,fruit,DETECTED_PICK.followLead/arm.servo.motionScale),offset=DETECTED_PICK.cupOffset;
