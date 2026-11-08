@@ -2,7 +2,7 @@
 <html lang="ja">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MIKAN LAB v0.2 — YOLOv9回転検査</title><link rel="stylesheet" href="style.css?v=20261109-streamlined"><script src="vendor/babylon.js?v=20261025-bluegreen-mold" defer></script><script src="vendor/HavokPhysics_umd.js?v=20261025-bluegreen-mold" defer></script></head>
 <body>
-<header><h1><span class="logo" aria-hidden="true">●</span> MIKAN LAB <span class="version">v0.2</span></h1><nav><a href="../index.html">サンプル一覧 ↗</a></nav></header>
+<header><h1><span class="logo" aria-hidden="true">●</span> MIKAN LAB <span class="version">v0.2</span></h1><nav><a href="../mikan-inspection-v02-dual-arm/">2 ARMS ↗</a> <a href="../index.html">サンプル一覧 ↗</a></nav></header>
 <p id="loadMessage" role="status">3D表示を準備しています…</p>
 <script>
 globalThis.mikanShowError=function(error){const message=document.getElementById('loadMessage');message.hidden=false;message.setAttribute('role','alert');message.textContent='読込エラー：'+(error?.message||String(error))+' エラーが解消するまで検査を停止します。';const fallback=document.getElementById('colorFallback');if(fallback)fallback.hidden=false;};

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MIKAN LAB v0.2 — 2本アーム比較</title><link rel="stylesheet" href="style.css?v=20261109-dual"><script src="../mikan-inspection-v02/vendor/babylon.js?v=20261025-bluegreen-mold" defer></script><script src="../mikan-inspection-v02/vendor/HavokPhysics_umd.js?v=20261025-bluegreen-mold" defer></script></head>
+<body>
+<header><h1><span class="logo" aria-hidden="true">●</span> MIKAN LAB <span class="version">v0.2 / 2 ARMS</span></h1><nav><a href="../mikan-inspection-v02/">1 ARM ↗</a> <a href="../index.html">サンプル一覧 ↗</a></nav></header>
+<p id="loadMessage" role="status">3D表示を準備しています…</p>
+<script>
+globalThis.mikanShowError=function(error){const message=document.getElementById('loadMessage');message.hidden=false;message.setAttribute('role','alert');message.textContent='読込エラー：'+(error?.message||String(error))+' エラーが解消するまで検査を停止します。';const fallback=document.getElementById('colorFallback');if(fallback)fallback.hidden=false;};
+window.addEventListener('error',function(event){if(event.target?.tagName==='SCRIPT')mikanShowError(new Error('3Dライブラリーを取得できませんでした。ページを再読み込みしてください。'));else if(event.error)mikanShowError(event.error);},true);
+window.addEventListener('unhandledrejection',function(event){mikanShowError(event.reason);});
+</script>
+<a id="colorFallback" class="fallback" href="?detector=color" hidden>色解析デモで開き直す</a>
+<main class="dashboard"><div class="live-console">
+<section class="inspection-strip" aria-label="検査カメラと動作状態">
+  <div class="view-tile"><div class="view-label"><span id="camera1Label">YOLO カメラ1</span><small>上方</small></div><div class="camera"><canvas id="inspectionA" width="640" height="480"></canvas><canvas id="overlayA" width="640" height="480"></canvas></div></div>
+  <div class="view-tile"><div class="view-label"><span id="camera2Label">YOLO カメラ2</span><small>斜め</small></div><div class="camera"><canvas id="inspectionB" width="640" height="480"></canvas><canvas id="overlayB" width="640" height="480"></canvas></div></div>
+  <div class="status-panel"><div class="status-heading"><span id="activeDetectorName">YOLOv9-T</span><span>画像判定 <strong id="latency">— ms</strong></span></div><p class="status"><i aria-hidden="true"></i><span id="status" role="status">Havok読込中…</span></p><div class="metrics"><div><strong id="total">0</strong><span>検出個体</span></div><div><strong id="reject">0</strong><span>不良回収</span></div><div><strong id="escaped">0</strong><span>取り逃がし</span></div></div><div class="appearance-controls"><label class="appearance-picker">外観を指定<select id="sampleAppearance"></select></label><button id="addSample">指定した外観で投入</button></div><div class="arm-comparison"><span id="armAResult">ARM A</span><span id="armBResult">ARM B</span></div><section class="confidence-bar" aria-label="YOLO信頼度"><label for="confidence">YOLO信頼度 <output id="confidenceValue">35%</output></label><input id="confidence" type="range" min="10" max="90" step="5" value="35"></section></div>
+</section>
+<section class="scene-panel" aria-label="3D表示"><div class="panel-head"><span>3D表示</span><small>ドラッグで回転・ホイールで拡大</small></div><canvas id="scene" aria-label="ミカン選別ラインの3D表示"></canvas><div class="scene-caption"><span>赤BOX：生成時の不良 ／ 黄文字：YOLO候補 ／ NG!：不良確定</span><output id="spawnFeedback" role="status" aria-live="polite"></output></div></section>
+<details id="optionsPanel" class="options-panel"><summary><span>オプション</span><small>傾斜・アーム・ローラーなど</small></summary><div class="options-content">
+  <div class="options-grid">
+    <fieldset><legend>投入・ライン</legend><label>ゴール側への傾斜<select id="slopeAngle"><option value="0">0度（水平）</option><option value="2">2度</option><option value="5" selected>5度</option></select></label>
+<label>ローラー直径<select id="rollerDiameter"><option value="0.2">0.20</option><option value="0.25">0.25</option><option value="0.3">0.30（従来）</option><option value="0.35" selected>0.35</option><option value="0.4">0.40</option></select></label>
+<label>ローラー中心間隔<select id="rollerPitch"><option value="0.31">0.31（従来）</option><option value="0.35">0.35</option><option value="0.4">0.40</option><option value="0.45" selected>0.45</option><option value="0.5">0.50</option><option value="0.55">0.55</option></select></label>
+<label>不良品の投入率 <output id="rateValue">35%</output><input id="rate" type="range" min="0" max="100" value="35"></label>
+<label>投入間隔 <output id="feedIntervalValue">2.5 秒</output><input id="feedInterval" type="range" min="2" max="8" step="0.5" value="2.5"></label><p class="note">不良の外観：従来70%／追加30%（外観指定は除く）。</p></fieldset>
+    <fieldset><legend>ローラー</legend><label>ローラー回転速度 <output id="speedValue">8.0 rad/s</output><input id="speed" type="range" min="0" max="24" step="1" value="8"></label>
+<label class="checkbox"><input id="removeSlowRollers" type="checkbox" checked> 低速側ローラーを取り除く</label>
+<label>減速側除去時の加速ローラー間隔<select id="fastRollerPitch"><option value="auto">従来（基本間隔×2）</option><option value="0.35">0.35</option><option value="0.4">0.40</option><option value="0.41">0.41</option><option value="0.45">0.45</option><option value="0.5" selected>0.50</option><option value="0.6">0.60</option><option value="0.7">0.70</option><option value="0.8">0.80</option></select></label>
+<label title="100%で停止、−100%で基準の2倍">低速側の減速率 <output id="rollerSlowdownValue">22.5%</output><input id="rollerSlowdown" type="range" min="-100" max="100" step="0.5" value="22.5"></label>
+<label>高速側の増速率 <output id="rollerDifferenceValue">10%</output><input id="rollerDifference" type="range" min="0" max="100" step="5" value="10"></label>
+<label>転がりの比較設定<select id="rollingPreset"><option value="combined" selected>改善試験：4項目を適用</option><option value="legacy">従来設定</option><option value="friction">摩擦のみ変更</option><option value="shape">当たり判定のみ変更</option><option value="ramp">加減速のみ変更</option><option value="damping">角減衰のみ変更</option></select></label>
+<label>ミカンの摩擦係数 <output id="frictionValue">1.00</output><input id="friction" type="range" min="0" max="1" step="0.05" value="1"></label></fieldset>
+    <fieldset><legend>アーム・吸着</legend><label>アーム構造<select id="armModel"><option value="two">従来（リンク2本）</option><option value="three" selected>関節を1つ追加（リンク3本）</option></select></label>
+<label>接近時のアーム速度<select id="armSpeed"><option value="1">1倍（比較用）</option><option value="1.5">1.5倍</option><option value="2" selected>2倍（下降・搬送は1倍）</option></select></label>
+<label>空のアームの戻り速度<select id="returnSpeed"><option value="1">1倍</option><option value="1.5">1.5倍</option><option value="2" selected>2倍</option></select></label>
+<label>吸着の負圧（モデル）<output id="vacuumPressureValue">78 kPa</output><input id="vacuumPressure" type="range" min="0" max="80" step="1" value="78"></label>
+<label>空気漏れ（試験用）<output id="vacuumLeakValue">0%</output><input id="vacuumLeak" type="range" min="0" max="100" step="5" value="0"></label>
+<label class="checkbox" title="回収済みのミカンがある間は、箱の表示と当たり判定を残します。"><input id="collectUnknown" type="checkbox"> 未判定箱を表示して回収（通常は不良のみ）</label></fieldset>
+    <fieldset><legend>画像検査</legend><label>検出方式<select id="detector"><option value="yolo" selected>YOLOv9-T（学習済みモデル）</option><option value="color">従来の色解析デモ</option></select></label>
+<label>YOLO入力解像度<select id="yoloSize"><option value="640" selected>640 × 640（従来）</option><option value="320">320 × 320（速度比較）</option></select></label><p id="detectorInfo" class="note">YOLOv9を準備中…</p><p id="inferenceInfo" class="note"></p><p class="note">赤BOXは生成時の不良。候補文字は最後の不良検出から2秒を超えると消えます。2秒以内の別撮影2回でNG!表示となり、選別対象になります。</p><a href="../mikan-inspection-v02/appearance-review/" target="_blank" rel="noopener">外観ごとの画像判定を見る ↗</a></fieldset>
+  </div>
+  <details id="diagnosticsPanel" class="diagnostics-panel"><summary>動作詳細・履歴</summary><div class="diagnostic-grid"><div><p id="physicsInfo">Havok初期化中…</p><p id="gripInfo">真空吸着・接触の確認待ち</p><p id="predictionInfo"></p><p id="armWaitInfo"></p><p id="trackingInfo">画像追跡を準備中…</p><p id="rollingInfo"></p><p id="observationInfo"></p></div><div><p>不良未検出の追跡：<span id="good">0</span> ／ 未判定回収：<span id="unknown">0</span></p><p>未判定通過：<span id="unclassified">0</span> ／ 空振り：<span id="pickFailed">0</span> ／ 未排除の実個体通過：<span id="passed">0</span> ／ ラインからの落下：<span id="lost">0</span></p><p>橙：カメラ範囲 ／ 緑：把持範囲 ／ 赤BOX：不良確定</p><ol id="log" aria-live="polite"><li>V0.2 YOLOv9検査ラインを起動しました</li></ol></div></div><section class="history-panel"><div class="panel-head"><span>検出・選別の履歴</span><button id="export">履歴をJSON保存</button></div><div class="table-wrap"><table><thead><tr><th>追跡ID</th><th>判定・動作</th><th>観測フレーム</th><th>位置 x,z ／ 速度</th><th>画像から確認した不良</th><th>履歴</th></tr></thead><tbody id="history"></tbody></table></div></section></details>
+</div></details>
+</div></main>
+<script type="module" src="app.js?v=20261109-dual"></script></body></html>
