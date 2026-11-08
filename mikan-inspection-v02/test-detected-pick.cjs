@@ -8,6 +8,11 @@ const server=http.createServer((req,res)=>{
 });
 (async()=>{let browser;try{
   const uri=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
+  const {labelPresentation,labelPopScale}=await import(uri(fs.readFileSync(__dirname+'/yolo-label.js','utf8')));
+  assert.deepEqual(labelPresentation({defects:new Set(),observedKinds:new Set(['damage'])}),{confirmed:false,title:'',detail:'キズ候補'});
+  assert.deepEqual(labelPresentation({defects:new Set(['mold']),observedKinds:new Set(['mold','damage'])}),{confirmed:true,title:'NG!',detail:'カビ検出'},'unconfirmed kinds must not be announced as confirmed');
+  assert.deepEqual(labelPresentation({defects:new Set(['damage','mold']),observedKinds:new Set(['mold','damage'])}),{confirmed:true,title:'NG!',detail:'カビ・キズ検出'});
+  assert.equal(labelPopScale(0),.65);assert.equal(labelPopScale(.12),1.25);assert.equal(labelPopScale(.38),1);assert.equal(labelPopScale(20),1);
   const {matchDetectedFruits,recordDefectCapture,pendingDefectCount}=await import(uri(fs.readFileSync(__dirname+'/detected-fruit-control.js','utf8')));
   const record=()=>({defects:new Set(),evidence:{mold:0,damage:0}}),r=record();
   recordDefectCapture(r,['mold'],10,1);recordDefectCapture(r,['mold'],10,1);
@@ -52,10 +57,10 @@ const server=http.createServer((req,res)=>{
     },x);
     await page.waitForFunction(()=>pickFixture.cycle>=2&&mikanDebug.detectedRecords.length>0,null,{timeout:12000});
     const pending=await page.evaluate(()=>({confirmed:mikanDebug.detectedRecords[0].defects.size,markers:[...mikanDebug.defectMarkers.keys()],attempts:mikanDebug.attempts.length,evidence:mikanDebug.detectedRecords[0].evidence.mold,views:[...mikanDebug.detectedRecords[0].views].sort(),label:mikanDebug.defectLabels.get(pickFixture.f.id)?.text,missedId:pickFixture.missed.id}));
-    assert.deepEqual(pending,{confirmed:0,markers:[pending.missedId],attempts:0,evidence:1,views:['A','B'],label:'カビ',missedId:pending.missedId},'ground-truth marker stays on the missed defect; first YOLO capture labels the good fruit but cannot start the arm');
+    assert.deepEqual(pending,{confirmed:0,markers:[pending.missedId],attempts:0,evidence:1,views:['A','B'],label:'カビ候補',missedId:pending.missedId},'ground-truth marker stays on the missed defect; first YOLO capture labels the good fruit but cannot start the arm');
     await page.evaluate(()=>{pickFixture.allowSecond=true;});
     await page.waitForFunction(()=>mikanDebug.attempts.length>0,null,{timeout:12000});
-    assert.equal(await page.evaluate(()=>mikanDebug.defectLabels.get(pickFixture.f.id)?.text),'カビ ✓');
+    assert.equal(await page.evaluate(()=>mikanDebug.defectLabels.get(pickFixture.f.id)?.text),'NG! カビ検出');
     await page.waitForFunction(()=>['checking-grip','holding','success','failed'].includes(mikanDebug.attempts[0]?.result),null,{timeout:12000});
     const trial=await page.evaluate(()=>{
       clearInterval(pickFixture.timer);const d=mikanDebug,{f,missed,samples}=pickFixture;
@@ -71,6 +76,8 @@ const server=http.createServer((req,res)=>{
   await page.evaluate(()=>mikanDebug.setPaused(true));
   await page.selectOption('#returnSpeed','1.5');await page.waitForFunction(()=>mikanDebug.arm.servo.motionScale===1.5);
   await page.selectOption('#returnSpeed','2');await page.waitForFunction(()=>mikanDebug.arm.servo.motionScale===2);
+  const labelState=await page.evaluate(()=>{const d=mikanDebug,label=d.defectLabels.get(pickFixture.f.id);return {confirmed:label.confirmed,scale:label.mesh.scaling.x,billboard:label.mesh.billboardMode===BABYLON.Mesh.BILLBOARDMODE_ALL,cameraLeaks:d.views.filter(v=>v.rt.renderList.includes(label.mesh)).length,popAt:label.popAt};});
+  assert.ok(labelState.confirmed&&labelState.billboard&&Number.isFinite(labelState.popAt));assert.equal(labelState.scale,1);assert.equal(labelState.cameraLeaks,0);
   await page.evaluate(()=>{const d=mikanDebug;d.scene.activeCamera.setTarget(pickFixture.f.root.position.clone());d.scene.activeCamera.radius=8;});await page.waitForTimeout(400);
   fs.mkdirSync(path.join(__dirname,'qa'),{recursive:true});await page.screenshot({path:path.join(__dirname,'qa/yolo-annotations.png'),fullPage:true});
   const download=page.waitForEvent('download');await page.click('#export');const artifact=await download,exported=JSON.parse(fs.readFileSync(await artifact.path(),'utf8'));assert.equal(exported.tracking.simulatorPositionsForPlanning,true);assert.equal(exported.robot.returnMotionScale,2);assert.deepEqual(exported.picking.defectConfirmation,{windowSeconds:2,captures:2});

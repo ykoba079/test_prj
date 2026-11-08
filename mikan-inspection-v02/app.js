@@ -1,4 +1,5 @@
 import {createEquipmentDetails} from './equipment-detail.js?v=20261108-factory';
+import {labelPresentation,labelPopScale,paintYoloLabel} from './yolo-label.js?v=20261109-ng';
 import {stepContactSearch,CONTACT_SEARCH} from './contact-search.js?v=20261029-transfer';
 import {colorDetector} from './vision.js?v=20261025-bluegreen-mold';
 import {createFruitFactory,random,FRUIT_VARIANTS,chooseFruitAppearance,APPEARANCE_MIX} from './fruit.js?v=20261109-natural';
@@ -140,16 +141,19 @@ function showDefectMarker(fruit){
 }
 function updateDefectLabel(fruit,record){
   const kinds=[...(record.observedKinds||[])];if(!kinds.length)return;
-  const text=kinds.map(k=>names[k]+(record.defects.has(k)?' ✓':'')).join('・');
+  const presentation=labelPresentation(record),text=[presentation.title,presentation.detail].filter(Boolean).join(' ');
   let label=defectLabels.get(fruit.id);
   if(!label){
-    const texture=new B.DynamicTexture('yolo-label-'+fruit.id,{width:512,height:128},scene,false);
+    const texture=new B.DynamicTexture('yolo-label-'+fruit.id,{width:512,height:256},scene,false);
     const mat=new B.StandardMaterial('yolo-label-material-'+fruit.id,scene);mat.diffuseTexture=texture;mat.emissiveTexture=texture;mat.disableLighting=true;mat.backFaceCulling=false;texture.hasAlpha=true;mat.useAlphaFromDiffuseTexture=true;
-    const mesh=B.MeshBuilder.CreatePlane('yolo-label-'+fruit.id,{width:1.25,height:.3125},scene);mesh.material=mat;mesh.billboardMode=B.Mesh.BILLBOARDMODE_ALL;mesh.layerMask=1;mesh.isPickable=false;
-    label={mesh,texture,material:mat,text:null};defectLabels.set(fruit.id,label);
+    const mesh=B.MeshBuilder.CreatePlane('yolo-label-'+fruit.id,{width:1.6,height:.8},scene);mesh.material=mat;mesh.billboardMode=B.Mesh.BILLBOARDMODE_ALL;mesh.layerMask=1;mesh.isPickable=false;mesh.renderingGroupId=2;
+    label={mesh,texture,material:mat,text:null,confirmed:false,popAt:null};defectLabels.set(fruit.id,label);
   }
-  if(label.text!==text){const c=label.texture.getContext();c.clearRect(0,0,512,128);c.fillStyle='rgba(24,30,27,.88)';c.fillRect(0,0,512,128);c.fillStyle='#ffe5b0';c.font='bold 62px "Yu Gothic",sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(text,256,66,490);label.texture.update();label.text=text;}
-  label.mesh.position.copyFrom(fruit.root.position);label.mesh.position.y+=.86;
+  if(presentation.confirmed&&!label.confirmed)label.popAt=performance.now()/1000;
+  if(label.text!==text){paintYoloLabel(label.texture,presentation);label.text=text;}
+  label.confirmed=presentation.confirmed;
+  label.mesh.scaling.setAll(label.popAt===null?1:labelPopScale(performance.now()/1000-label.popAt));
+  label.mesh.position.copyFrom(fruit.root.position);label.mesh.position.y+=1.1;
 }
 function captureFruitCandidates(){
   return fruits.filter(f=>!f.sorted&&!f.picked).map(f=>{
