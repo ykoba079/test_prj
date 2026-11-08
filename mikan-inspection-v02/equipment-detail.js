@@ -1,6 +1,6 @@
 // Equipment appearance adapted from https://playground.babylonjs.com/#KK480H#3.
 // Conveyor and robot dimensions are preserved; crate collision proxies follow the reference shape.
-import {createHarvestCrate,HARVEST_CRATE_SCALE,HARVEST_CRATE_SPEC,GOOD_CRATE_SPEC,REJECT_CRATE_SPEC,GOOD_BIN_X,FLOOR_TOP} from './harvest-crate.js?v=20261108-capacity';
+import {createHarvestCrate,HARVEST_CRATE_SCALE,HARVEST_CRATE_SPEC,GOOD_CRATE_SPEC,REJECT_CRATE_SPEC,GOOD_BIN_X,FLOOR_TOP} from './harvest-crate.js?v=20261108-standard-bins';
 const B=globalThis.BABYLON;
 function pbr(scene,name,color,metallic=0,roughness=.5){
   const m=new B.PBRMaterial(name,scene);m.albedoColor=B.Color3.FromHexString(color).toLinearSpace();m.metallic=metallic;m.roughness=roughness;return m;
@@ -40,7 +40,7 @@ export function createEquipmentDetails(scene){
     // Narrow end band communicates drive role without coloring the whole metal roller.
     const ring=cyl('roller-drive-band',.035,diameter*1.008,[0,1.2,0],mesh.driveRole==='fast'?fastBand:mesh.driveRole==='slow'?slowBand:rubber,mesh);
   }
-  function crate(name,x,z,color,spec=HARVEST_CRATE_SPEC){
+  function crate(name,x,z,color,spec=GOOD_CRATE_SPEC){
     const model=createHarvestCrate(scene,color),mesh=model.mesh,k=HARVEST_CRATE_SCALE*spec.width/HARVEST_CRATE_SPEC.width;
     // Local y=0 is the inside floor; feet project below it to rest on the room floor.
     const transform=B.Matrix.Translation(0,-model.floorTop,0).multiply(B.Matrix.Scaling(k,k,k));
@@ -182,5 +182,5 @@ export function createEquipmentDetails(scene){
     return lineMeshes;
   }
   function syncFloor(floorY){for(const {mesh,top,height} of floorSupports){mesh.scaling.y=(top-floorY)/height;mesh.position.y=(top+floorY)/2;}for(const mesh of floorFeet)mesh.position.y=floorY+.025;}
-  return {steel,rubber,alloy,paint,blue,box,cyl,bolt,tube,label,roller,decorate,crate,crateSpec:HARVEST_CRATE_SPEC,goodCrateSpec:GOOD_CRATE_SPEC,rejectCrateSpec:REJECT_CRATE_SPEC,goodBinX:GOOD_BIN_X,floorTop:FLOOR_TOP,armLink,armJoint,syncFloor,syncCameraMounts};
+  return {steel,rubber,alloy,paint,blue,box,cyl,bolt,tube,label,roller,decorate,crate,crateSpec:GOOD_CRATE_SPEC,goodCrateSpec:GOOD_CRATE_SPEC,rejectCrateSpec:REJECT_CRATE_SPEC,goodBinX:GOOD_BIN_X,floorTop:FLOOR_TOP,armLink,armJoint,syncFloor,syncCameraMounts};
 }

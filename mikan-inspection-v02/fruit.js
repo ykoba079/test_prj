@@ -3,13 +3,21 @@ const B=globalThis.BABYLON;
 export const FRUIT_VARIANTS=[
   {id:'standard',type:0,label:'正常：標準'},
   {id:'mottled',type:0,label:'正常：果皮の色むら'},
-  {id:'mold-large',type:1,label:'カビ：広い病斑',radius:.76,count:1,aspect:1},
+  {id:'mold-large',type:1,label:'カビ：広い病斑',legacy:true,radius:.76,count:1,aspect:1},
   {id:'mold-small',type:1,label:'カビ：小さい病斑',radius:.16,count:1,aspect:1},
   {id:'mold-spots',type:1,label:'カビ：点在する病斑',radius:.11,count:4,aspect:1},
-  {id:'damage',type:2,label:'傷：従来の傷',radius:.44,count:1,aspect:.62},
+  {id:'damage',type:2,label:'傷：従来の傷',legacy:true,radius:.44,count:1,aspect:.62},
   {id:'scratch',type:2,label:'傷：細い線状の傷',radius:.58,count:1,aspect:.10},
   {id:'scuff',type:2,label:'傷：淡い擦り傷',radius:.56,count:1,aspect:.68}
 ];
+export const APPEARANCE_MIX={legacyDefectShare:.70};
+export function chooseFruitAppearance(type,rng=Math.random){
+  const choices=FRUIT_VARIANTS.filter(v=>v.type===type);
+  if(!choices.length)throw new RangeError('Unknown fruit category');
+  const legacy=type!==0&&rng()<APPEARANCE_MIX.legacyDefectShare;
+  const pool=type===0?choices:choices.filter(v=>!!v.legacy===legacy);
+  return pool[Math.floor(rng()*pool.length)].id;
+}
 export function random(seed){let s=seed>>>0;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};}
 function texture(name,size,scene,paint){const t=new B.DynamicTexture(name,size,scene,false);paint(t.getContext(),size.width,size.height);t.update();return t;}
 function paintBlueGreenMold(c,w,h,r){
