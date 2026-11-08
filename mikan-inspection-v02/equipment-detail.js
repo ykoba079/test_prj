@@ -1,6 +1,7 @@
 // Equipment appearance adapted from https://playground.babylonjs.com/#KK480H#3.
 // Conveyor and robot dimensions are preserved; crate collision proxies follow the reference shape.
 import {createHarvestCrate,HARVEST_CRATE_SCALE,HARVEST_CRATE_SPEC,GOOD_CRATE_SPEC,REJECT_CRATE_SPEC,GOOD_BIN_X,FLOOR_TOP} from './harvest-crate.js?v=20261108-standard-bins';
+import {createFactoryRoom} from './factory-room.js?v=20261108-factory';
 const B=globalThis.BABYLON;
 function pbr(scene,name,color,metallic=0,roughness=.5){
   const m=new B.PBRMaterial(name,scene);m.albedoColor=B.Color3.FromHexString(color).toLinearSpace();m.metallic=metallic;m.roughness=roughness;return m;
@@ -22,6 +23,7 @@ function installStudioReflections(scene){
 export function createEquipmentDetails(scene){
   installStudioReflections(scene);
   const floorSupports=[],floorFeet=[],cameraMounts=[];
+  let room=null;
   const steel=pbr(scene,'brushed-stainless','#b6bdc4',.86,.28),rubber=pbr(scene,'black-rubber','#222831',0,.78),alloy=pbr(scene,'machined-alloy','#d1d5d9',.82,.22),paint=pbr(scene,'powder-coat','#e7ebed',.12,.37),blue=pbr(scene,'motor-blue','#284c65',.25,.42);
   const slowBand=pbr(scene,'slow-band','#648fbc',.1,.5),fastBand=pbr(scene,'fast-band','#c5ab6c',.1,.5);
   const lineMeshes=[];
@@ -123,7 +125,7 @@ export function createEquipmentDetails(scene){
     }
   }
   function decorate(){
-    const floor=scene.getMeshByName('floor');floor.material=pbr(scene,'epoxy-floor','#344641',.05,.88);
+    const floor=scene.getMeshByName('floor');room=createFactoryRoom(scene,floor);
     scene.getMeshByName('inspection-background').material=rubber;
     for(const rail of scene.meshes.filter(m=>m.name==='rail')){
       rail.material=steel;const side=Math.sign(rail.position.z);railShell(rail);
@@ -181,6 +183,6 @@ export function createEquipmentDetails(scene){
     syncFloor(floor.position.y+.05);
     return lineMeshes;
   }
-  function syncFloor(floorY){for(const {mesh,top,height} of floorSupports){mesh.scaling.y=(top-floorY)/height;mesh.position.y=(top+floorY)/2;}for(const mesh of floorFeet)mesh.position.y=floorY+.025;}
+  function syncFloor(floorY){for(const {mesh,top,height} of floorSupports){mesh.scaling.y=(top-floorY)/height;mesh.position.y=(top+floorY)/2;}for(const mesh of floorFeet)mesh.position.y=floorY+.025;room?.syncFloor(floorY);}
   return {steel,rubber,alloy,paint,blue,box,cyl,bolt,tube,label,roller,decorate,crate,crateSpec:GOOD_CRATE_SPEC,goodCrateSpec:GOOD_CRATE_SPEC,rejectCrateSpec:REJECT_CRATE_SPEC,goodBinX:GOOD_BIN_X,floorTop:FLOOR_TOP,armLink,armJoint,syncFloor,syncCameraMounts};
 }

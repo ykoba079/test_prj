@@ -1,4 +1,4 @@
-import {createEquipmentDetails} from './equipment-detail.js?v=20261108-standard-bins';
+import {createEquipmentDetails} from './equipment-detail.js?v=20261108-factory';
 import {stepContactSearch,CONTACT_SEARCH} from './contact-search.js?v=20261029-transfer';
 import {colorDetector} from './vision.js?v=20261025-bluegreen-mold';
 import {createFruitFactory,random,FRUIT_VARIANTS,chooseFruitAppearance,APPEARANCE_MIX} from './fruit.js?v=20261108-standard-bins';
