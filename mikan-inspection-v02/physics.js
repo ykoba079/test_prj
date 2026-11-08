@@ -1,4 +1,4 @@
-import {ROLLER_TRIAL,rollerRole} from './roller-layout.js?v=20261029-transfer';
+import {ROLLER_TRIAL,rollerRole} from './roller-layout.js?v=20261108-fruit90';
 export {ROLLER_TRIAL};
 const B=globalThis.BABYLON;
 export const ROLLING_PRESETS={
@@ -40,7 +40,7 @@ export async function createMechanics(scene,rollers){
   attachRollers();
   // Bake the same ellipsoid proportions as the visible fruit into the collision hull.
   const fruitShapes=new Map([12,32].map(segments=>{
-    const hullMesh=B.MeshBuilder.CreateSphere('fruit-collision-template',{diameter:.78,segments},scene);
+    const hullMesh=B.MeshBuilder.CreateSphere('fruit-collision-template',{diameter:.78*.9,segments},scene);
     hullMesh.scaling.y=.84;hullMesh.bakeCurrentTransformIntoVertices();
     const shape=new B.PhysicsShapeConvexHull(hullMesh,scene);hullMesh.dispose();return [segments,shape];
   }));

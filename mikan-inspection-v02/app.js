@@ -1,9 +1,9 @@
 import {createEquipmentDetails} from './equipment-detail.js?v=20261108-factory';
 import {stepContactSearch,CONTACT_SEARCH} from './contact-search.js?v=20261029-transfer';
 import {colorDetector} from './vision.js?v=20261025-bluegreen-mold';
-import {createFruitFactory,random,FRUIT_VARIANTS,chooseFruitAppearance,APPEARANCE_MIX} from './fruit.js?v=20261108-standard-bins';
-import {createMechanics,ROLLER_TRIAL} from './physics.js?v=20261108-standard-bins';
-import {rollerLayout,supportCalibration,compatiblePitch} from './roller-layout.js?v=20261029-transfer';
+import {createFruitFactory,random,FRUIT_VARIANTS,chooseFruitAppearance,APPEARANCE_MIX} from './fruit.js?v=20261108-fruit90';
+import {createMechanics,ROLLER_TRIAL} from './physics.js?v=20261108-fruit90';
+import {rollerLayout,supportCalibration,compatiblePitch} from './roller-layout.js?v=20261108-fruit90';
 import {createSlopeGeometry} from './slope.js?v=20261028-slope';
 import {createYoloDetector} from './yolo-detector.js?v=20261028-controls';
 import {createImageTracker,fuseViews,PICK_ZONE,TRACK_RULE} from './tracking.js?v=20261030-contour-track';
@@ -12,7 +12,7 @@ import {ARM_REST,DROP_POINTS} from './arm-kinematics.js?v=20261108-standard-bins
 import {checkFruitObservation,OBSERVATION_RULE} from './observation-check.js?v=20261030-contour';
 import {chooseIntercept,PICK_RULE,hoverReady,observedInPickZone,pickStartStatus} from './pick-planning.js?v=20261030-readiness';
 import {createVacuumGripper,SUCTION_RULE} from './vacuum-physics.js?v=20261030-78kpa';
-import {matchDetectedFruits,fruitSurface,DETECTED_PICK,DEFECT_CONFIRMATION,recordDefectCapture,pendingDefectCount} from './detected-fruit-control.js?v=20261030-two-captures';
+import {matchDetectedFruits,fruitSurface,DETECTED_PICK,DEFECT_CONFIRMATION,recordDefectCapture,pendingDefectCount} from './detected-fruit-control.js?v=20261108-fruit90';
 const B=globalThis.BABYLON,$=id=>document.getElementById(id),names={mold:'カビ',damage:'傷'},stateNames={observing:'観測中',good:'良品通過',reject:'不良排除',unknown:'未判定隔離',sorting:'アーム移動中',escaping:'取り逃がし・搬送中',escaped:'取り逃がし通過',missed:'搬送異常'};
 if(!B?.Engine.IsSupported)throw new Error('このブラウザーでWebGLを利用できません。ブラウザーの3D描画設定を確認してください。');
 const FRAME={width:640,height:480};
@@ -33,7 +33,7 @@ const trialSlow=material('trial-slow','#648fbc'),trialFast=material('trial-fast'
 function fastPitchValue(){return $('fastRollerPitch').value==='auto'?null:+$('fastRollerPitch').value;}
 function buildRollers(pitch,diameter=.30,removed=false,fastPitch=null){
   for(const {x,role,transfer=false} of rollerLayout(pitch,removed,fastPitch)){
-    const roller=B.MeshBuilder.CreateCylinder('roller',{height:2.65,diameter,tessellation:20},scene);
+    const roller=B.MeshBuilder.CreateCylinder('roller',{height:2.65,diameter,tessellation:32},scene);
     roller.driveRole=role;roller.transfer=transfer;
     roller.material=roller.driveRole==='slow'?trialSlow:roller.driveRole==='fast'?trialFast:metal;roller.position.set(x,-.13,0);roller.rotationQuaternion=B.Quaternion.RotationAxis(B.Axis.X,Math.PI/2);roller.layerMask=1;equipment.roller(roller,diameter);
     const stripe=box('roller-marker',.03,.012,2.5,0,.155,0,dark);stripe.parent=roller;stripe.position.set(diameter/2,0,0);stripe.rotation.x=-Math.PI/2;rollers.push(roller);
@@ -208,7 +208,7 @@ function worldAt(d,view){
 function projectedFruitDiameter(d,view){
   const center=worldAt(d,view);if(!center)return NaN;
   const transform=view.viewMatrix.multiply(view.projectionMatrix),viewport=new B.Viewport(0,0,FRAME.width,FRAME.height);
-  const half=new B.Vector3(.39*line.cos,-.39*line.sin,0);
+  const half=new B.Vector3(.39*.9*line.cos,-.39*.9*line.sin,0);
   const left=B.Vector3.Project(center.subtract(half),B.Matrix.Identity(),transform,viewport),right=B.Vector3.Project(center.add(half),B.Matrix.Identity(),transform,viewport);
   return Math.hypot(right.x-left.x,right.y-left.y);
 }

@@ -24,17 +24,18 @@ export function rollerLayout(pitch,removed=false,fastPitch=null){
   result.push({x:base.find(r=>r.role==='slow').x,role:'normal',transfer:true});
   return result.sort((a,b)=>a.x-b.x);
 }
-function restingHeight(gap,diameter=.30){
-  // Ellipsoid (.39 x .3276) resting between two cylinders.
+function restingHeight(gap,diameter=.30,fruitScale=.9){
+  // Ellipsoid at 90% size, matching the visible fruit and collision hull.
   const radius=diameter/2;
   let height=0;
   for(let i=0;i<=600;i++){
-    const u=-radius+diameter*i/600,q=(u-gap/2)/.39;
-    if(Math.abs(q)<=1)height=Math.max(height,Math.sqrt(Math.max(0,radius**2-u*u))+.3276*Math.sqrt(1-q*q));
+    const u=-radius+diameter*i/600,q=(u-gap/2)/(.39*fruitScale);
+    if(Math.abs(q)<=1)height=Math.max(height,Math.sqrt(Math.max(0,radius**2-u*u))+.3276*fruitScale*Math.sqrt(1-q*q));
   }
   return height-.13;
 }
-const baseline=restingHeight(.31);
+// Keep the original calibration datum; shrinking the fruit lowers its center.
+const baseline=restingHeight(.31,.30,1);
 export function supportCalibration(pitch,removed=false,diameter=.30,fastPitch=null){
   const supports=rollerLayout(pitch,removed,fastPitch).filter(r=>!removed||r.role!=='slow').map(r=>r.x);
   // Pocket height at the middle of each pair; interpolate to avoid calibration jumps.

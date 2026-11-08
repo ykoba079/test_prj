@@ -40,7 +40,7 @@ export function matchDetectedFruits(detections,candidates){
 export function fruitSurface(B,fruit,lead=0){
   const rotation=new B.Matrix();(fruit.root.rotationQuaternion||B.Quaternion.Identity()).toRotationMatrix(rotation);
   const x=B.Vector3.TransformNormal(B.Axis.X,rotation),y=B.Vector3.TransformNormal(B.Axis.Y,rotation),z=B.Vector3.TransformNormal(B.Axis.Z,rotation);
-  const a2=.39**2,b2=(.39*.84)**2,s=x.scale(a2*x.y).add(y.scale(b2*y.y)).add(z.scale(a2*z.y));
+  const a2=(.39*.9)**2,b2=(.39*.9*.84)**2,s=x.scale(a2*x.y).add(y.scale(b2*y.y)).add(z.scale(a2*z.y));
   const offset=s.scale(1/Math.sqrt(s.y)),velocity=fruit.body?.getLinearVelocity()||B.Vector3.Zero();
   return fruit.root.position.add(offset).add(velocity.scale(lead));
 }

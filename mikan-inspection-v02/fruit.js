@@ -53,7 +53,7 @@ export function createFruitFactory(scene){
   });const m=new B.StandardMaterial(kind+'-'+seed,scene);if(kind!=='mold')m.diffuseTexture=t;m.emissiveTexture=t;m.disableLighting=true;m.backFaceCulling=false;return m;}
   return function create({id,type=0,hidden=false,seed=id*717,variant=null}){
     const recipe=FRUIT_VARIANTS.find(v=>v.id===variant)||FRUIT_VARIANTS.find(v=>v.type===type);type=recipe.type;
-    const r=random(seed),root=new B.TransformNode('fruit-'+id,scene),visual=new B.TransformNode('orientation-'+id,scene);visual.parent=root;visual.rotationQuaternion=B.Quaternion.Identity();
+    const r=random(seed),root=new B.TransformNode('fruit-'+id,scene),visual=new B.TransformNode('orientation-'+id,scene);visual.parent=root;visual.scaling.setAll(.9);visual.rotationQuaternion=B.Quaternion.Identity();
     const sphere=B.MeshBuilder.CreateSphere('mikan-'+id,{diameter:.78,segments:28},scene);sphere.scaling.y=.84;sphere.material=recipe.id==='mottled'?mottled:skin;sphere.parent=visual;sphere.layerMask=3;
     const cap=B.MeshBuilder.CreateCylinder('stem-'+id,{height:.035,diameter:.1,tessellation:8},scene);cap.position.y=.329;cap.material=stem;cap.parent=visual;cap.layerMask=3;
     const meshes=[sphere,cap],ownedMaterials=[];
