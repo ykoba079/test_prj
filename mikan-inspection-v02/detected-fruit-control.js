@@ -1,6 +1,7 @@
 // Detection authorizes an individual. Its simulator pose may then guide the robot.
 export const DETECTED_PICK={cupOffset:.1175,indent:.012,maxIndent:.025,hoverClearance:.55,followLead:.14,timeout:6};
 export const DEFECT_CONFIRMATION={windowSeconds:2,captures:2};
+export const DETECTED_RETRY={maxAttempts:2,cooldownSeconds:.5};
 export function pendingDefectCount(record,time){return (record.defectCaptures||[]).filter(s=>time>=s.time&&time-s.time<=DEFECT_CONFIRMATION.windowSeconds).length;}
 export function recordDefectCapture(record,kinds,time,frame){
   record.defectCaptures=(record.defectCaptures||[]).filter(s=>time>=s.time&&time-s.time<=DEFECT_CONFIRMATION.windowSeconds);
