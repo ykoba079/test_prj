@@ -146,7 +146,8 @@ function updateDefectLabel(fruit,record){
   if(!label){
     const texture=new B.DynamicTexture('yolo-label-'+fruit.id,{width:512,height:256},scene,false);
     const mat=new B.StandardMaterial('yolo-label-material-'+fruit.id,scene);mat.diffuseTexture=texture;mat.emissiveTexture=texture;mat.disableLighting=true;mat.backFaceCulling=false;texture.hasAlpha=true;mat.useAlphaFromDiffuseTexture=true;
-    const mesh=B.MeshBuilder.CreatePlane('yolo-label-'+fruit.id,{width:1.6,height:.8},scene);mesh.material=mat;mesh.billboardMode=B.Mesh.BILLBOARDMODE_ALL;mesh.layerMask=1;mesh.isPickable=false;mesh.renderingGroupId=2;
+    // Share the equipment's depth buffer so opaque objects occlude the label.
+    const mesh=B.MeshBuilder.CreatePlane('yolo-label-'+fruit.id,{width:1.6,height:.8},scene);mesh.material=mat;mesh.billboardMode=B.Mesh.BILLBOARDMODE_ALL;mesh.layerMask=1;mesh.isPickable=false;mesh.renderingGroupId=0;
     label={mesh,texture,material:mat,text:null,confirmed:false,popAt:null};defectLabels.set(fruit.id,label);
   }
   if(presentation.confirmed&&!label.confirmed)label.popAt=performance.now()/1000;

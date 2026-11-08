@@ -78,6 +78,13 @@ const server=http.createServer((req,res)=>{
   await page.selectOption('#returnSpeed','2');await page.waitForFunction(()=>mikanDebug.arm.servo.motionScale===2);
   const labelState=await page.evaluate(()=>{const d=mikanDebug,label=d.defectLabels.get(pickFixture.f.id);return {confirmed:label.confirmed,scale:label.mesh.scaling.x,billboard:label.mesh.billboardMode===BABYLON.Mesh.BILLBOARDMODE_ALL,cameraLeaks:d.views.filter(v=>v.rt.renderList.includes(label.mesh)).length,popAt:label.popAt};});
   assert.ok(labelState.confirmed&&labelState.billboard&&Number.isFinite(labelState.popAt));assert.equal(labelState.scale,1);assert.equal(labelState.cameraLeaks,0);
+  // A closed opaque enclosure must hide all label pixels. This fails when
+  // the label uses a later rendering group that clears the equipment depth.
+  await page.evaluate(()=>{const d=mikanDebug,B=BABYLON,label=d.defectLabels.get(pickFixture.f.id);const box=B.MeshBuilder.CreateBox('qa-label-occluder',{size:3},d.scene),mat=new B.StandardMaterial('qa-label-occluder-material',d.scene);mat.disableLighting=true;mat.emissiveColor=new B.Color3(.1,.1,.1);box.material=mat;box.position.copyFrom(label.mesh.position);box.layerMask=1;globalThis.labelOccluder={box,mat};});
+  await page.waitForTimeout(400);const occluded=await page.locator('#scene').screenshot();
+  await page.evaluate(()=>mikanDebug.defectLabels.get(pickFixture.f.id).mesh.setEnabled(false));await page.waitForTimeout(150);
+  const hidden=await page.locator('#scene').screenshot();assert.ok(occluded.equals(hidden),'label behind opaque geometry must contribute no visible pixels');
+  await page.evaluate(()=>{mikanDebug.defectLabels.get(pickFixture.f.id).mesh.setEnabled(true);labelOccluder.box.dispose();labelOccluder.mat.dispose();});
   await page.evaluate(()=>{const d=mikanDebug;d.scene.activeCamera.setTarget(pickFixture.f.root.position.clone());d.scene.activeCamera.radius=8;});await page.waitForTimeout(400);
   fs.mkdirSync(path.join(__dirname,'qa'),{recursive:true});await page.screenshot({path:path.join(__dirname,'qa/yolo-annotations.png'),fullPage:true});
   const download=page.waitForEvent('download');await page.click('#export');const artifact=await download,exported=JSON.parse(fs.readFileSync(await artifact.path(),'utf8'));assert.equal(exported.tracking.simulatorPositionsForPlanning,true);assert.equal(exported.robot.returnMotionScale,2);assert.deepEqual(exported.picking.defectConfirmation,{windowSeconds:2,captures:2});
