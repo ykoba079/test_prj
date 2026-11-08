@@ -22,6 +22,12 @@ export function rollerLayout(pitch,removed=false,fastPitch=null){
   // The removed first slow roller otherwise doubles the entry gap. Keep a
   // separate normal-speed transfer roller there; the slow body stays disabled.
   result.push({x:base.find(r=>r.role==='slow').x,role:'normal',transfer:true});
+  // Restart the downstream normal section one normal pitch after the last
+  // active fast roller. Adding a roller into the leftover gap could overlap
+  // its neighbours when the selected roller diameter is large.
+  const lastFast=Math.max(...result.filter(r=>r.role==='fast').map(r=>r.x));
+  for(let i=result.length-1;i>=0;i--)if(result[i].role==='normal'&&result[i].x>lastFast)result.splice(i,1);
+  for(let x=lastFast+pitch;x<7.2-1e-8;x+=pitch)result.push({x,role:'normal'});
   return result.sort((a,b)=>a.x-b.x);
 }
 function restingHeight(gap,diameter=.30,fruitScale=.9){

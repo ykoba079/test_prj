@@ -31,7 +31,9 @@ button:disabled,select:disabled,input:disabled{opacity:.5;cursor:default}
 .status i{width:6px;height:6px;flex:none;border-radius:50%;background:#9cdb8e}
 .metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:650px}
 .metrics div{display:flex;gap:9px;align-items:baseline}.metrics strong{font-size:23px;font-weight:500;color:#d4e8bd;font-variant-numeric:tabular-nums}.metrics span{font-size:10px;color:#91a997}
-.scene-panel{display:grid;grid-template-rows:26px minmax(0,1fr);min-height:0;overflow:hidden}
+.scene-panel{position:relative;display:grid;grid-template-rows:26px minmax(0,1fr);min-height:0;overflow:hidden}
+.scene-caption{position:absolute;left:8px;bottom:7px;right:8px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px;pointer-events:none;font-size:10px;color:#e4eddf;text-shadow:0 1px 3px #000}
+.scene-caption>span,.scene-caption>output:not(:empty){background:#102019d9;padding:3px 6px;border-radius:4px}
 .panel-head{display:flex;align-items:center;justify-content:space-between;padding:5px 10px;gap:10px;color:#a8bfb0;font-size:10px;min-width:0}
 .panel-head small{font-size:10px;color:#7f9989}
 #scene{display:block;width:100%;height:100%;min-width:0;min-height:0;touch-action:none;outline:none}

@@ -51,10 +51,11 @@ const server=http.createServer((req,res)=>{
       pickFixture.timer=setInterval(()=>{const j=d.activeJob;if(j?.attempt.surfaceControl)pickFixture.samples.push({...j.attempt.surfaceControl});},20);d.setPaused(false);
     },x);
     await page.waitForFunction(()=>pickFixture.cycle>=2&&mikanDebug.detectedRecords.length>0,null,{timeout:12000});
-    const pending=await page.evaluate(()=>({confirmed:mikanDebug.detectedRecords[0].defects.size,markers:mikanDebug.defectMarkers.size,attempts:mikanDebug.attempts.length,evidence:mikanDebug.detectedRecords[0].evidence.mold,views:[...mikanDebug.detectedRecords[0].views].sort()}));
-    assert.deepEqual(pending,{confirmed:0,markers:0,attempts:0,evidence:1,views:['A','B']},'one capture, even from both cameras, must not mark or start the arm');
+    const pending=await page.evaluate(()=>({confirmed:mikanDebug.detectedRecords[0].defects.size,markers:[...mikanDebug.defectMarkers.keys()],attempts:mikanDebug.attempts.length,evidence:mikanDebug.detectedRecords[0].evidence.mold,views:[...mikanDebug.detectedRecords[0].views].sort(),label:mikanDebug.defectLabels.get(pickFixture.f.id)?.text,missedId:pickFixture.missed.id}));
+    assert.deepEqual(pending,{confirmed:0,markers:[pending.missedId],attempts:0,evidence:1,views:['A','B'],label:'カビ',missedId:pending.missedId},'ground-truth marker stays on the missed defect; first YOLO capture labels the good fruit but cannot start the arm');
     await page.evaluate(()=>{pickFixture.allowSecond=true;});
     await page.waitForFunction(()=>mikanDebug.attempts.length>0,null,{timeout:12000});
+    assert.equal(await page.evaluate(()=>mikanDebug.defectLabels.get(pickFixture.f.id)?.text),'カビ ✓');
     await page.waitForFunction(()=>['checking-grip','holding','success','failed'].includes(mikanDebug.attempts[0]?.result),null,{timeout:12000});
     const trial=await page.evaluate(()=>{
       clearInterval(pickFixture.timer);const d=mikanDebug,{f,missed,samples}=pickFixture;
@@ -70,7 +71,9 @@ const server=http.createServer((req,res)=>{
   await page.evaluate(()=>mikanDebug.setPaused(true));
   await page.selectOption('#returnSpeed','1.5');await page.waitForFunction(()=>mikanDebug.arm.servo.motionScale===1.5);
   await page.selectOption('#returnSpeed','2');await page.waitForFunction(()=>mikanDebug.arm.servo.motionScale===2);
+  await page.evaluate(()=>{const d=mikanDebug;d.scene.activeCamera.setTarget(pickFixture.f.root.position.clone());d.scene.activeCamera.radius=8;});await page.waitForTimeout(400);
+  fs.mkdirSync(path.join(__dirname,'qa'),{recursive:true});await page.screenshot({path:path.join(__dirname,'qa/yolo-annotations.png'),fullPage:true});
   const download=page.waitForEvent('download');await page.click('#export');const artifact=await download,exported=JSON.parse(fs.readFileSync(await artifact.path(),'utf8'));assert.equal(exported.tracking.simulatorPositionsForPlanning,true);assert.equal(exported.robot.returnMotionScale,2);assert.deepEqual(exported.picking.defectConfirmation,{windowSeconds:2,captures:2});
   await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-  assert.deepEqual(errors,[]);console.log('PASS two captures within two seconds; same-frame A/B deduplication; clean gap, expiry and latch; no arm/marker on first capture; missed fruit excluded; physical surface contact and settings',JSON.stringify(trials.map(t=>({model:t.model,attempt:t.attempt,samples:t.samples.length}))));
+  assert.deepEqual(errors,[]);console.log('PASS two captures within two seconds; same-frame A/B deduplication; clean gap, expiry and latch; ground-truth markers independent of YOLO labels; no arm on first capture; missed fruit excluded; physical surface contact and settings',JSON.stringify(trials.map(t=>({model:t.model,attempt:t.attempt,samples:t.samples.length}))));
 }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1;});
